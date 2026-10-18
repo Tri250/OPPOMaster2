@@ -5,6 +5,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.material3.Surface
+import com.silas.omaster.ui.animation.FluidPressSpring
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -72,9 +75,17 @@ fun PresetCard(
     val isPressed by interactionSource.collectIsPressedAsState()
     val haptic = LocalHapticFeedback.current
 
+    // 【v1.6.13】ColorOS 17 液态按压反馈：按下轻微缩小，松手细腻回弹
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1f,
+        animationSpec = FluidPressSpring,
+        label = "presetCardPress"
+    )
+
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .scale(pressScale)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -215,13 +226,37 @@ fun PresetCard(
                     )
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                Text(
-                    text = PresetI18n.getLocalizedPresetName(preset.name),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = OffWhite,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                // 【v1.6.13】机型适配徽章（哈苏 / 2亿）—— Find X10 专属预设一眼可辨
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    preset.deviceProfile?.let { dp ->
+                        if (dp.isProImaging || dp.totalPixelsMp >= 200) {
+                            val badge = listOfNotNull(
+                                if (dp.isProImaging) stringResource(R.string.device_badge_hasselblad) else null,
+                                if (dp.totalPixelsMp >= 200) stringResource(R.string.device_badge_200mp) else null
+                            ).joinToString(" · ")
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = Color.White.copy(alpha = 0.22f),
+                                modifier = Modifier.padding(end = 6.dp)
+                            ) {
+                                Text(
+                                    text = badge,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                                    fontSize = 9.sp,
+                                    color = OffWhite,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        text = PresetI18n.getLocalizedPresetName(preset.name),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = OffWhite,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }

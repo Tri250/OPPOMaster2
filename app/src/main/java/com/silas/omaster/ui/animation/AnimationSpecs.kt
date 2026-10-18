@@ -1,8 +1,13 @@
 package com.silas.omaster.ui.animation
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 
 /**
@@ -153,3 +158,37 @@ val ListItemFadeInSpec = spring<Float>(
     stiffness = Spring.StiffnessMedium,
     visibilityThreshold = 0.01f
 )
+
+// ═══════════════════════════════════════════════════════════
+// 【v1.6.13】ColorOS 17 液态按压反馈（Fluid Press）
+// 按下轻微缩小、松手低阻尼回弹，对齐 ColorOS 17 灵动交互手感；
+// 纯 graphicsLayer 缩放，硬件加速，不触发布局与测量。
+// ═══════════════════════════════════════════════════════════
+
+/** 液态按压弹簧：按下跟手，松手细腻回弹 */
+val FluidPressSpring = spring<Float>(
+    dampingRatio = Spring.DampingRatioMediumBouncy,
+    stiffness = Spring.StiffnessHigh,
+    visibilityThreshold = 0.0001f
+)
+
+/**
+ * ColorOS 17 液态按压缩放：配合 Card(onClick, interactionSource) 使用。
+ * 按下缩小至 [pressedScale]，松手以 FluidPressSpring 回弹。
+ */
+@Composable
+fun Modifier.fluidPressScale(
+    interactionSource: MutableInteractionSource,
+    pressedScale: Float = 0.97f
+): Modifier {
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) pressedScale else 1f,
+        animationSpec = FluidPressSpring,
+        label = "fluidPressScale"
+    )
+    return this.graphicsLayer {
+        scaleX = scale
+        scaleY = scale
+    }
+}

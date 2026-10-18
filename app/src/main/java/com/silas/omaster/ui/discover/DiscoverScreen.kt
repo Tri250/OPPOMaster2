@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -53,16 +54,24 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.silas.omaster.R
 import com.silas.omaster.data.local.CheckInManager
+import com.silas.omaster.data.local.ColorWalkManager
+import com.silas.omaster.data.repository.PresetRepository
+import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.ui.animation.fluidPressScale
 import com.silas.omaster.ui.components.OMasterTopAppBar
+import com.silas.omaster.ui.components.PresetImage
 import com.silas.omaster.ui.theme.AppDesign
 import com.silas.omaster.ui.theme.themedBackground
 import com.silas.omaster.ui.theme.themedCardBackground
 import com.silas.omaster.ui.theme.themedTextPrimary
 import com.silas.omaster.ui.theme.themedTextSecondary
 import com.silas.omaster.ui.theme.themedBorderLight
+import com.silas.omaster.util.PresetI18n
 import java.time.LocalDate
+import java.time.LocalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,10 +79,12 @@ fun DiscoverScreen(
     onNavigateToColorWalk: () -> Unit = {},
     onNavigateToPhotoFrame: () -> Unit = {},
     onNavigateToSurvey: () -> Unit = {},
+    onNavigateToPresetDetail: (String) -> Unit = {},
     onScrollStateChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val checkInManager = remember { CheckInManager(context) }
+    val colorWalkManager = remember { ColorWalkManager(context) }
     val scrollState = rememberScrollState()
     var previousScrollValue by remember { mutableIntStateOf(0) }
     var isScrollingUp by remember { mutableStateOf(true) }
@@ -83,6 +94,8 @@ fun DiscoverScreen(
 
     val currentStreak = checkInManager.getCurrentStreak()
     val todayRecord = remember { checkInManager.getTodayRecord() }
+    // 【v1.6.13】ColorWalk 今日状态（从 Color Walk 返回后自动刷新）
+    val todayCard by colorWalkManager.todayCardFlow.collectAsState()
 
     LaunchedEffect(scrollState.value) {
         val currentValue = scrollState.value
@@ -113,10 +126,25 @@ fun DiscoverScreen(
                 .padding(AppDesign.ScreenPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // 【v1.6.13】时段问候头部（ColorOS 17 个性化体验）
+            GreetingHeader()
+
+            Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
+
+            // 【v1.6.13】今日灵感卡：每日轮换一张精选预设，点击查看参数
+            DailyInspirationCard(onPresetClick = onNavigateToPresetDetail)
+
+            Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
+
             FeatureCard(
                 icon = Icons.Default.Palette,
                 title = stringResource(R.string.colorwalk_card_title),
                 description = stringResource(R.string.colorwalk_card_desc),
+                statusText = if (todayCard != null) {
+                    stringResource(R.string.colorwalk_today_done)
+                } else {
+                    stringResource(R.string.colorwalk_draw_hint)
+                },
                 gradient = listOf(Color(0xFFFF7E5F), Color(0xFFFEB47B)),
                 onClick = onNavigateToColorWalk,
                 modifier = Modifier.fillMaxWidth()
@@ -189,8 +217,11 @@ private fun SurveyEntryCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // 【v1.6.13】ColorOS 17 液态按压反馈
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
         modifier = modifier
+            .fluidPressScale(interactionSource)
             .border(
                 width = 1.dp,
                 color = themedBorderLight(),
@@ -198,7 +229,8 @@ private fun SurveyEntryCard(
             ),
         colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
         shape = RoundedCornerShape(16.dp),
-        onClick = onClick
+        onClick = onClick,
+        interactionSource = interactionSource
     ) {
         Row(
             modifier = Modifier
@@ -252,13 +284,17 @@ private fun FeatureCard(
     description: String,
     gradient: List<Color>,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    statusText: String? = null
 ) {
+    // 【v1.6.13】ColorOS 17 液态按压反馈
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
-        modifier = modifier,
+        modifier = modifier.fluidPressScale(interactionSource),
         colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
         shape = RoundedCornerShape(16.dp),
-        onClick = onClick
+        onClick = onClick,
+        interactionSource = interactionSource
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -298,6 +334,24 @@ private fun FeatureCard(
                     color = themedTextSecondary(),
                     maxLines = 2
                 )
+                // 【v1.6.13】今日状态提示（如 ColorWalk 今日进度）
+                if (statusText != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(5.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = statusText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
 
             Icon(
@@ -316,11 +370,14 @@ private fun CheckInEntryCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // 【v1.6.13】ColorOS 17 液态按压反馈
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
-        modifier = modifier,
+        modifier = modifier.fluidPressScale(interactionSource),
         colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
         shape = RoundedCornerShape(16.dp),
-        onClick = onClick
+        onClick = onClick,
+        interactionSource = interactionSource
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -416,6 +473,130 @@ private fun ComingSoonCard(modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodySmall,
                 color = themedTextSecondary().copy(alpha = 0.6f)
             )
+        }
+    }
+}
+
+/**
+ * 【v1.6.13】时段问候头部（ColorOS 17 个性化体验）
+ * 按当前时间展示 早上好 / 下午好 / 晚上好 + 今日主题问句
+ */
+@Composable
+private fun GreetingHeader(modifier: Modifier = Modifier) {
+    val hour = remember { LocalTime.now().hour }
+    val greetingRes = when (hour) {
+        in 5..11 -> R.string.greeting_morning
+        in 12..17 -> R.string.greeting_afternoon
+        else -> R.string.greeting_evening
+    }
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(greetingRes),
+            style = MaterialTheme.typography.bodyMedium,
+            color = themedTextSecondary()
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = stringResource(R.string.discover_greeting_today),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = themedTextPrimary()
+        )
+    }
+}
+
+/**
+ * 【v1.6.13】今日灵感卡
+ * 以日期为种子每日轮换一张精选预设，展示真实样片，点击进入参数详情。
+ */
+@Composable
+private fun DailyInspirationCard(
+    onPresetClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val repository = remember { PresetRepository.getInstance(context) }
+    val allPresets by repository.getAllPresets().collectAsState(initial = emptyList())
+
+    // 以 epochDay 为种子确定性轮换，当天内保持稳定
+    val dailyPreset = remember(allPresets) {
+        if (allPresets.isEmpty()) {
+            null
+        } else {
+            val seed = LocalDate.now().toEpochDay().toInt()
+            val candidates = allPresets.filter { !it.id.isNullOrEmpty() }
+            candidates.ifEmpty { null }?.let { it[(seed % it.size).coerceAtLeast(0)] }
+        }
+    } ?: return
+
+    val interactionSource = remember { MutableInteractionSource() }
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .fluidPressScale(interactionSource),
+        colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
+        shape = RoundedCornerShape(16.dp),
+        onClick = { dailyPreset.id?.let(onPresetClick) },
+        interactionSource = interactionSource
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 真实样片（复用 PresetImage 统一加载管线）
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            ) {
+                PresetImage(
+                    preset = dailyPreset,
+                    modifier = Modifier.fillMaxSize(),
+                    showDownloadIndicator = false
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.discover_daily_title),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = PresetI18n.getLocalizedPresetName(dailyPreset.name),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = themedTextPrimary(),
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = stringResource(R.string.discover_daily_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = themedTextSecondary(),
+                    maxLines = 1
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // CTA：查看参数
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.discover_daily_cta),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Icon(
+                    Icons.Default.ChevronRight, null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
     }
 }

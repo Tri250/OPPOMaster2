@@ -37,6 +37,8 @@ import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -58,6 +60,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -78,20 +81,26 @@ import com.silas.omaster.ui.animation.AnimationSpecs
 import com.silas.omaster.ui.animation.ListItemFadeInSpec
 import com.silas.omaster.ui.animation.ListItemPlacementSpec
 import com.silas.omaster.ui.animation.calculateStaggerDelay
+import com.silas.omaster.ui.animation.fluidPressScale
 import com.silas.omaster.ui.components.HomeTabRow
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.components.PresetCard
+import com.silas.omaster.ui.components.PresetImage
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.theme.AppDesign
 import com.silas.omaster.ui.theme.themedBackground
 import com.silas.omaster.ui.theme.themedTextSecondary
 import com.silas.omaster.util.DeviceDetector
+import com.silas.omaster.util.PresetI18n
 import com.silas.omaster.util.hapticClickable
 import com.silas.omaster.util.perform
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -304,7 +313,12 @@ fun HomeScreen(
                             onScrollStateChanged = onScrollStateChanged,
                             showLoadingTip = false,
                             onRefresh = { onComplete -> viewModel.refresh(onComplete) },
-                            usePremiumGlass = usePremiumGlass
+                            usePremiumGlass = usePremiumGlass,
+                            // 【v1.6.13】空状态一键跳转全部预设
+                            onEmptyBrowseAll = {
+                                scope.launch { pagerState.scrollToPage(0) }
+                                viewModel.selectTab(0)
+                            }
                         )
                         2 -> PresetGrid(
                             presets = customPresets,
@@ -319,7 +333,9 @@ fun HomeScreen(
                             showTopHint = false,
                             onScrollStateChanged = onScrollStateChanged,
                             onRefresh = { onComplete -> viewModel.refresh(onComplete) },
-                            usePremiumGlass = usePremiumGlass
+                            usePremiumGlass = usePremiumGlass,
+                            // 【v1.6.13】空状态直达创建入口
+                            onEmptyCreate = onNavigateToCreate
                         )
                     }
                 }
@@ -395,8 +411,11 @@ fun HomeScreen(
 
 // ═══════════════════════════════════════════════════════════
 // FD-04 / MU-21 v1.6：机型感知精选 Banner（可横滑）
-// 标题动态组合：设备展示名 + 特色标签（哈苏/2亿像素/理光/徕卡）
-// 缩略图使用主色方块 + 预设名，避免加载网络图片
+// 【v1.6.13】ColorOS 17 重构：
+//   1) 标题/标签全面多语言化（修复原硬编码中文）
+//   2) 特色标签随 DeviceProfile 能力动态生成（哈苏专业影像 / 2亿像素）
+//   3) 缩略图从主色方块占位升级为真实预设样片（复用 PresetImage 缓存管线）
+//   4) Chip 按压液态缩放反馈（fluidPressScale）
 // ═══════════════════════════════════════════════════════════
 
 @Composable
@@ -409,9 +428,9 @@ private fun DeviceRecommendedBanner(
     modifier: Modifier = Modifier
 ) {
     val chipTexts = buildList {
-        if (hasProImaging) add("专业影像")
-        if (is200Mp) add("2亿像素")
-        add("精选预设")
+        if (hasProImaging) add(stringResource(R.string.banner_chip_pro_imaging))
+        if (is200Mp) add(stringResource(R.string.banner_chip_200mp))
+        add(stringResource(R.string.banner_chip_curated))
     }
 
     Card(
@@ -422,22 +441,17 @@ private fun DeviceRecommendedBanner(
         )
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            // 标题行
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = "为 $deviceDisplayName 精选",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+            // 标题行（i18n：为 Find X10 精选 / Curated for Find X10）
+            Text(
+                text = stringResource(R.string.banner_recommended_for, deviceDisplayName),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary
+            )
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // 特色标签
+            // 特色标签（随设备能力动态生成）
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
@@ -458,7 +472,7 @@ private fun DeviceRecommendedBanner(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // 横滑预设列表
+            // 横滑预设列表（真实样片）
             androidx.compose.foundation.lazy.LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -478,48 +492,45 @@ private fun RecommendedPresetChip(
     preset: MasterPreset,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    val interactionSource = remember { MutableInteractionSource() }
     Surface(
+        onClick = onClick,
+        interactionSource = interactionSource,
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
-        onClick = onClick
+        modifier = Modifier.fluidPressScale(interactionSource, pressedScale = 0.94f)
     ) {
         Column(
             modifier = Modifier
                 .width(96.dp)
                 .padding(8.dp)
         ) {
-            // 主色方块占位（避免加载远程图）
+            // 【v1.6.13】真实样片（assets / 本地缓存 / 网络下载统一走 PresetImage 管线）
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .background(
-                        preset.deviceProfile?.let {
-                            if (it.isProImaging) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                            else MaterialTheme.colorScheme.secondaryContainer
-                        } ?: MaterialTheme.colorScheme.secondaryContainer,
-                        RoundedCornerShape(8.dp)
-                    ),
-                contentAlignment = Alignment.Center
+                    .clip(RoundedCornerShape(8.dp))
             ) {
-                Text(
-                    text = preset.name.take(1),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                PresetImage(
+                    preset = preset,
+                    modifier = Modifier.fillMaxSize(),
+                    showDownloadIndicator = false
                 )
             }
 
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = preset.name,
+                text = PresetI18n.getLocalizedPresetName(preset.name),
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
                 color = MaterialTheme.colorScheme.onSurface
             )
             preset.filter?.let { filter ->
                 Text(
-                    text = filter,
+                    text = PresetI18n.getLocalizedFilter(context, filter),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -540,7 +551,9 @@ private fun PresetGrid(
     showLoadingTip: Boolean = true,
     showTopHint: Boolean = false,
     onRefresh: (onComplete: (HomeViewModel.RefreshResult) -> Unit) -> Unit = {},
-    usePremiumGlass: Boolean = true
+    usePremiumGlass: Boolean = true,
+    onEmptyBrowseAll: (() -> Unit)? = null,
+    onEmptyCreate: (() -> Unit)? = null
 ) {
     val listState = rememberLazyStaggeredGridState()
     val haptic = LocalHapticFeedback.current
@@ -552,12 +565,16 @@ private fun PresetGrid(
         refreshing = true
         onRefresh { result ->
             refreshing = false
-            // 显示刷新结果 Toast
+            // 【v1.6.13】刷新结果 Toast 多语言化（修复硬编码中文）
             val message = when (result) {
-                is HomeViewModel.RefreshResult.Success -> "成功更新 ${result.count} 个订阅"
-                is HomeViewModel.RefreshResult.PartialUpdate -> "成功更新 ${result.updated} 个，${result.upToDate} 个已是最新"
-                is HomeViewModel.RefreshResult.UpToDate -> "所有订阅均已是最新"
-                is HomeViewModel.RefreshResult.Failed -> "更新失败，请检查网络"
+                is HomeViewModel.RefreshResult.Success ->
+                    context.getString(R.string.refresh_success, result.count)
+                is HomeViewModel.RefreshResult.PartialUpdate ->
+                    context.getString(R.string.refresh_partial, result.updated, result.upToDate)
+                is HomeViewModel.RefreshResult.UpToDate ->
+                    context.getString(R.string.refresh_up_to_date)
+                is HomeViewModel.RefreshResult.Failed ->
+                    context.getString(R.string.refresh_failed)
                 is HomeViewModel.RefreshResult.NoSubscriptions -> ""
             }
             if (message.isNotEmpty()) {
@@ -639,7 +656,12 @@ private fun PresetGrid(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 item {
-                    EmptyState(tabIndex)
+                    // 【v1.6.13】可操作空状态：收藏页一键跳全部预设 / 我的页直达创建
+                    EmptyState(
+                        tabIndex = tabIndex,
+                        onBrowseAll = onEmptyBrowseAll,
+                        onCreatePreset = onEmptyCreate
+                    )
                 }
             }
         } else {
@@ -794,8 +816,17 @@ private fun PresetCardItem(
     }
 }
 
+/**
+ * 【v1.6.13】空状态可操作化：
+ * - 图标 + 主/副文案 + 动作按钮（收藏页 → 跳全部预设；我的页 → 直达创建）
+ * - 全部预设页给下拉刷新提示（对齐 ColorOS 17 "给用户下一步" 的引导原则）
+ */
 @Composable
-private fun EmptyState(tabIndex: Int) {
+private fun EmptyState(
+    tabIndex: Int,
+    onBrowseAll: (() -> Unit)? = null,
+    onCreatePreset: (() -> Unit)? = null
+) {
     val message = when (tabIndex) {
         0 -> stringResource(R.string.empty_no_presets)
         1 -> stringResource(R.string.empty_no_favorites)
@@ -810,11 +841,35 @@ private fun EmptyState(tabIndex: Int) {
         else -> ""
     }
 
+    val icon = when (tabIndex) {
+        1 -> Icons.Outlined.FavoriteBorder
+        2 -> Icons.Default.Add
+        else -> Icons.Default.CloudOff
+    }
+
+    val onAction = when (tabIndex) {
+        1 -> onBrowseAll
+        2 -> onCreatePreset
+        else -> null
+    }
+    val actionText = when (tabIndex) {
+        1 -> onBrowseAll?.let { stringResource(R.string.home_empty_action_browse) }
+        2 -> onCreatePreset?.let { stringResource(R.string.home_empty_action_create) }
+        else -> null
+    }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                modifier = Modifier.size(48.dp)
+            )
+            androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.titleMedium,
@@ -828,6 +883,27 @@ private fun EmptyState(tabIndex: Int) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                     textAlign = TextAlign.Center
+                )
+            }
+            if (actionText != null && onAction != null) {
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onAction,
+                    shape = AppDesign.ButtonShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text(text = actionText, style = MaterialTheme.typography.labelLarge)
+                }
+            }
+            if (tabIndex == 0) {
+                androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.home_empty_hint_pull_refresh),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = themedTextSecondary().copy(alpha = 0.6f)
                 )
             }
         }
@@ -998,125 +1074,124 @@ private fun SearchFilterBar(
 
             Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
 
-            // ③ 排序下拉 + 快捷 Toggle + 计数
+            // ③ 排序下拉 + 快捷 Toggle
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // 排序小下拉按钮
-                    Box {
-                        TextButton(
-                            onClick = { sortExpanded = true },
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Sort,
-                                contentDescription = stringResource(R.string.sort_default),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = when (sortOrder) {
-                                    HomeViewModel.SortOrder.DEFAULT -> stringResource(R.string.sort_default)
-                                    HomeViewModel.SortOrder.NEW_FIRST -> stringResource(R.string.sort_new_first)
-                                    HomeViewModel.SortOrder.FAVORITE_FIRST -> stringResource(R.string.sort_favorite_first)
-                                    HomeViewModel.SortOrder.NAME_A_Z -> stringResource(R.string.sort_name_a_z)
+                // 排序小下拉按钮
+                Box {
+                    TextButton(
+                        onClick = { sortExpanded = true },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Sort,
+                            contentDescription = stringResource(R.string.sort_default),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = when (sortOrder) {
+                                HomeViewModel.SortOrder.DEFAULT -> stringResource(R.string.sort_default)
+                                HomeViewModel.SortOrder.NEW_FIRST -> stringResource(R.string.sort_new_first)
+                                HomeViewModel.SortOrder.FAVORITE_FIRST -> stringResource(R.string.sort_favorite_first)
+                                HomeViewModel.SortOrder.NAME_A_Z -> stringResource(R.string.sort_name_a_z)
+                            },
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = sortExpanded,
+                        onDismissRequest = { sortExpanded = false }
+                    ) {
+                        HomeViewModel.SortOrder.values().forEach { order ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        when (order) {
+                                            HomeViewModel.SortOrder.DEFAULT -> stringResource(R.string.sort_default)
+                                            HomeViewModel.SortOrder.NEW_FIRST -> stringResource(R.string.sort_new_first)
+                                            HomeViewModel.SortOrder.FAVORITE_FIRST -> stringResource(R.string.sort_favorite_first)
+                                            HomeViewModel.SortOrder.NAME_A_Z -> stringResource(R.string.sort_name_a_z)
+                                        }
+                                    )
                                 },
-                                style = MaterialTheme.typography.labelMedium
+                                onClick = {
+                                    haptic.perform(HapticFeedbackType.SegmentTick)
+                                    onSortChange(order)
+                                    sortExpanded = false
+                                }
                             )
                         }
-                        DropdownMenu(
-                            expanded = sortExpanded,
-                            onDismissRequest = { sortExpanded = false }
-                        ) {
-                            HomeViewModel.SortOrder.values().forEach { order ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            when (order) {
-                                                HomeViewModel.SortOrder.DEFAULT -> stringResource(R.string.sort_default)
-                                                HomeViewModel.SortOrder.NEW_FIRST -> stringResource(R.string.sort_new_first)
-                                                HomeViewModel.SortOrder.FAVORITE_FIRST -> stringResource(R.string.sort_favorite_first)
-                                                HomeViewModel.SortOrder.NAME_A_Z -> stringResource(R.string.sort_name_a_z)
-                                            }
-                                        )
-                                    },
-                                    onClick = {
-                                        haptic.perform(HapticFeedbackType.SegmentTick)
-                                        onSortChange(order)
-                                        sortExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    // 收藏 Toggle（Pill）
-                    val favChipColor = if (showFavoritesOnly) MaterialTheme.colorScheme.primary else themedCardBackground()
-                    val favTextColor = if (showFavoritesOnly) Color.White else themedTextPrimary()
-                    Surface(
-                        shape = AppDesign.PillShape,
-                        color = favChipColor,
-                        shadowElevation = 0.dp,
-                        modifier = Modifier.clickable {
-                            haptic.perform(HapticFeedbackType.ToggleOn)
-                            onToggleFavoritesOnly()
-                        }
-                    ) {
-                        Text(
-                            text = stringResource(R.string.filter_favorites_only),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = favTextColor
-                        )
-                    }
-
-                    // 新预设 Toggle
-                    val newChipColor = if (showNewOnly) MaterialTheme.colorScheme.primary else themedCardBackground()
-                    val newTextColor = if (showNewOnly) Color.White else themedTextPrimary()
-                    Surface(
-                        shape = AppDesign.PillShape,
-                        color = newChipColor,
-                        shadowElevation = 0.dp,
-                        modifier = Modifier.clickable {
-                            haptic.perform(HapticFeedbackType.ToggleOn)
-                            onToggleNewOnly()
-                        }
-                    ) {
-                        Text(
-                            text = stringResource(R.string.filter_new_only),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = newTextColor
-                        )
                     }
                 }
 
-                // 右侧：数量 + 一键清除
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val hasActiveFilter = searchQuery.isNotBlank() || selectedFilters.isNotEmpty() ||
-                            showFavoritesOnly || showNewOnly || sortOrder != HomeViewModel.SortOrder.DEFAULT
+                // 收藏 Toggle（Pill）
+                val favChipColor = if (showFavoritesOnly) MaterialTheme.colorScheme.primary else themedCardBackground()
+                val favTextColor = if (showFavoritesOnly) Color.White else themedTextPrimary()
+                Surface(
+                    shape = AppDesign.PillShape,
+                    color = favChipColor,
+                    shadowElevation = 0.dp,
+                    modifier = Modifier.clickable {
+                        haptic.perform(HapticFeedbackType.ToggleOn)
+                        onToggleFavoritesOnly()
+                    }
+                ) {
                     Text(
-                        text = context.getString(R.string.filter_result_count, presetCount),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = themedTextSecondary()
+                        text = stringResource(R.string.filter_favorites_only),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = favTextColor
                     )
-                    if (hasActiveFilter) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        TextButton(
-                            onClick = { onClearAll() },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                        ) {
-                            Text(
-                                stringResource(R.string.clear_all),
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
+                }
+
+                // 新预设 Toggle
+                val newChipColor = if (showNewOnly) MaterialTheme.colorScheme.primary else themedCardBackground()
+                val newTextColor = if (showNewOnly) Color.White else themedTextPrimary()
+                Surface(
+                    shape = AppDesign.PillShape,
+                    color = newChipColor,
+                    shadowElevation = 0.dp,
+                    modifier = Modifier.clickable {
+                        haptic.perform(HapticFeedbackType.ToggleOn)
+                        onToggleNewOnly()
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.filter_new_only),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = newTextColor
+                    )
+                }
+            }
+
+            // ④ 【v1.6.13】计数 + 一键清除独立成行（修复小屏与排序/Toggle 挤压溢出）
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val hasActiveFilter = searchQuery.isNotBlank() || selectedFilters.isNotEmpty() ||
+                        showFavoritesOnly || showNewOnly || sortOrder != HomeViewModel.SortOrder.DEFAULT
+                Text(
+                    text = context.getString(R.string.filter_result_count, presetCount),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = themedTextSecondary()
+                )
+                if (hasActiveFilter) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(
+                        onClick = { onClearAll() },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
+                        Text(
+                            stringResource(R.string.clear_all),
+                            style = MaterialTheme.typography.labelSmall
+                        )
                     }
                 }
             }

@@ -742,6 +742,10 @@ fun MainApp(
                     onNavigateToSurvey = {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(SURVEY_URL)))
                     },
+                    // 【v1.6.13】今日灵感卡 → 预设参数详情
+                    onNavigateToPresetDetail = { presetId ->
+                        navController.navigate(Screen.Detail(presetId))
+                    },
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp
                     }

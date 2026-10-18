@@ -832,4 +832,38 @@
     <string name="paste_import_error_too_large">Content exceeds the size limit</string>
     <string name="paste_import_error_no_valid">No valid preset found (a non-empty \"name\" field is required)</string>
     <string name="paste_import_error_too_many">Preset count exceeds the per-import limit</string>
+
+    <!-- ══════════ v1.6.13 Find X10 / ColorOS 17 experience ══════════ -->
+    <!-- Home · Device-recommended banner -->
+    <string name="banner_recommended_for">Curated for %1$s</string>
+    <string name="banner_chip_pro_imaging">Hasselblad Pro Imaging</string>
+    <string name="banner_chip_200mp">200MP</string>
+    <string name="banner_chip_curated">Curated</string>
+    <string name="device_badge_hasselblad">Hasselblad</string>
+    <string name="device_badge_200mp">200MP</string>
+    <!-- Home · Empty states -->
+    <string name="home_empty_action_browse">Browse all presets</string>
+    <string name="home_empty_action_create">Create a preset</string>
+    <string name="home_empty_hint_pull_refresh">Try pulling down to refresh</string>
+    <!-- Home · Pull-to-refresh results -->
+    <string name="refresh_success">Updated %1$d subscriptions</string>
+    <string name="refresh_partial">Updated %1$d, %2$d already up to date</string>
+    <string name="refresh_up_to_date">All subscriptions are up to date</string>
+    <string name="refresh_failed">Update failed, check your network</string>
+    <!-- Discover -->
+    <string name="greeting_morning">Good morning</string>
+    <string name="greeting_afternoon">Good afternoon</string>
+    <string name="greeting_evening">Good evening</string>
+    <string name="discover_greeting_today">What are you shooting today?</string>
+    <string name="discover_daily_title">Daily Inspiration</string>
+    <string name="discover_daily_desc">A fresh curated sample every day</string>
+    <string name="discover_daily_cta">View params</string>
+    <string name="colorwalk_today_done">Today\'s color collected — see you tomorrow</string>
+    <!-- About -->
+    <string name="about_device_title">Your device</string>
+    <string name="about_device_coloros_ready">ColorOS 17 ready</string>
+    <string name="feature_device_title">Device-tailored presets</string>
+    <string name="feature_device_desc">Exclusive Hasselblad 200MP presets tuned for the Find X10 series</string>
+    <string name="about_check_update_hint">Tap the version to check for updates</string>
+    <string name="update_action_later">Later</string>
 </resources>

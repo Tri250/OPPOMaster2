@@ -631,4 +631,38 @@
     <string name="paste_import_error_too_large">サイズ上限を超えています</string>
     <string name="paste_import_error_no_valid">有効なプリセットが見つかりません（空でない name フィールドが必要です）</string>
     <string name="paste_import_error_too_many">1回のインポート上限件数を超えています</string>
+
+    <!-- ══════════ v1.6.13 Find X10 / ColorOS 17 体験深化 ══════════ -->
+    <!-- ホーム · 機種別セレクトバナー -->
+    <string name="banner_recommended_for">%1$s におすすめ</string>
+    <string name="banner_chip_pro_imaging">ハッセルブラド専用</string>
+    <string name="banner_chip_200mp">2億ピクセル</string>
+    <string name="banner_chip_curated">セレクト</string>
+    <string name="device_badge_hasselblad">ハッセル</string>
+    <string name="device_badge_200mp">2億</string>
+    <!-- ホーム · 空状態 -->
+    <string name="home_empty_action_browse">すべてのプリセットを見る</string>
+    <string name="home_empty_action_create">プリセットを作成</string>
+    <string name="home_empty_hint_pull_refresh">下にスワイプして更新</string>
+    <!-- ホーム · 引っ張って更新の結果 -->
+    <string name="refresh_success">%1$d 件の購読を更新しました</string>
+    <string name="refresh_partial">%1$d 件更新、%2$d 件は最新です</string>
+    <string name="refresh_up_to_date">すべての購読は最新です</string>
+    <string name="refresh_failed">更新に失敗しました。ネットワークを確認してください</string>
+    <!-- 発見 -->
+    <string name="greeting_morning">おはようございます</string>
+    <string name="greeting_afternoon">こんにちは</string>
+    <string name="greeting_evening">こんばんは</string>
+    <string name="discover_greeting_today">今日は何を撮りますか？</string>
+    <string name="discover_daily_title">今日のインスピレーション</string>
+    <string name="discover_daily_desc">毎日変わるおすすめサンプル</string>
+    <string name="discover_daily_cta">パラメータを見る</string>
+    <string name="colorwalk_today_done">今日のカラーは取得済みです</string>
+    <!-- About -->
+    <string name="about_device_title">現在のデバイス</string>
+    <string name="about_device_coloros_ready">ColorOS 17 対応</string>
+    <string name="feature_device_title">機種専用プリセット</string>
+    <string name="feature_device_desc">Find X10 シリーズ（ハッセルブラド2億ピクセル）向けの専用プリセット</string>
+    <string name="about_check_update_hint">バージョンをタップして更新を確認</string>
+    <string name="update_action_later">後で</string>
 </resources>

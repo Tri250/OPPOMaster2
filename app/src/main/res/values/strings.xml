@@ -881,4 +881,38 @@
     <string name="paste_import_error_too_large">内容超出大小限制</string>
     <string name="paste_import_error_no_valid">未找到有效预设（需至少包含非空 name 字段）</string>
     <string name="paste_import_error_too_many">预设数量超出单次导入上限</string>
+
+    <!-- ══════════ v1.6.13 Find X10 / ColorOS 17 体验深化 ══════════ -->
+    <!-- 主页 · 机型精选 Banner -->
+    <string name="banner_recommended_for">为 %1$s 精选</string>
+    <string name="banner_chip_pro_imaging">哈苏专业影像</string>
+    <string name="banner_chip_200mp">2亿像素</string>
+    <string name="banner_chip_curated">精选预设</string>
+    <string name="device_badge_hasselblad">哈苏</string>
+    <string name="device_badge_200mp">2亿</string>
+    <!-- 主页 · 空状态 -->
+    <string name="home_empty_action_browse">去看看全部预设</string>
+    <string name="home_empty_action_create">去创建预设</string>
+    <string name="home_empty_hint_pull_refresh">下拉刷新试试</string>
+    <!-- 主页 · 下拉刷新结果 -->
+    <string name="refresh_success">成功更新 %1$d 个订阅</string>
+    <string name="refresh_partial">成功更新 %1$d 个，%2$d 个已是最新</string>
+    <string name="refresh_up_to_date">所有订阅均已是最新</string>
+    <string name="refresh_failed">更新失败，请检查网络</string>
+    <!-- 发现页 -->
+    <string name="greeting_morning">早上好</string>
+    <string name="greeting_afternoon">下午好</string>
+    <string name="greeting_evening">晚上好</string>
+    <string name="discover_greeting_today">今天想拍点什么？</string>
+    <string name="discover_daily_title">今日灵感</string>
+    <string name="discover_daily_desc">每天为你换一张精选样片</string>
+    <string name="discover_daily_cta">查看参数</string>
+    <string name="colorwalk_today_done">今日色彩已收集，明天再来</string>
+    <!-- 关于页 -->
+    <string name="about_device_title">当前设备</string>
+    <string name="about_device_coloros_ready">ColorOS 17 适配</string>
+    <string name="feature_device_title">机型深度适配</string>
+    <string name="feature_device_desc">为 Find X10 系列（哈苏 2亿像素）提供专属预设与调校</string>
+    <string name="about_check_update_hint">点击版本号检查更新</string>
+    <string name="update_action_later">稍后</string>
 </resources>

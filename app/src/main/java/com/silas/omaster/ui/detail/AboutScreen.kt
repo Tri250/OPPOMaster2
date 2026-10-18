@@ -2,6 +2,7 @@ package com.silas.omaster.ui.detail
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,20 +37,26 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +74,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.R
+import com.silas.omaster.data.config.ConfigCenter
+import com.silas.omaster.data.local.UpdateChannel
+import com.silas.omaster.model.DeviceProfile
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.AppDesign
 import com.silas.omaster.ui.theme.CardBorderLight
@@ -75,9 +85,12 @@ import com.silas.omaster.ui.theme.themedCardBackground
 import com.silas.omaster.ui.theme.themedTextPrimary
 import com.silas.omaster.ui.theme.themedTextSecondary
 import com.silas.omaster.ui.theme.themedBorderLight
+import com.silas.omaster.util.DeviceDetector
+import com.silas.omaster.util.UpdateChecker
 import com.silas.omaster.util.VersionInfo
 import com.silas.omaster.util.perform
 import com.silas.omaster.util.rememberScrollHaptics
+import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileScreen(
@@ -110,6 +123,39 @@ fun ProfileScreen(
         onScrollStateChanged(isScrollingUp)
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // 【v1.6.13】版本号点击检查更新（ColorOS 17 直达式更新入口）
+    // ═══════════════════════════════════════════════════════════
+    val config = remember { ConfigCenter.getInstance(context) }
+    val updateChannel by config.updateChannelFlow.collectAsState()
+    val scope = rememberCoroutineScope()
+    var isCheckingUpdate by remember { mutableStateOf(false) }
+    var pendingUpdate by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
+
+    val checkForUpdate: () -> Unit = {
+        if (!isCheckingUpdate) {
+            scope.launch {
+                isCheckingUpdate = true
+                haptic.perform(HapticFeedbackType.TextHandleMove)
+                try {
+                    val result = UpdateChecker.checkUpdate(context, VersionInfo.VERSION_CODE, updateChannel)
+                    if (result != null && result.isNewer) {
+                        pendingUpdate = result
+                        haptic.perform(HapticFeedbackType.Confirm)
+                    } else if (result != null) {
+                        Toast.makeText(context, context.getString(R.string.version_is_latest), Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, context.getString(R.string.version_check_failed), Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, context.getString(R.string.version_check_failed), Toast.LENGTH_SHORT).show()
+                } finally {
+                    isCheckingUpdate = false
+                }
+            }
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -134,7 +180,16 @@ fun ProfileScreen(
                 .padding(AppDesign.ScreenPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            AppTitleSection(currentVersionName)
+            AppTitleSection(
+                currentVersionName = currentVersionName,
+                isCheckingUpdate = isCheckingUpdate,
+                onCheckUpdate = checkForUpdate
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 【v1.6.13】当前设备卡片（Find X10 机型感知）
+            DeviceCard(modifier = Modifier.fillMaxWidth())
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -168,10 +223,145 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(48.dp))
         }
     }
+
+    // 【v1.6.13】发现新版本 → 更新确认弹窗（稍后 / 更新）
+    pendingUpdate?.let { info ->
+        if (info.isNewer) {
+            AlertDialog(
+                onDismissRequest = { pendingUpdate = null },
+                title = {
+                    Text(text = stringResource(R.string.new_version_available))
+                },
+                text = {
+                    Column {
+                        Text(
+                            text = "v${info.versionName}",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (info.releaseNotes.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = info.releaseNotes,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = themedTextSecondary()
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        UpdateChecker.downloadAndInstall(context, info.downloadUrl, info.versionName)
+                        pendingUpdate = null
+                    }) {
+                        Text(stringResource(R.string.version_download_btn))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingUpdate = null }) {
+                        Text(stringResource(R.string.update_action_later))
+                    }
+                }
+            )
+        }
+    }
+}
+
+/**
+ * 【v1.6.13】当前设备卡片（Find X10 机型感知）
+ * 展示识别到的机型名称、ColorOS 17 适配徽章与硬件特性徽章（哈苏 / 2亿）。
+ */
+@Composable
+private fun DeviceCard(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val device = remember { DeviceDetector.getCurrentDevice(context) }
+    val displayName = device.displayNameZh.ifBlank { device.model }
+
+    Card(
+        modifier = modifier.border(
+            width = 1.dp,
+            color = themedBorderLight(),
+            shape = RoundedCornerShape(16.dp)
+        ),
+        colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Smartphone,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.about_device_title),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = themedTextSecondary().copy(alpha = 0.7f)
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = themedTextPrimary(),
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // 徽章行：ColorOS 17 适配 + 机型硬件特性
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    DeviceBadge(text = stringResource(R.string.about_device_coloros_ready))
+                    if (device.isProImaging) {
+                        DeviceBadge(text = stringResource(R.string.device_badge_hasselblad))
+                    }
+                    if (device.has200Mp) {
+                        DeviceBadge(text = stringResource(R.string.device_badge_200mp))
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
-private fun AppTitleSection(currentVersionName: String) {
+private fun DeviceBadge(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+private fun AppTitleSection(
+    currentVersionName: String,
+    isCheckingUpdate: Boolean = false,
+    onCheckUpdate: () -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -203,9 +393,11 @@ private fun AppTitleSection(currentVersionName: String) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 版本号标签
+        // 【v1.6.13】版本号标签：点击检查更新（检查中展示加载态）
         Box(
             modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .clickable(onClick = onCheckUpdate)
                 .border(
                     width = 1.dp,
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
@@ -215,15 +407,44 @@ private fun AppTitleSection(currentVersionName: String) {
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                     shape = RoundedCornerShape(20.dp)
                 )
-                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Version $currentVersionName",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Medium
-            )
+            if (isCheckingUpdate) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(12.dp),
+                        strokeWidth = 1.5.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = stringResource(R.string.checking),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            } else {
+                Text(
+                    text = "Version $currentVersionName",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // 点击提示（ColorOS 17 引导式文案）
+        Text(
+            text = stringResource(R.string.about_check_update_hint),
+            style = MaterialTheme.typography.labelSmall,
+            color = themedTextSecondary().copy(alpha = 0.5f)
+        )
     }
 }
 
@@ -244,6 +465,12 @@ private fun FeatureList() {
             icon = Icons.Default.DashboardCustomize,
             title = stringResource(R.string.feature_update_title),
             description = stringResource(R.string.feature_update_desc)
+        ),
+        // 【v1.6.13】机型深度适配项（Find X10 哈苏 2亿像素）
+        FeatureItem(
+            icon = Icons.Default.Smartphone,
+            title = stringResource(R.string.feature_device_title),
+            description = stringResource(R.string.feature_device_desc)
         )
     )
 
