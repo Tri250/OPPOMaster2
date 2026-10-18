@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
@@ -385,8 +386,11 @@ fun MainApp(
     var showMigrationDialog by remember { mutableStateOf(false) }
 
     // 【v1.6.12】消费侧边键快捷方式路由（Find X10 + ColorOS 17 长按图标直达）
+    // 【v1.6.13 编译修复】LocalActivity.current 是 @Composable 调用，必须在组合上下文中读取；
+    // v1.6.12 因将其写入 LaunchedEffect lambda 导致 :app:compileDebugKotlin FAILED
+    val activity = LocalActivity.current
     LaunchedEffect(Unit) {
-        val mainActivity = LocalActivity.current as? MainActivity ?: return@LaunchedEffect
+        val mainActivity = activity as? MainActivity ?: return@LaunchedEffect
         when (mainActivity.pendingShortcutAction) {
             com.silas.omaster.util.ShortcutRegistrar.ACTION_CREATE -> {
                 navController.navigate(Screen.PresetSelection)

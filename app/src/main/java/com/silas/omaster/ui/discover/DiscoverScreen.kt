@@ -95,8 +95,11 @@ fun DiscoverScreen(
     var showCheckInSheet by remember { mutableStateOf(false) }
     var sheetDetailDate by remember { mutableStateOf<LocalDate?>(null) }
 
-    val currentStreak = checkInManager.getCurrentStreak()
-    val todayRecord = remember { checkInManager.getTodayRecord() }
+    // 【v1.6.13 性能修复】连续打卡次数读取记忆化，避免每次重组同步读 SharedPreferences；
+    // 打卡面板关闭时 bump refreshKey 保证返回后数据最新
+    var streakRefreshKey by remember { mutableStateOf(0) }
+    val currentStreak = remember(streakRefreshKey) { checkInManager.getCurrentStreak() }
+    val todayRecord = remember(streakRefreshKey) { checkInManager.getTodayRecord() }
     // 【v1.6.13】ColorWalk 今日状态（从 Color Walk 返回后自动刷新）
     val todayCard by colorWalkManager.todayCardFlow.collectAsState()
     // 【v1.6.13】当前设备能力（Find X10 → 哈苏专业影像 / 2亿像素）
@@ -200,6 +203,7 @@ fun DiscoverScreen(
         val sheetState = rememberModalBottomSheetState()
         ModalBottomSheet(
             onDismissRequest = {
+                streakRefreshKey++
                 showCheckInSheet = false
                 sheetDetailDate = null
             },
