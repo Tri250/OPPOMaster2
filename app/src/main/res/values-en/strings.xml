@@ -863,6 +863,7 @@
     <string name="discover_daily_desc">A fresh curated sample every day</string>
     <string name="discover_daily_cta">View params</string>
     <string name="colorwalk_today_done">Today\'s color collected — see you tomorrow</string>
+    <string name="photoframe_status_hasselblad">Hasselblad imaging · tuned for Find X10</string>
     <!-- About -->
     <string name="about_device_title">Your device</string>
     <string name="about_device_coloros_ready">ColorOS 17 ready</string>

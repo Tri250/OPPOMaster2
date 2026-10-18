@@ -36,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +49,7 @@ import com.silas.omaster.data.local.CheckInRecord
 import com.silas.omaster.ui.theme.themedCardBackground
 import com.silas.omaster.ui.theme.themedTextPrimary
 import com.silas.omaster.ui.theme.themedTextSecondary
+import com.silas.omaster.util.perform
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -187,12 +190,17 @@ private fun CalendarHeader(
     onNextMonth: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // 【v1.6.13】翻月触感反馈
+    val haptic = LocalHapticFeedback.current
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onPreviousMonth) {
+        IconButton(onClick = {
+            haptic.perform(HapticFeedbackType.TextHandleMove)
+            onPreviousMonth()
+        }) {
             Icon(
                 imageVector = Icons.Default.ChevronLeft,
                 contentDescription = stringResource(R.string.checkin_calendar_previous_month),
@@ -207,7 +215,10 @@ private fun CalendarHeader(
             fontWeight = FontWeight.Bold
         )
 
-        IconButton(onClick = onNextMonth) {
+        IconButton(onClick = {
+            haptic.perform(HapticFeedbackType.TextHandleMove)
+            onNextMonth()
+        }) {
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = stringResource(R.string.checkin_calendar_next_month),

@@ -662,6 +662,7 @@
     <string name="discover_daily_desc">毎日変わるおすすめサンプル</string>
     <string name="discover_daily_cta">パラメータを見る</string>
     <string name="colorwalk_today_done">今日のカラーは取得済みです</string>
+    <string name="photoframe_status_hasselblad">ハッセルブラード撮影 · Find X10 専用チューニング</string>
     <!-- About -->
     <string name="about_device_title">現在のデバイス</string>
     <string name="about_device_coloros_ready">ColorOS 17 対応</string>

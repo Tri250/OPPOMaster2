@@ -912,6 +912,7 @@
     <string name="discover_daily_desc">每天为你换一张精选样片</string>
     <string name="discover_daily_cta">查看参数</string>
     <string name="colorwalk_today_done">今日色彩已收集，明天再来</string>
+    <string name="photoframe_status_hasselblad">哈苏专业影像 · Find X10 专属调校</string>
     <!-- 关于页 -->
     <string name="about_device_title">当前设备</string>
     <string name="about_device_coloros_ready">ColorOS 17 适配</string>

@@ -69,9 +69,12 @@ import com.silas.omaster.ui.theme.themedCardBackground
 import com.silas.omaster.ui.theme.themedTextPrimary
 import com.silas.omaster.ui.theme.themedTextSecondary
 import com.silas.omaster.ui.theme.themedBorderLight
+import com.silas.omaster.util.DeviceDetector
 import com.silas.omaster.util.PresetI18n
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,6 +99,8 @@ fun DiscoverScreen(
     val todayRecord = remember { checkInManager.getTodayRecord() }
     // 【v1.6.13】ColorWalk 今日状态（从 Color Walk 返回后自动刷新）
     val todayCard by colorWalkManager.todayCardFlow.collectAsState()
+    // 【v1.6.13】当前设备能力（Find X10 → 哈苏专业影像 / 2亿像素）
+    val deviceDp = remember { DeviceDetector.getCurrentDevice(context) }
 
     LaunchedEffect(scrollState.value) {
         val currentValue = scrollState.value
@@ -156,6 +161,12 @@ fun DiscoverScreen(
                 icon = Icons.Default.CameraAlt,
                 title = stringResource(R.string.photoframe_card_title),
                 description = stringResource(R.string.photoframe_card_desc),
+                // 【v1.6.13】Find X10 专属：哈苏专业影像能力状态行（其他机型不显示）
+                statusText = if (deviceDp.isProImaging) {
+                    stringResource(R.string.photoframe_status_hasselblad)
+                } else {
+                    null
+                },
                 gradient = listOf(Color(0xFF4FACFE), Color(0xFF00F2FE)),
                 onClick = onNavigateToPhotoFrame,
                 modifier = Modifier.fillMaxWidth()
@@ -479,17 +490,27 @@ private fun ComingSoonCard(modifier: Modifier = Modifier) {
 
 /**
  * 【v1.6.13】时段问候头部（ColorOS 17 个性化体验）
- * 按当前时间展示 早上好 / 下午好 / 晚上好 + 今日主题问句
+ * 本地化日期 + 早上好 / 下午好 / 晚上好 + 今日主题问句
+ * 日期格式由系统 Locale 决定（对齐 ColorOS 桌面智能信息服务）
  */
 @Composable
 private fun GreetingHeader(modifier: Modifier = Modifier) {
     val hour = remember { LocalTime.now().hour }
+    val todayText = remember {
+        LocalDate.now().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+    }
     val greetingRes = when (hour) {
         in 5..11 -> R.string.greeting_morning
         in 12..17 -> R.string.greeting_afternoon
         else -> R.string.greeting_evening
     }
     Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = todayText,
+            style = MaterialTheme.typography.labelMedium,
+            color = themedTextSecondary().copy(alpha = 0.7f)
+        )
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = stringResource(greetingRes),
             style = MaterialTheme.typography.bodyMedium,
@@ -508,6 +529,8 @@ private fun GreetingHeader(modifier: Modifier = Modifier) {
 /**
  * 【v1.6.13】今日灵感卡
  * 以日期为种子每日轮换一张精选预设，展示真实样片，点击进入参数详情。
+ * 【v1.6.13】机型感知：优先从当前设备专属预设（deviceProfile / deviceSupport 匹配）中轮换，
+ * 例如 Find X10 用户优先看到哈苏 / 2亿像素专属灵感；无专属时回退全部预设。
  */
 @Composable
 private fun DailyInspirationCard(
@@ -517,6 +540,7 @@ private fun DailyInspirationCard(
     val context = LocalContext.current
     val repository = remember { PresetRepository.getInstance(context) }
     val allPresets by repository.getAllPresets().collectAsState(initial = emptyList())
+    val deviceProfile = remember { DeviceDetector.getCurrentDevice(context) }
 
     // 以 epochDay 为种子确定性轮换，当天内保持稳定
     val dailyPreset = remember(allPresets) {
@@ -525,7 +549,18 @@ private fun DailyInspirationCard(
         } else {
             val seed = LocalDate.now().toEpochDay().toInt()
             val candidates = allPresets.filter { !it.id.isNullOrEmpty() }
-            candidates.ifEmpty { null }?.let { it[(seed % it.size).coerceAtLeast(0)] }
+            if (candidates.isEmpty()) {
+                null
+            } else {
+                // 机型专属池：预设声明的 deviceKey 与当前设备匹配
+                val deviceKey = deviceProfile.deviceKey
+                val deviceSpecific = candidates.filter { p ->
+                    p.deviceProfile?.deviceKey == deviceKey ||
+                            p.deviceSupport?.contains(deviceKey) == true
+                }
+                val pool = deviceSpecific.ifEmpty { candidates }
+                pool[(seed % pool.size).coerceAtLeast(0)]
+            }
         }
     } ?: return
 
