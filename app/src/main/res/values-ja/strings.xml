@@ -644,6 +644,10 @@
     <string name="home_empty_action_browse">すべてのプリセットを見る</string>
     <string name="home_empty_action_create">プリセットを作成</string>
     <string name="home_empty_hint_pull_refresh">下にスワイプして更新</string>
+    <!-- ホーム · 検索/フィルター結果なし -->
+    <string name="home_no_match_title">一致するプリセットが見つかりません</string>
+    <string name="home_no_match_desc">キーワードを変えるか、フィルターを解除してお試しください</string>
+    <string name="home_no_match_action">フィルターをクリア</string>
     <!-- ホーム · 引っ張って更新の結果 -->
     <string name="refresh_success">%1$d 件の購読を更新しました</string>
     <string name="refresh_partial">%1$d 件更新、%2$d 件は最新です</string>

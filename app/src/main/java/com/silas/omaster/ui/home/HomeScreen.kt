@@ -299,7 +299,15 @@ fun HomeScreen(
                             },
                             onScrollStateChanged = onScrollStateChanged,
                             onRefresh = { onComplete -> viewModel.refresh(onComplete) },
-                            usePremiumGlass = usePremiumGlass
+                            usePremiumGlass = usePremiumGlass,
+                            // 【v1.6.13】搜索/筛选无结果 → 一键清除筛选
+                            onClearFilters = if (searchQuery.isNotBlank() || selectedFilters.isNotEmpty() ||
+                                showFavoritesOnly || showNewOnly
+                            ) {
+                                { viewModel.clearAllFilters() }
+                            } else {
+                                null
+                            }
                         )
                         1 -> PresetGrid(
                             presets = favorites,
@@ -344,11 +352,14 @@ fun HomeScreen(
 
         // 悬浮添加按钮（只在"我的"Tab显示）
         if (selectedTab == 2) {
+            // 【v1.6.13】ColorOS 17 液态按压反馈
+            val fabInteraction = remember { MutableInteractionSource() }
             FloatingActionButton(
                 onClick = {
                     haptic.perform(HapticFeedbackType.Confirm)
                     onNavigateToCreate()
                 },
+                interactionSource = fabInteraction,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = AppDesign.ButtonShape,
@@ -360,6 +371,7 @@ fun HomeScreen(
                     .align(Alignment.BottomEnd)
                     .padding(end = AppDesign.ScreenPadding, bottom = 100.dp)
                     .size(AppDesign.FABSize + 8.dp)
+                    .fluidPressScale(fabInteraction, pressedScale = 0.92f)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -553,7 +565,9 @@ private fun PresetGrid(
     onRefresh: (onComplete: (HomeViewModel.RefreshResult) -> Unit) -> Unit = {},
     usePremiumGlass: Boolean = true,
     onEmptyBrowseAll: (() -> Unit)? = null,
-    onEmptyCreate: (() -> Unit)? = null
+    onEmptyCreate: (() -> Unit)? = null,
+    // 【v1.6.13】搜索/筛选无结果时非空：空状态切换为"未找到匹配"并给出一键清除筛选
+    onClearFilters: (() -> Unit)? = null
 ) {
     val listState = rememberLazyStaggeredGridState()
     val haptic = LocalHapticFeedback.current
@@ -656,11 +670,12 @@ private fun PresetGrid(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 item {
-                    // 【v1.6.13】可操作空状态：收藏页一键跳全部预设 / 我的页直达创建
+                    // 【v1.6.13】可操作空状态：收藏页一键跳全部预设 / 我的页直达创建 / 搜索无结果一键清除筛选
                     EmptyState(
                         tabIndex = tabIndex,
                         onBrowseAll = onEmptyBrowseAll,
-                        onCreatePreset = onEmptyCreate
+                        onCreatePreset = onEmptyCreate,
+                        onClearFilters = onClearFilters
                     )
                 }
             }
@@ -820,41 +835,51 @@ private fun PresetCardItem(
  * 【v1.6.13】空状态可操作化：
  * - 图标 + 主/副文案 + 动作按钮（收藏页 → 跳全部预设；我的页 → 直达创建）
  * - 全部预设页给下拉刷新提示（对齐 ColorOS 17 "给用户下一步" 的引导原则）
+ * - 搜索/筛选无结果：切换为"未找到匹配"文案 + 一键清除筛选（修复误导性的"暂无预设"）
  */
 @Composable
 private fun EmptyState(
     tabIndex: Int,
     onBrowseAll: (() -> Unit)? = null,
-    onCreatePreset: (() -> Unit)? = null
+    onCreatePreset: (() -> Unit)? = null,
+    onClearFilters: (() -> Unit)? = null
 ) {
-    val message = when (tabIndex) {
-        0 -> stringResource(R.string.empty_no_presets)
-        1 -> stringResource(R.string.empty_no_favorites)
-        2 -> stringResource(R.string.empty_no_custom)
+    // 搜索/筛选无结果态（优先级高于"暂无预设"空态）
+    val isNoMatch = tabIndex == 0 && onClearFilters != null
+
+    val message = when {
+        isNoMatch -> stringResource(R.string.home_no_match_title)
+        tabIndex == 0 -> stringResource(R.string.empty_no_presets)
+        tabIndex == 1 -> stringResource(R.string.empty_no_favorites)
+        tabIndex == 2 -> stringResource(R.string.empty_no_custom)
         else -> stringResource(R.string.empty_no_data)
     }
 
-    val subMessage = when (tabIndex) {
-        0 -> stringResource(R.string.empty_hint_add_presets)
-        1 -> stringResource(R.string.empty_hint_favorite)
-        2 -> stringResource(R.string.empty_hint_create)
+    val subMessage = when {
+        isNoMatch -> stringResource(R.string.home_no_match_desc)
+        tabIndex == 0 -> stringResource(R.string.empty_hint_add_presets)
+        tabIndex == 1 -> stringResource(R.string.empty_hint_favorite)
+        tabIndex == 2 -> stringResource(R.string.empty_hint_create)
         else -> ""
     }
 
-    val icon = when (tabIndex) {
-        1 -> Icons.Outlined.FavoriteBorder
-        2 -> Icons.Default.Add
+    val icon = when {
+        isNoMatch -> Icons.Default.Search
+        tabIndex == 1 -> Icons.Outlined.FavoriteBorder
+        tabIndex == 2 -> Icons.Default.Add
         else -> Icons.Default.CloudOff
     }
 
-    val onAction = when (tabIndex) {
-        1 -> onBrowseAll
-        2 -> onCreatePreset
+    val onAction = when {
+        isNoMatch -> onClearFilters
+        tabIndex == 1 -> onBrowseAll
+        tabIndex == 2 -> onCreatePreset
         else -> null
     }
-    val actionText = when (tabIndex) {
-        1 -> onBrowseAll?.let { stringResource(R.string.home_empty_action_browse) }
-        2 -> onCreatePreset?.let { stringResource(R.string.home_empty_action_create) }
+    val actionText = when {
+        isNoMatch -> stringResource(R.string.home_no_match_action)
+        tabIndex == 1 -> onBrowseAll?.let { stringResource(R.string.home_empty_action_browse) }
+        tabIndex == 2 -> onCreatePreset?.let { stringResource(R.string.home_empty_action_create) }
         else -> null
     }
 
@@ -898,7 +923,7 @@ private fun EmptyState(
                     Text(text = actionText, style = MaterialTheme.typography.labelLarge)
                 }
             }
-            if (tabIndex == 0) {
+            if (tabIndex == 0 && !isNoMatch) {
                 androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.home_empty_hint_pull_refresh),
@@ -1053,12 +1078,16 @@ private fun SearchFilterBar(
                     ) {
                         items(availableFilters) { label ->
                             val selected = label in selectedFilters
+                            // 【v1.6.13】ColorOS 17 液态按压反馈
+                            val chipInteraction = remember { MutableInteractionSource() }
                             FilterChip(
                                 selected = selected,
                                 onClick = {
                                     haptic.perform(HapticFeedbackType.ToggleOn)
                                     onToggleFilter(label)
                                 },
+                                modifier = Modifier.fluidPressScale(chipInteraction, pressedScale = 0.92f),
+                                interactionSource = chipInteraction,
                                 label = { Text(label) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
@@ -1131,14 +1160,18 @@ private fun SearchFilterBar(
                 // 收藏 Toggle（Pill）
                 val favChipColor = if (showFavoritesOnly) MaterialTheme.colorScheme.primary else themedCardBackground()
                 val favTextColor = if (showFavoritesOnly) Color.White else themedTextPrimary()
+                // 【v1.6.13】ColorOS 17 液态按压反馈
+                val favInteraction = remember { MutableInteractionSource() }
                 Surface(
+                    onClick = {
+                        haptic.perform(HapticFeedbackType.ToggleOn)
+                        onToggleFavoritesOnly()
+                    },
+                    interactionSource = favInteraction,
                     shape = AppDesign.PillShape,
                     color = favChipColor,
                     shadowElevation = 0.dp,
-                    modifier = Modifier.clickable {
-                        haptic.perform(HapticFeedbackType.ToggleOn)
-                        onToggleFavoritesOnly()
-                    }
+                    modifier = Modifier.fluidPressScale(favInteraction, pressedScale = 0.92f)
                 ) {
                     Text(
                         text = stringResource(R.string.filter_favorites_only),
@@ -1151,14 +1184,17 @@ private fun SearchFilterBar(
                 // 新预设 Toggle
                 val newChipColor = if (showNewOnly) MaterialTheme.colorScheme.primary else themedCardBackground()
                 val newTextColor = if (showNewOnly) Color.White else themedTextPrimary()
+                val newInteraction = remember { MutableInteractionSource() }
                 Surface(
+                    onClick = {
+                        haptic.perform(HapticFeedbackType.ToggleOn)
+                        onToggleNewOnly()
+                    },
+                    interactionSource = newInteraction,
                     shape = AppDesign.PillShape,
                     color = newChipColor,
                     shadowElevation = 0.dp,
-                    modifier = Modifier.clickable {
-                        haptic.perform(HapticFeedbackType.ToggleOn)
-                        onToggleNewOnly()
-                    }
+                    modifier = Modifier.fluidPressScale(newInteraction, pressedScale = 0.92f)
                 ) {
                     Text(
                         text = stringResource(R.string.filter_new_only),

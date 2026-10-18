@@ -845,6 +845,10 @@
     <string name="home_empty_action_browse">Browse all presets</string>
     <string name="home_empty_action_create">Create a preset</string>
     <string name="home_empty_hint_pull_refresh">Try pulling down to refresh</string>
+    <!-- Home · No search/filter results -->
+    <string name="home_no_match_title">No matching presets</string>
+    <string name="home_no_match_desc">Try a different keyword, or clear the filters</string>
+    <string name="home_no_match_action">Clear filters</string>
     <!-- Home · Pull-to-refresh results -->
     <string name="refresh_success">Updated %1$d subscriptions</string>
     <string name="refresh_partial">Updated %1$d, %2$d already up to date</string>

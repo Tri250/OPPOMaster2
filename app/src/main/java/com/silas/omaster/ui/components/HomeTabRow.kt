@@ -2,6 +2,7 @@ package com.silas.omaster.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import com.silas.omaster.ui.animation.fluidPressScale
 import com.silas.omaster.ui.theme.AppDesign
 import com.silas.omaster.ui.theme.themedBackground
 import com.silas.omaster.ui.theme.themedCardBackground
@@ -56,16 +59,23 @@ fun HomeTabRow(
                 label = "tabText"
             )
 
+            // 【v1.6.13】ColorOS 17 液态按压反馈：切换 Tab 跟手缩放、松手回弹
+            val interactionSource = remember { MutableInteractionSource() }
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .height(AppDesign.TabBarHeight)
+                    .fluidPressScale(interactionSource, pressedScale = 0.95f)
                     .clip(AppDesign.PillShape)
                     .background(backgroundColor)
-                    .clickable {
-                        haptic.perform(HapticFeedbackType.ToggleOn)
-                        onTabSelected(index)
-                    },
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = {
+                            haptic.perform(HapticFeedbackType.ToggleOn)
+                            onTabSelected(index)
+                        }
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
