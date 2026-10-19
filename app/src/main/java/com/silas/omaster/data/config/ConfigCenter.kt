@@ -353,6 +353,13 @@ class ConfigCenter private constructor(context: Context) {
 
     val subscriptionsFlow: StateFlow<List<Subscription>> = subscriptionConfig.subscriptionsFlow
 
+    // 【v1.6.14 发现 2.0】订阅更新雷达（每源未读新增预设数）
+    val unseenCountsFlow: StateFlow<Map<String, Int>> = subscriptionConfig.unseenCountsFlow
+
+    fun markSubscriptionSeen(url: String) {
+        subscriptionConfig.markSubscriptionSeen(url)
+    }
+
     fun addSubscription(url: String, name: String = "", author: String = "", build: Int = 1) {
         subscriptionConfig.addSubscription(url, name, author, build)
     }

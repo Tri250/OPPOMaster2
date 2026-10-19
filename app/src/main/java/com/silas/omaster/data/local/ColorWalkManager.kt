@@ -204,6 +204,30 @@ class ColorWalkManager(context: Context) {
         }
     }
 
+    /**
+     * 【v1.6.14 发现 2.0】连续抽取天数（基于抽取历史日期连续性计算）
+     * 今天已抽则含今天；未抽则从昨天回溯（今天抽了仍可能延续 streak）
+     */
+    fun getCurrentStreak(): Int {
+        val dates = loadHistory()
+            .map { runCatching { LocalDate.parse(it.date, DATE_FORMATTER) }.getOrNull() }
+            .filterNotNull()
+            .distinct()
+            .sortedDescending()
+        if (dates.isEmpty()) return 0
+        val today = LocalDate.now()
+        if (dates[0] < today.minusDays(1)) return 0
+
+        var streak = 0
+        var cursor = if (dates[0] == today) today else today.minusDays(1)
+        val dateSet = dates.toSet()
+        while (dateSet.contains(cursor)) {
+            streak++
+            cursor = cursor.minusDays(1)
+        }
+        return streak
+    }
+
     private fun loadTodayCard(): ColorCard? {
         val savedDate = prefs.getString(KEY_TODAY_DATE, null)
         val today = LocalDate.now().format(DATE_FORMATTER)

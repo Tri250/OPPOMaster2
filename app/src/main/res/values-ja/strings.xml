@@ -682,4 +682,49 @@
     <string name="about_qq_title">QQグループに参加</string>
     <string name="about_qq_group_number">グループ番号: %1$s</string>
     <string name="about_qq_open_failed">QQグループを開けませんでした。QQがインストールされているか確認してください</string>
+    <!-- ═══════════════ 発見 2.0 · サブスク更新レーダー ═══════════════ -->
+    <string name="radar_card_title">サブスク更新レーダー</string>
+    <string name="radar_card_summary">%1$d 件のソースが更新、新規プリセット %2$d 件</string>
+    <string name="radar_detail_title">更新詳細</string>
+    <string name="radar_detail_desc">各ソースの新規プリセット一覧</string>
+    <string name="radar_new_count">新規 %1$d 件</string>
+    <string name="radar_source_total">全 %1$d 件</string>
+    <string name="radar_unnamed_source">名称未設定ソース</string>
+    <string name="radar_mark_all_seen">すべて既読にする</string>
+    <string name="radar_manage_subscriptions">ソースを管理</string>
+    <string name="radar_go">表示</string>
+    <!-- ═══════════════ 発見 2.0 · カラームード ═══════════════ -->
+    <string name="mood_card_title">カラームード</string>
+    <string name="mood_card_desc">今日の気分を記録して、あなただけの色彩インスピレーションを</string>
+    <string name="mood_picker_title">今日の気分は？</string>
+    <string name="mood_picker_desc">今の気分を選んでください</string>
+    <string name="mood_joyful">うれしい</string>
+    <string name="mood_calm">穏やか</string>
+    <string name="mood_melancholy">メランコリー</string>
+    <string name="mood_romantic">ロマンチック</string>
+    <string name="mood_energetic">元気</string>
+    <string name="mood_serene">静けさ</string>
+    <string name="mood_calendar_entry">ムードカレンダー</string>
+    <string name="mood_calendar_title">今月のムード</string>
+    <string name="mood_inspiration_title">%1$s のインスピレーション</string>
+    <string name="mood_inspiration_desc">今の気分に合わせてプリセットを選びました</string>
+    <string name="mood_inspiration_empty">マッチするプリセットがありません。別の気分で試してください</string>
+    <string name="mood_inspiration_cta">プリセットを見る</string>
+    <!-- ═══════════════ 発見 2.0 · スナップノート ═══════════════ -->
+    <string name="snapnote_card_title">スナップノート</string>
+    <string name="snapnote_card_desc">好きな色を撮って、カラーノートにしよう</string>
+    <string name="snapnote_card_count">ノート %1$d 件</string>
+    <string name="snapnote_pick_title">新しいスナップノート</string>
+    <string name="snapnote_pick_desc">ギャラリーから画像を選んで抽出</string>
+    <string name="snapnote_take_photo">写真を撮る</string>
+    <string name="snapnote_pick_image">ギャラリーから選ぶ</string>
+    <string name="snapnote_view_gallery">すべてのノートを見る</string>
+    <string name="snapnote_gallery_title">ノートを見返す</string>
+    <string name="snapnote_gallery_desc">記録した色彩の瞬間を振り返る</string>
+    <string name="snapnote_gallery_empty">まだノートがありません。撮ってみましょう</string>
+    <!-- ═══════════════ 発見 2.0 · インスピレーションお気に入り ═══════════════ -->
+    <string name="discover_daily_favorites">保存</string>
+    <string name="discover_daily_shuffle">シャッフル</string>
+    <string name="discover_favorites_title">お気に入り</string>
+    <string name="discover_favorites_empty">保存されたインスピレーションはまだありません</string>
 </resources>

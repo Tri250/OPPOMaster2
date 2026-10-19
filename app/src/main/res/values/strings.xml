@@ -925,4 +925,49 @@
     <string name="about_qq_title">加入QQ群</string>
     <string name="about_qq_group_number">群号: %1$s</string>
     <string name="about_qq_open_failed">无法打开QQ群，请检查是否安装QQ</string>
+    <!-- ═══════════════ 发现 2.0 · 订阅更新雷达 ═══════════════ -->
+    <string name="radar_card_title">订阅更新雷达</string>
+    <string name="radar_card_summary">%1$d 个订阅源有更新，共 %2$d 条新预设</string>
+    <string name="radar_detail_title">更新明细</string>
+    <string name="radar_detail_desc">各订阅源的新增预设明细</string>
+    <string name="radar_new_count">新增 %1$d 条</string>
+    <string name="radar_source_total">共 %1$d 条</string>
+    <string name="radar_unnamed_source">未命名订阅源</string>
+    <string name="radar_mark_all_seen">全部标记已读</string>
+    <string name="radar_manage_subscriptions">管理订阅源</string>
+    <string name="radar_go">查看</string>
+    <!-- ═══════════════ 发现 2.0 · 色彩心情 ═══════════════ -->
+    <string name="mood_card_title">色彩心情</string>
+    <string name="mood_card_desc">记录今天的心情，获得专属色彩灵感</string>
+    <string name="mood_picker_title">今天心情如何？</string>
+    <string name="mood_picker_desc">选择此刻的心情</string>
+    <string name="mood_joyful">愉悦</string>
+    <string name="mood_calm">平静</string>
+    <string name="mood_melancholy">低落</string>
+    <string name="mood_romantic">浪漫</string>
+    <string name="mood_energetic">元气</string>
+    <string name="mood_serene">安宁</string>
+    <string name="mood_calendar_entry">心情月历</string>
+    <string name="mood_calendar_title">本月心情</string>
+    <string name="mood_inspiration_title">%1$s 心情灵感</string>
+    <string name="mood_inspiration_desc">根据你的心情，为你挑选了这些色调预设</string>
+    <string name="mood_inspiration_empty">暂时没有匹配的预设，换个心情试试</string>
+    <string name="mood_inspiration_cta">查看灵感预设</string>
+    <!-- ═══════════════ 发现 2.0 · 快拍笔记 ═══════════════ -->
+    <string name="snapnote_card_title">快拍笔记</string>
+    <string name="snapnote_card_desc">拍下喜欢的颜色，自动生成色彩笔记</string>
+    <string name="snapnote_card_count">%1$d 条笔记</string>
+    <string name="snapnote_pick_title">新的快拍笔记</string>
+    <string name="snapnote_pick_desc">从相册选择一张图片取色</string>
+    <string name="snapnote_take_photo">拍摄照片</string>
+    <string name="snapnote_pick_image">从相册选择</string>
+    <string name="snapnote_view_gallery">查看全部笔记</string>
+    <string name="snapnote_gallery_title">笔记回顾</string>
+    <string name="snapnote_gallery_desc">回顾你记录的色彩瞬间</string>
+    <string name="snapnote_gallery_empty">还没有笔记，拍一张试试</string>
+    <!-- ═══════════════ 发现 2.0 · 灵感流收藏 ═══════════════ -->
+    <string name="discover_daily_favorites">收藏</string>
+    <string name="discover_daily_shuffle">换一批</string>
+    <string name="discover_favorites_title">我的收藏</string>
+    <string name="discover_favorites_empty">还没有收藏的灵感，去发现喜欢的色调吧</string>
 </resources>

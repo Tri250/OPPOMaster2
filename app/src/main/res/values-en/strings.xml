@@ -883,4 +883,49 @@
     <string name="about_qq_title">Join QQ Group</string>
     <string name="about_qq_group_number">Group: %1$s</string>
     <string name="about_qq_open_failed">Couldn\'t open QQ group. Check that QQ is installed</string>
+    <!-- ═══════════════ Discover 2.0 · Subscription radar ═══════════════ -->
+    <string name="radar_card_title">Subscription Radar</string>
+    <string name="radar_card_summary">%1$d sources updated, %2$d new presets</string>
+    <string name="radar_detail_title">Update details</string>
+    <string name="radar_detail_desc">New presets from each subscription source</string>
+    <string name="radar_new_count">+%1$d new</string>
+    <string name="radar_source_total">%1$d presets</string>
+    <string name="radar_unnamed_source">Unnamed source</string>
+    <string name="radar_mark_all_seen">Mark all as read</string>
+    <string name="radar_manage_subscriptions">Manage sources</string>
+    <string name="radar_go">View</string>
+    <!-- ═══════════════ Discover 2.0 · Color Mood ═══════════════ -->
+    <string name="mood_card_title">Color Mood</string>
+    <string name="mood_card_desc">Log today\'s mood and get tailored color inspiration</string>
+    <string name="mood_picker_title">How do you feel today?</string>
+    <string name="mood_picker_desc">Pick your current mood</string>
+    <string name="mood_joyful">Joyful</string>
+    <string name="mood_calm">Calm</string>
+    <string name="mood_melancholy">Melancholy</string>
+    <string name="mood_romantic">Romantic</string>
+    <string name="mood_energetic">Energetic</string>
+    <string name="mood_serene">Serene</string>
+    <string name="mood_calendar_entry">Mood calendar</string>
+    <string name="mood_calendar_title">This month\'s moods</string>
+    <string name="mood_inspiration_title">%1$s inspiration</string>
+    <string name="mood_inspiration_desc">Presets picked for your current mood</string>
+    <string name="mood_inspiration_empty">No matching presets yet — try another mood</string>
+    <string name="mood_inspiration_cta">View mood presets</string>
+    <!-- ═══════════════ Discover 2.0 · Snap Note ═══════════════ -->
+    <string name="snapnote_card_title">Snap Note</string>
+    <string name="snapnote_card_desc">Snap a color you love and turn it into a note</string>
+    <string name="snapnote_card_count">%1$d notes</string>
+    <string name="snapnote_pick_title">New snap note</string>
+    <string name="snapnote_pick_desc">Pick an image to extract colors</string>
+    <string name="snapnote_take_photo">Take photo</string>
+    <string name="snapnote_pick_image">From gallery</string>
+    <string name="snapnote_view_gallery">View all notes</string>
+    <string name="snapnote_gallery_title">Note gallery</string>
+    <string name="snapnote_gallery_desc">Revisit the colors you\'ve captured</string>
+    <string name="snapnote_gallery_empty">No notes yet — snap one to get started</string>
+    <!-- ═══════════════ Discover 2.0 · Inspiration favorites ═══════════════ -->
+    <string name="discover_daily_favorites">Save</string>
+    <string name="discover_daily_shuffle">Shuffle</string>
+    <string name="discover_favorites_title">My favorites</string>
+    <string name="discover_favorites_empty">No saved inspirations yet — go discover tones you love</string>
 </resources>

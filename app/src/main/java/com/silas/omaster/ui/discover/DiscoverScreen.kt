@@ -3,12 +3,14 @@ package com.silas.omaster.ui.discover
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,7 +31,9 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,8 +63,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.silas.omaster.R
+import com.silas.omaster.data.config.ConfigCenter
 import com.silas.omaster.data.local.CheckInManager
 import com.silas.omaster.data.local.ColorWalkManager
+import com.silas.omaster.data.local.InspirationManager
+import com.silas.omaster.data.local.MoodManager
+import com.silas.omaster.data.local.SnapNoteManager
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.animation.fluidPressScale
@@ -71,6 +82,7 @@ import com.silas.omaster.ui.theme.themedTextSecondary
 import com.silas.omaster.ui.theme.themedBorderLight
 import com.silas.omaster.util.DeviceDetector
 import com.silas.omaster.util.PresetI18n
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -83,11 +95,18 @@ fun DiscoverScreen(
     onNavigateToPhotoFrame: () -> Unit = {},
     onNavigateToSurvey: () -> Unit = {},
     onNavigateToPresetDetail: (String) -> Unit = {},
+    onNavigateToSubscription: () -> Unit = {},
     onScrollStateChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val checkInManager = remember { CheckInManager(context) }
     val colorWalkManager = remember { ColorWalkManager(context) }
+    // 【v1.6.14 发现 2.0】色彩心情 / 快拍笔记 / 灵感收藏 / 订阅雷达
+    val repository = remember { PresetRepository.getInstance(context) }
+    val moodManager = remember { MoodManager(context) }
+    val snapNoteManager = remember { SnapNoteManager(context) }
+    val inspirationManager = remember { InspirationManager(context) }
+    val configCenter = remember { ConfigCenter.getInstance(context) }
     val scrollState = rememberScrollState()
     var previousScrollValue by remember { mutableIntStateOf(0) }
     var isScrollingUp by remember { mutableStateOf(true) }
@@ -139,8 +158,21 @@ fun DiscoverScreen(
 
             Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
 
-            // 【v1.6.13】今日灵感卡：每日轮换一张精选预设，点击查看参数
-            DailyInspirationCard(onPresetClick = onNavigateToPresetDetail)
+            // 【v1.6.14 发现 2.0】今日灵感流：每日 5 张精选（机型感知），横滑 + 换一批 + 收藏
+            InspirationFlowCard(
+                repository = repository,
+                inspirationManager = inspirationManager,
+                onPresetClick = onNavigateToPresetDetail
+            )
+
+            Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
+
+            // 【v1.6.14 发现 2.0】订阅更新雷达：有新增预设时展示（无更新自动隐藏）
+            PresetRadarCard(
+                config = configCenter,
+                onNavigateToSubscription = onNavigateToSubscription,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
 
@@ -184,11 +216,24 @@ fun DiscoverScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(AppDesign.SectionSpacing))
+            Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
 
-            ComingSoonCard(modifier = Modifier.fillMaxWidth())
+            // 【v1.6.14 发现 2.0】ColorMood 色彩心情（原占位模块转正）
+            MoodColorCard(
+                moodManager = moodManager,
+                onPresetClick = onNavigateToPresetDetail,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
+
+            // 【v1.6.14 发现 2.0】AiSnapNote 快拍笔记（原占位模块转正）
+            SnapNoteCard(
+                snapNoteManager = snapNoteManager,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(AppDesign.SectionSpacing))
 
             SurveyEntryCard(
                 onClick = onNavigateToSurvey,
@@ -449,49 +494,6 @@ private fun CheckInEntryCard(
     }
 }
 
-@Composable
-private fun ComingSoonCard(modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Outlined.Star, null,
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                stringResource(R.string.discover_more_coming),
-                style = MaterialTheme.typography.bodyMedium,
-                color = themedTextSecondary(),
-                fontWeight = FontWeight.Medium
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                stringResource(R.string.discover_stay_tuned),
-                style = MaterialTheme.typography.bodySmall,
-                color = themedTextSecondary().copy(alpha = 0.6f)
-            )
-        }
-    }
-}
-
 /**
  * 【v1.6.13】时段问候头部（ColorOS 17 个性化体验）
  * 本地化日期 + 早上好 / 下午好 / 晚上好 + 今日主题问句
@@ -531,111 +533,304 @@ private fun GreetingHeader(modifier: Modifier = Modifier) {
 }
 
 /**
- * 【v1.6.13】今日灵感卡
- * 以日期为种子每日轮换一张精选预设，展示真实样片，点击进入参数详情。
- * 【v1.6.13】机型感知：优先从当前设备专属预设（deviceProfile / deviceSupport 匹配）中轮换，
- * 例如 Find X10 用户优先看到哈苏 / 2亿像素专属灵感；无专属时回退全部预设。
+ * 【v1.6.14 发现 2.0】今日灵感流
+ * 每日从精选池（机型专属优先）确定性抽取 5 张灵感，横滑浏览；
+ * 支持"换一批"重新洗牌、单卡收藏、收藏夹回顾，点击进入参数详情。
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DailyInspirationCard(
+private fun InspirationFlowCard(
+    repository: PresetRepository,
+    inspirationManager: InspirationManager,
     onPresetClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val repository = remember { PresetRepository.getInstance(context) }
     val allPresets by repository.getAllPresets().collectAsState(initial = emptyList())
     val deviceProfile = remember { DeviceDetector.getCurrentDevice(context) }
+    val favorites by inspirationManager.favoritesFlow.collectAsState()
 
-    // 以 epochDay 为种子确定性轮换，当天内保持稳定
-    val dailyPreset = remember(allPresets) {
+    // 会话内"换一批"nonce：递增重洗（跨日自动回落到每日固定流）
+    var shuffleNonce by remember { mutableIntStateOf(0) }
+    var showFavoritesSheet by remember { mutableStateOf(false) }
+
+    val dailyPresets = remember(allPresets, shuffleNonce) {
         if (allPresets.isEmpty()) {
-            null
+            emptyList()
         } else {
-            val seed = LocalDate.now().toEpochDay().toInt()
             val candidates = allPresets.filter { !it.id.isNullOrEmpty() }
             if (candidates.isEmpty()) {
-                null
+                emptyList()
             } else {
-                // 机型专属池：预设声明的 deviceKey 与当前设备匹配
                 val deviceKey = deviceProfile.deviceKey
                 val deviceSpecific = candidates.filter { p ->
                     p.deviceProfile?.deviceKey == deviceKey ||
                             p.deviceSupport?.contains(deviceKey) == true
                 }
                 val pool = deviceSpecific.ifEmpty { candidates }
-                pool[(seed % pool.size).coerceAtLeast(0)]
+                val seedBase = LocalDate.now().toEpochDay().toInt() + shuffleNonce * 7919
+                pool.shuffled(java.util.Random(seedBase.toLong())).take(FLOW_SIZE)
             }
         }
-    } ?: return
+    }
 
-    val interactionSource = remember { MutableInteractionSource() }
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .fluidPressScale(interactionSource),
-        colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
-        shape = RoundedCornerShape(16.dp),
-        onClick = { dailyPreset.id?.let(onPresetClick) },
-        interactionSource = interactionSource
-    ) {
+    if (dailyPresets.isEmpty()) return
+    val pagerState = rememberPagerState(pageCount = { dailyPresets.size })
+    val scope = rememberCoroutineScope()
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        // 头部：标题 + 换一批 + 收藏夹
         Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 真实样片（复用 PresetImage 统一加载管线）
-            Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(12.dp))
-            ) {
-                PresetImage(
-                    preset = dailyPreset,
-                    modifier = Modifier.fillMaxSize(),
-                    showDownloadIndicator = false
-                )
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.discover_daily_title),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = PresetI18n.getLocalizedPresetName(dailyPreset.name),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = themedTextPrimary(),
-                    maxLines = 1
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = stringResource(R.string.discover_daily_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = themedTextSecondary(),
-                    maxLines = 1
-                )
-            }
-
+            Text(
+                text = stringResource(R.string.discover_daily_title),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "${pagerState.currentPage + 1}/${dailyPresets.size}",
+                style = MaterialTheme.typography.labelSmall,
+                color = themedTextSecondary().copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            FlowActionButton(
+                icon = Icons.Default.Refresh,
+                text = stringResource(R.string.discover_daily_shuffle),
+                onClick = {
+                    shuffleNonce++
+                    scope.launch { pagerState.animateScrollToPage(0) }
+                }
+            )
             Spacer(modifier = Modifier.width(8.dp))
+            FlowActionButton(
+                icon = Icons.Default.Star,
+                text = stringResource(R.string.discover_daily_favorites),
+                onClick = { showFavoritesSheet = true }
+            )
+        }
 
-            // CTA：查看参数
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.discover_daily_cta),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Icon(
-                    Icons.Default.ChevronRight, null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
+        Spacer(modifier = Modifier.height(10.dp))
+
+        HorizontalPager(
+            state = pagerState,
+            pageSpacing = 10.dp
+        ) { page ->
+            val preset = dailyPresets[page]
+            val presetId = preset.id ?: return@HorizontalPager
+            val isFav = favorites.any { it.presetId == presetId }
+            val favInteraction = remember { MutableInteractionSource() }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fluidPressScale(remember { MutableInteractionSource() }),
+                colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
+                shape = RoundedCornerShape(16.dp),
+                onClick = { onPresetClick(presetId) },
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    ) {
+                        PresetImage(
+                            preset = preset,
+                            modifier = Modifier.fillMaxSize(),
+                            showDownloadIndicator = false
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = PresetI18n.getLocalizedPresetName(preset.name),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = themedTextPrimary(),
+                            maxLines = 1
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(R.string.discover_daily_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = themedTextSecondary(),
+                            maxLines = 1
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // 收藏按钮（阻止点击穿透到卡片）
+                    Icon(
+                        imageVector = if (isFav) Icons.Default.Star else Icons.Default.StarBorder,
+                        contentDescription = null,
+                        tint = if (isFav) Color(0xFFFFB300) else themedTextSecondary().copy(alpha = 0.5f),
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable(
+                                interactionSource = favInteraction,
+                                indication = null
+                            ) {
+                                inspirationManager.toggleFavorite(presetId)
+                            }
+                    )
+                }
+            }
+        }
+
+        // 页点指示
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            repeat(dailyPresets.size) { index ->
+                Box(
+                    modifier = Modifier
+                        .size(if (index == pagerState.currentPage) 6.dp else 4.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (index == pagerState.currentPage) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                themedTextSecondary().copy(alpha = 0.25f)
+                            }
+                        )
                 )
             }
         }
     }
+
+    if (showFavoritesSheet) {
+        val sheetState = rememberModalBottomSheetState()
+        ModalBottomSheet(
+            onDismissRequest = { showFavoritesSheet = false },
+            sheetState = sheetState
+        ) {
+            InspirationFavoritesSheet(
+                inspirationManager = inspirationManager,
+                allPresets = allPresets,
+                onPresetClick = { presetId ->
+                    showFavoritesSheet = false
+                    onPresetClick(presetId)
+                }
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
 }
+
+@Composable
+private fun FlowActionButton(
+    icon: ImageVector,
+    text: String,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+            .fluidPressScale(interactionSource, pressedScale = 0.94f)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        Icon(
+            icon, null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(13.dp)
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+/** 灵感收藏夹：横滑列表，点击直达详情 */
+@Composable
+private fun InspirationFavoritesSheet(
+    inspirationManager: InspirationManager,
+    allPresets: List<MasterPreset>,
+    onPresetClick: (String) -> Unit
+) {
+    val favorites by inspirationManager.favoritesFlow.collectAsState()
+    val favoritePresets = remember(favorites, allPresets) {
+        favorites.mapNotNull { fav -> allPresets.firstOrNull { it.id == fav.presetId } }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.discover_favorites_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = themedTextPrimary()
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+
+        if (favoritePresets.isEmpty()) {
+            Text(
+                text = stringResource(R.string.discover_favorites_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = themedTextSecondary(),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                favoritePresets.forEach { preset ->
+                    Column(
+                        modifier = Modifier
+                            .width(120.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .border(1.dp, themedBorderLight(), RoundedCornerShape(14.dp))
+                            .clickable { preset.id?.let(onPresetClick) },
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        PresetImage(
+                            preset = preset,
+                            modifier = Modifier.fillMaxWidth().aspectRatio(3f / 4f),
+                            showDownloadIndicator = false
+                        )
+                        Text(
+                            text = PresetI18n.getLocalizedPresetName(preset.name),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = themedTextPrimary(),
+                            maxLines = 1,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+private const val FLOW_SIZE = 5

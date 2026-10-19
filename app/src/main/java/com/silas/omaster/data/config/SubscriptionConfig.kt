@@ -25,6 +25,10 @@ internal class SubscriptionConfig(private val context: Context) {
     private val _subscriptionsFlow = MutableStateFlow<List<Subscription>>(emptyList())
     val subscriptionsFlow: StateFlow<List<Subscription>> = _subscriptionsFlow.asStateFlow()
 
+    // 【v1.6.14 发现 2.0】订阅更新雷达：每源自上次"标记已读"后的新增预设数
+    private val _unseenCountsFlow = MutableStateFlow<Map<String, Int>>(loadUnseenCounts())
+    val unseenCountsFlow: StateFlow<Map<String, Int>> = _unseenCountsFlow.asStateFlow()
+
     companion object {
         const val DEFAULT_PRESET_URL = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/oppo.json"
         const val REALME_PRESET_URL = "https://cdn.jsdelivr.net/gh/fengyec2/OMaster-Community@main/presets/v2/realme.json"
@@ -45,6 +49,9 @@ internal class SubscriptionConfig(private val context: Context) {
          */
         private const val KEY_DEFAULT_SEED_VERSION = "default_seed_version"
         private const val DEFAULT_SEED_VERSION = 3
+
+        // 【v1.6.14 发现 2.0】订阅雷达未读新增计数（url → count）
+        private const val KEY_UNSEEN_COUNTS = "unseen_counts"
     }
 
     init {
@@ -236,6 +243,8 @@ internal class SubscriptionConfig(private val context: Context) {
     fun removeSubscription(url: String) {
         _subscriptionsFlow.value = _subscriptionsFlow.value.filterNot { it.url == url }
         saveSubscriptions()
+        // 【v1.6.14 发现 2.0】同步清理雷达计数
+        removeUnseenCount(url)
         val fileName = getFileNameForUrl(url)
         File(context.filesDir, fileName).delete()
     }
@@ -269,6 +278,17 @@ internal class SubscriptionConfig(private val context: Context) {
         author: String? = null,
         build: Int? = null
     ) {
+        // 【v1.6.14 发现 2.0】刷新雷达：预设数增量计入未读
+        // （旧值为 0 且从未标记已读时视为初始基准，不把首次拉取算作"新增"）
+        val oldCount = _subscriptionsFlow.value.firstOrNull { it.url == url }?.presetCount ?: 0
+        val unseen = _unseenCountsFlow.value
+        if (presetCount > oldCount && (oldCount > 0 || unseen.containsKey(url))) {
+            val updated = unseen.toMutableMap()
+            updated[url] = (updated[url] ?: 0) + (presetCount - oldCount)
+            _unseenCountsFlow.value = updated
+            saveUnseenCounts(updated)
+        }
+
         _subscriptionsFlow.value = _subscriptionsFlow.value.map {
             if (it.url == url) {
                 it.copy(
@@ -281,6 +301,34 @@ internal class SubscriptionConfig(private val context: Context) {
             } else it
         }
         saveSubscriptions()
+    }
+
+    /** 【v1.6.14 发现 2.0】标记某订阅源已读：雷达未读清零（0 占位以区分"从未看过"） */
+    fun markSubscriptionSeen(url: String) {
+        if (_unseenCountsFlow.value[url] != null) {
+            val updated = _unseenCountsFlow.value.toMutableMap()
+            updated[url] = 0
+            _unseenCountsFlow.value = updated
+            saveUnseenCounts(updated)
+        }
+    }
+
+    /** 移除订阅时同步清理雷达计数 */
+    private fun removeUnseenCount(url: String) {
+        if (_unseenCountsFlow.value.containsKey(url)) {
+            val updated = _unseenCountsFlow.value - url
+            _unseenCountsFlow.value = updated
+            saveUnseenCounts(updated)
+        }
+    }
+
+    private fun loadUnseenCounts(): Map<String, Int> {
+        val raw = prefs.getString(KEY_UNSEEN_COUNTS, null) ?: return emptyMap()
+        return runCatching { json.decodeFromString<Map<String, Int>>(raw) }.getOrDefault(emptyMap())
+    }
+
+    private fun saveUnseenCounts(map: Map<String, Int>) {
+        prefs.edit().putString(KEY_UNSEEN_COUNTS, json.encodeToString(map)).apply()
     }
 
     fun getFileNameForUrl(url: String): String {
