@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 
 /**
@@ -192,3 +193,75 @@ fun Modifier.fluidPressScale(
         scaleY = scale
     }
 }
+
+// ═══════════════════════════════════════════════════════════
+// 【v1.6.14】ColorOS 17 流体设计三级参数体系（Fluid Design System）
+//
+// 背景：v1.6.13 及之前各页面动效参数各自为政（PillNavBar 用 StiffnessLow、
+// ColorWalkCard 用 tween(400)、MainActivity 用 0.92f/380f），同类交互手感不一致。
+// v1.6.14 起全 App 动效必须引用本体系，禁止文件内私有 spring/tween 硬编码。
+//
+// L1 微交互：按压 / Toggle / Chip      —— 跟手、回弹利落
+// L2 组件过渡：面板滑入 / 入场 / 展开   —— 0.92f 低刚度，细腻不夸张
+// L3 页面转场：路由切换                 —— 与 MainActivity.fluidSlideSpec 参数同源
+// ═══════════════════════════════════════════════════════════
+
+/** L1 微交互弹簧（Float）—— 按压、Toggle、Chip */
+val FluidPressFloat = spring<Float>(
+    dampingRatio = Spring.DampingRatioMediumBouncy,
+    stiffness = Spring.StiffnessHigh,
+    visibilityThreshold = 0.0001f
+)
+
+/** L2 组件过渡弹簧（Float）—— 面板滑入、Banner 入场、展开收起 */
+val FluidComponentFloat = spring<Float>(
+    dampingRatio = 0.92f,
+    stiffness = 380f,
+    visibilityThreshold = 0.0001f
+)
+
+/** L2 组件过渡弹簧（IntOffset）—— 面板/胶囊位移动画 */
+val FluidComponentIntOffset = spring<IntOffset>(
+    dampingRatio = 0.92f,
+    stiffness = 380f,
+    visibilityThreshold = IntOffset.VisibilityThreshold
+)
+
+/** L2 组件过渡弹簧（Dp）—— 宽度 / 高度 / 圆角形变（流体 FAB、展开菜单） */
+val FluidComponentDp = spring<Dp>(
+    dampingRatio = 0.92f,
+    stiffness = 380f,
+    visibilityThreshold = 0.01f
+)
+
+/** L3 页面转场弹簧（Float）—— 路由切换淡入淡出 */
+val FluidPageFloat = spring<Float>(
+    dampingRatio = 0.92f,
+    stiffness = 380f,
+    visibilityThreshold = 0.0001f
+)
+
+/** L3 页面转场弹簧（IntOffset）—— 路由切换滑动 */
+val FluidPageIntOffset = spring<IntOffset>(
+    dampingRatio = 0.92f,
+    stiffness = 380f,
+    visibilityThreshold = IntOffset.VisibilityThreshold
+)
+
+/**
+ * 流体设计标准时长（毫秒）—— 与 FramerateOptimizer 配合做高刷自适应。
+ * 所有 tween 类动画应以这三个常量为基准，避免散落的魔法数字。
+ */
+const val FLUID_MICRO_MS = 150      // 微交互：高亮、闪烁、指示点
+const val FLUID_COMPONENT_MS = 250  // 组件：展开、收起、滑入
+const val FLUID_PAGE_MS = 300       // 页面：转场、切换
+
+/**
+ * 流体庆祝动画时长（毫秒）—— 打卡完成 / 挑战完成 / 里程碑达成
+ */
+const val FLUID_CELEBRATE_MS = 600
+
+/**
+ * 列表项错开延迟（毫秒）—— 列表入场、标签云、特性列表统一使用
+ */
+const val FLUID_STAGGER_MS = 40

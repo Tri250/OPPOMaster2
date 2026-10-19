@@ -33,7 +33,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.AlertDialog
@@ -41,6 +40,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import com.silas.omaster.ui.components.AuroraRefreshIndicator
+import com.silas.omaster.ui.components.FluidFab
+import com.silas.omaster.ui.components.FluidFabAction
+import com.silas.omaster.ui.components.rememberFrameDegrade
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -124,7 +127,9 @@ fun HomeScreen(
     onScrollStateChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     refreshTrigger: Int = 0,
-    usePremiumGlass: Boolean = true
+    usePremiumGlass: Boolean = true,
+    // 【v1.6.14】悬浮按钮次级动作：剪贴板导入（由宿主传入；未传入时 FAB 无次级菜单）
+    onNavigateToClipboardImport: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val repository = remember { PresetRepository.getInstance(context) }
@@ -162,6 +167,13 @@ fun HomeScreen(
     val defaultStartTab by config.defaultStartTabFlow.collectAsState()
 
     val pagerState = rememberPagerState(initialPage = defaultStartTab, pageCount = { 3 })
+
+    // 【v1.6.14】滚动方向状态：驱动流体 FAB 显隐（下滑隐藏 / 上滑显示）
+    var isScrollingUp by remember { mutableStateOf(true) }
+    val handleScrollStateChanged: (Boolean) -> Unit = { up ->
+        isScrollingUp = up
+        onScrollStateChanged(up)
+    }
 
     // 全局悬浮窗控制器
     val floatingWindowController = remember { FloatingWindowController.getInstance(context) }
@@ -298,7 +310,7 @@ fun HomeScreen(
                                 presetToDelete = it
                                 showDeleteConfirm = true
                             },
-                            onScrollStateChanged = onScrollStateChanged,
+                            onScrollStateChanged = handleScrollStateChanged,
                             onRefresh = { onComplete -> viewModel.refresh(onComplete) },
                             usePremiumGlass = usePremiumGlass,
                             // 【v1.6.13】搜索/筛选无结果 → 一键清除筛选
@@ -319,7 +331,7 @@ fun HomeScreen(
                                 presetToDelete = it
                                 showDeleteConfirm = true
                             },
-                            onScrollStateChanged = onScrollStateChanged,
+                            onScrollStateChanged = handleScrollStateChanged,
                             showLoadingTip = false,
                             onRefresh = { onComplete -> viewModel.refresh(onComplete) },
                             usePremiumGlass = usePremiumGlass,
@@ -340,7 +352,7 @@ fun HomeScreen(
                             },
                             showLoadingTip = false,
                             showTopHint = false,
-                            onScrollStateChanged = onScrollStateChanged,
+                            onScrollStateChanged = handleScrollStateChanged,
                             onRefresh = { onComplete -> viewModel.refresh(onComplete) },
                             usePremiumGlass = usePremiumGlass,
                             // 【v1.6.13】空状态直达创建入口
@@ -351,36 +363,29 @@ fun HomeScreen(
             }
         }
 
-        // 悬浮添加按钮（只在"我的"Tab显示）
-        if (selectedTab == 2) {
-            // 【v1.6.13】ColorOS 17 液态按压反馈
-            val fabInteraction = remember { MutableInteractionSource() }
-            FloatingActionButton(
-                onClick = {
-                    haptic.perform(HapticFeedbackType.Confirm)
-                    onNavigateToCreate()
-                },
-                interactionSource = fabInteraction,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = AppDesign.ButtonShape,
-                elevation = androidx.compose.material3.FloatingActionButtonDefaults.elevation(
-                    defaultElevation = 8.dp,
-                    pressedElevation = 12.dp
-                ),
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = AppDesign.ScreenPadding, bottom = 100.dp)
-                    .size(AppDesign.FABSize + 8.dp)
-                    .fluidPressScale(fabInteraction, pressedScale = 0.92f)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.create_preset),
-                    modifier = Modifier.size(AppDesign.FABSize / 2 + 4.dp)
-                )
-            }
-        }
+        // 【v1.6.14】流体展开悬浮按钮
+        // 变更：① 全部 Tab 可见（v1.6.13 仅"我的"Tab），下滑隐藏 / 上滑显示；
+        //      ② 按压时圆形液态延展为胶囊并显出文案（ColorOS 17 灵动胶囊语言）；
+        //      ③ 长按展开次级动作（剪贴板导入），贴合系统长按范式。
+        FluidFab(
+            onClick = {
+                haptic.perform(HapticFeedbackType.Confirm)
+                onNavigateToCreate()
+            },
+            label = stringResource(R.string.create_preset),
+            visible = isScrollingUp,
+            actions = listOfNotNull(
+                onNavigateToClipboardImport?.let { import ->
+                    FluidFabAction(
+                        label = stringResource(R.string.paste_import),
+                        onClick = import
+                    )
+                }
+            ),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = AppDesign.ScreenPadding, bottom = 100.dp)
+        )
     }
 
     // 删除确认对话框
@@ -576,6 +581,14 @@ private fun PresetGrid(
 
     // Pull-to-refresh state
     var refreshing by remember { mutableStateOf(false) }
+    // 【v1.6.14】刷新完成态：用于追光指示器展示对勾（800ms 后自动复位）
+    var refreshFinished by remember { mutableStateOf(false) }
+    LaunchedEffect(refreshFinished) {
+        if (refreshFinished) {
+            delay(800)
+            refreshFinished = false
+        }
+    }
     // 【v1.6.13 lint 修复】组合内通过 LocalResources 访问资源，回调内直接使用
     // (LocalContextGetResourceValueCall: 禁止经 LocalContext.current 查询资源)
     val resources = LocalResources.current
@@ -583,6 +596,7 @@ private fun PresetGrid(
         refreshing = true
         onRefresh { result ->
             refreshing = false
+            refreshFinished = true
             // 【v1.6.13】刷新结果 Toast 多语言化（修复硬编码中文）
             val message = when (result) {
                 is HomeViewModel.RefreshResult.Success ->
@@ -684,6 +698,8 @@ private fun PresetGrid(
                 }
             }
         } else {
+            // 【v1.6.14】高刷掉帧降级：连续掉帧时暂停交错入场动画，保住滚动帧率
+            val frameDegrade = rememberFrameDegrade(context = context, active = true)
             // 缓存可见区域起始索引，避免每次重组都计算
             val visibleStartIndex by remember {
                 derivedStateOf {
@@ -725,9 +741,11 @@ private fun PresetGrid(
                     items = presets,
                     key = { index, preset -> preset.id?.let { "${it}_$index" } ?: "preset_$index" }
                 ) { index, preset ->
-                    // 优化：更 subtle 的高度差，视觉更和谐
-                    val imageHeight = remember(index) {
-                        when (index % 4) {
+                    // 【v1.6.14】确定性高度：以预设 id 为种子，同一预设在筛选/排序前后高度不变。
+                    // （v1.6.13 用 index % 4，筛选后 index 位移会导致卡片高度集体跳动）
+                    val imageHeight = remember(preset.id) {
+                        val raw = preset.id?.hashCode() ?: index
+                        when ((if (raw < 0) -raw else raw) % 4) {
                             0 -> 200  // 标准
                             1 -> 170  // 稍矮
                             2 -> 230  // 稍高
@@ -738,7 +756,8 @@ private fun PresetGrid(
                     if (preset.id != null) {
                         // 使用缓存的 visibleStartIndex 计算延迟
                         // 优化：只有在列表顶部时才应用交错延迟，滚动时立即显示，避免卡顿感
-                        val delayMillis = if (visibleStartIndex == 0) {
+                        // 【v1.6.14】高刷设备掉帧时自动关闭交错动画（潮汐引擎式"前台流畅"）
+                        val delayMillis = if (visibleStartIndex == 0 && !frameDegrade) {
                             calculateStaggerDelay(index, visibleStartIndex)
                         } else {
                             0
@@ -771,12 +790,15 @@ private fun PresetGrid(
             }
         }
 
-        // Pull refresh indicator overlay
-        PullRefreshIndicator(
+        // 【v1.6.14】凝光追光刷新指示器（替代系统默认 PullRefreshIndicator）
+        AuroraRefreshIndicator(
+            progress = pullRefreshState.progress,
             refreshing = refreshing,
-            state = pullRefreshState,
-            modifier = Modifier.align(Alignment.TopCenter),
-            contentColor = MaterialTheme.colorScheme.primary
+            finished = refreshFinished,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 8.dp)
         )
     }
 }
@@ -796,6 +818,11 @@ private fun PresetCardItem(
 ) {
     // 使用统一的动画状态管理，减少 Animatable 实例
     val animatedProgress = remember(preset.id, tabIndex) { Animatable(0f) }
+
+    // 【v1.6.14】长按菜单「应用至悬浮窗」所需的控制器与资源句柄
+    val cardContext = LocalContext.current
+    val cardResources = LocalResources.current
+    val floatingController = remember { FloatingWindowController.getInstance(cardContext) }
 
     LaunchedEffect(preset.id, tabIndex) {
         // 添加延迟，实现错开动画效果
@@ -830,7 +857,19 @@ private fun PresetCardItem(
             showFavoriteButton = true,
             showDeleteButton = tabIndex == 2,
             imageHeight = imageHeight,
-            usePremiumGlass = usePremiumGlass
+            usePremiumGlass = usePremiumGlass,
+            // 【v1.6.14】一步直达悬浮窗（无需先进详情）：失败时提示，不静默吞掉
+            onApplyToFloat = {
+                runCatching {
+                    floatingController.showFloatingWindow(preset)
+                }.onFailure {
+                    Toast.makeText(
+                        cardContext,
+                        cardResources.getString(R.string.preset_apply_float_failed),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
         )
     }
 }

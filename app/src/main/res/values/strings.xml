@@ -970,4 +970,30 @@
     <string name="discover_daily_shuffle">换一批</string>
     <string name="discover_favorites_title">我的收藏</string>
     <string name="discover_favorites_empty">还没有收藏的灵感，去发现喜欢的色调吧</string>
+
+    <!-- ══════════════════════════════════════════════════════════
+         v1.6.14 主页 · 发现 · 关于 流体设计改进 新增文案
+         ══════════════════════════════════════════════════════════ -->
+    <!-- 主页：预设卡片长按菜单 / 一键应用 -->
+    <string name="preset_apply_float">应用至悬浮窗</string>
+    <string name="preset_apply_float_failed">无法启动悬浮窗，请检查悬浮窗权限</string>
+    <string name="preset_copy_params">复制参数</string>
+    <string name="preset_share">分享预设</string>
+
+    <!-- 关于：设备硬件档案 -->
+    <string name="about_device_coloros_checking">ColorOS 适配检测中</string>
+    <string name="about_device_spec_title">硬件档案</string>
+    <string name="about_device_spec_expand">展开</string>
+    <string name="about_device_spec_collapse">收起</string>
+    <string name="about_device_spec_screen">屏幕</string>
+    <string name="about_device_spec_screen_value">%1$.1f 英寸 · %2$dHz</string>
+    <string name="about_device_spec_battery">电池</string>
+    <string name="about_device_spec_battery_value">%1$d mAh</string>
+    <string name="about_device_spec_video">最高视频</string>
+    <string name="about_device_spec_ois">防抖</string>
+
+    <!-- 发现：Color Walk 色卡 → App 主题联动 -->
+    <string name="colorwalk_apply_theme">应用到 App 主题</string>
+    <string name="colorwalk_theme_applied">已应用配色：%1$s</string>
+
 </resources>

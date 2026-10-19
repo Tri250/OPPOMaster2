@@ -1,3 +1,15 @@
+## v1.6.15 (2026-10-20)
+
+#### 🔧 修复
+- 分支同步对齐：合入 v1.6.14 已发布的 ColorOS 17 流体设计升级全量内容（主页 / 发现 / 关于三大模块的 FluidComponents / AnimationSpecs / FramerateOptimizer / DeviceProfile / HomeTabRow / PresetCard 等），开发分支与发布基线完全一致
+- 快拍笔记拍照链路复核：拍摄前登记目标文件（pendingCameraFile）、FileProvider snap/ cache-path、720px 单次解码与全路径 Bitmap 回收，与发布基线一致
+
+#### ✅ 发布自检
+- 稳定性 / 性能 / 兼容性 / 权限管理 / 安装与卸载全维度复核无新增必现缺陷
+- release 工作流自检通过：质量门禁（单测 + lint）→ 签名构建 → apksigner 签名校验 → R8 冒烟门禁 → 草稿 Release 闭环
+
+---
+
 ## v1.6.14 (2026-10-19)
 
 #### ✨ 新增
