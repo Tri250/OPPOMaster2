@@ -29,21 +29,19 @@ class SnapNoteManager(context: Context) {
     val notesDir: File get() = File(this.context.filesDir, NOTES_DIR).apply { if (!exists()) mkdirs() }
 
     /**
-     * 保存笔记：压缩原图为缩略图并落盘，记录主色 / 色板 / 推荐预设。
+     * 保存笔记：将已解码缩略图落盘，记录主色 / 色板 / 推荐预设。
      * @param dominantHex 主色（#RRGGBB），@param swatchHexes 色板（3-5 色）
      */
-    fun saveNote(
-        sourceImageUri: android.net.Uri,
+    private fun saveBitmapNote(
+        bitmap: Bitmap,
         dominantHex: String,
         swatchHexes: List<String>,
         matchedPresetId: String? = null
     ): SnapNote? {
-        val bitmap = decodeScaledBitmap(sourceImageUri) ?: return null
         val fileName = "snap_${System.currentTimeMillis()}.jpg"
         val file = File(notesDir, fileName)
         runCatching {
             file.outputStream().use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 86, out) }
-            bitmap.recycle()
         }
         if (!file.exists()) return null
 
@@ -69,12 +67,13 @@ class SnapNoteManager(context: Context) {
     fun getImageFile(note: SnapNote): File = File(notesDir, note.imagePath)
 
     /**
-     * 一体化处理：解码 → Palette 取色（主色 + 按人群占比排序的色板）→ 压缩落盘保存。
+     * 一体化处理：解码（最长边 720px）→ Palette 取色（主色 + 按人群占比排序的色板）→ 压缩落盘保存。
+     * 同一 bitmap 复用于取色与缩略图，避免二次解码；无论成败均在返回前回收。
      * 相机临时文件（file:// 来源）在保存后清理。
      */
     fun processAndSaveNote(context: Context, sourceUri: android.net.Uri): SnapNote? {
-        val bitmap = decodeForPalette(context, sourceUri) ?: return null
-        return runCatching {
+        val bitmap = decodeScaledBitmap(sourceUri) ?: return null
+        val note = runCatching {
             val palette = androidx.palette.graphics.Palette.from(bitmap).maximumColorCount(24).generate()
             val dominant = palette.dominantSwatch
             val dominantHex = dominant?.let { String.format(java.util.Locale.US, "#%06X", 0xFFFFFF and it.rgb) }
@@ -84,27 +83,12 @@ class SnapNoteManager(context: Context) {
                 .sortedByDescending { it.population }
                 .take(4)
                 .map { String.format(java.util.Locale.US, "#%06X", 0xFFFFFF and it.rgb) }
-            val note = saveNote(sourceUri, dominantHex, swatches)
-            if (note != null && sourceUri.scheme == "file") File(sourceUri.path ?: "").delete()
-            note
-        }.getOrNull().also { if (it == null) bitmap.recycle() }
-    }
-
-    /** 供取色用的降采样解码（最长边约 512px，避免大图 OOM） */
-    private fun decodeForPalette(context: Context, uri: android.net.Uri): Bitmap? {
-        return runCatching {
-            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            context.contentResolver.openInputStream(uri)?.use {
-                BitmapFactory.decodeStream(it, null, bounds)
-            }
-            val maxSide = maxOf(bounds.outWidth, bounds.outHeight).coerceAtLeast(1)
-            var sample = 1
-            while (maxSide / (sample * 2) >= 512) sample *= 2
-            val options = BitmapFactory.Options().apply { inSampleSize = sample }
-            context.contentResolver.openInputStream(uri)?.use {
-                BitmapFactory.decodeStream(it, null, options)
-            }
+            val saved = saveBitmapNote(bitmap, dominantHex, swatches)
+            if (saved != null && sourceUri.scheme == "file") File(sourceUri.path ?: "").delete()
+            saved
         }.getOrNull()
+        bitmap.recycle()
+        return note
     }
 
     private fun persistTrimmed(list: List<SnapNote>) {

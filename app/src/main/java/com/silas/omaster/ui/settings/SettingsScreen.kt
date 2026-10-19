@@ -1492,12 +1492,14 @@ fun LanguageSelectionDialog(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
-                            text = when (language) {
-                                AppLanguage.SYSTEM -> context.getString(R.string.language_system)
-                                AppLanguage.CHINESE -> context.getString(R.string.language_chinese)
-                                AppLanguage.ENGLISH -> context.getString(R.string.language_english)
-                                AppLanguage.JAPANESE -> context.getString(R.string.language_japanese)
-                            },
+                            text = stringResource(
+                                when (language) {
+                                    AppLanguage.SYSTEM -> R.string.language_system
+                                    AppLanguage.CHINESE -> R.string.language_chinese
+                                    AppLanguage.ENGLISH -> R.string.language_english
+                                    AppLanguage.JAPANESE -> R.string.language_japanese
+                                }
+                            ),
                             style = MaterialTheme.typography.bodyLarge,
                             color = themedTextPrimary()
                         )

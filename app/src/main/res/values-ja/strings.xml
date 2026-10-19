@@ -727,4 +727,35 @@
     <string name="discover_daily_shuffle">シャッフル</string>
     <string name="discover_favorites_title">お気に入り</string>
     <string name="discover_favorites_empty">保存されたインスピレーションはまだありません</string>
+    <!-- ═══════════════ Lint MissingTranslation バックフィル ═══════════════ -->
+    <string name="shortcut_floating_show_short">フローティング</string>
+    <string name="shortcut_floating_show_long">OMaster のフローティングウィンドウを開く</string>
+    <string name="shortcut_floating_disabled">フローティングウィンドウは現在利用できません</string>
+    <string name="shortcut_open_home_short">ホーム</string>
+    <string name="shortcut_open_home_long">OMaster を開く</string>
+    <string name="shortcut_open_home_disabled">OMaster は現在利用できません</string>
+    <string name="shortcut_ai_snap_short">AIスナップ取り込み</string>
+    <string name="widget_label">OMaster 今日のプリセット</string>
+    <string name="widget_desc">今日のおすすめプリセットを表示。タップして OMaster を開く</string>
+    <string name="widget_today_title">%1$s におすすめ</string>
+    <string name="widget_empty">プリセットがありません。OMaster で購読しましょう</string>
+    <string name="widget_loading">読み込み中…</string>
+    <string name="sub_changelog_title">サブスク更新完了</string>
+    <string name="sub_changelog_added">プリセットを %d 件追加</string>
+    <string name="sub_changelog_modified">プリセットを %d 件更新</string>
+    <string name="sub_changelog_removed">プリセットを %d 件削除</string>
+    <string name="ok">OK</string>
+    <string name="search_preset_placeholder">プリセット・スタイル・タグを検索…</string>
+    <string name="sort_default">デフォルト</string>
+    <string name="sort_new_first">新しい順</string>
+    <string name="sort_favorite_first">お気に入り優先</string>
+    <string name="sort_name_a_z">名前 A → Z</string>
+    <string name="filter_favorites_only">お気に入りのみ</string>
+    <string name="filter_new_only">新着のみ</string>
+    <string name="filter_result_count">プリセット %d 件</string>
+    <string name="clear_all">フィルタをクリア</string>
+    <string name="floating_window_mode_framing">ファインダー回避</string>
+    <string name="floating_window_mode_framing_desc">カメラのファインダー領域を自動的に避ける · ColorOS 17 / Find X10 推奨</string>
+    <string name="follow_camera_framing">カメラ自動回避</string>
+    <string name="follow_camera_framing_desc">カメラ起動時にファインダー回避モードへ自動切替、ファインダーを塞ぎません</string>
 </resources>

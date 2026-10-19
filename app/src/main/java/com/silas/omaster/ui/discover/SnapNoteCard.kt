@@ -44,6 +44,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +68,9 @@ import com.silas.omaster.ui.theme.themedBorderLight
 import com.silas.omaster.ui.theme.themedCardBackground
 import com.silas.omaster.ui.theme.themedTextPrimary
 import com.silas.omaster.ui.theme.themedTextSecondary
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -85,6 +89,7 @@ fun SnapNoteCard(
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
     val notes by snapNoteManager.notesFlow.collectAsState()
 
     var showPickerSheet by remember { mutableStateOf(false) }
@@ -97,19 +102,27 @@ fun SnapNoteCard(
         showGallerySheet = true
     }
 
-    /** 取色 → 保存 → 标记打开回顾 */
+    /** 取色 → 保存 → 标记打开回顾（解码/取色/写盘在 IO 协程执行，避免阻塞主线程） */
     fun processAndSave(uri: Uri) {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        val saved = snapNoteManager.processAndSaveNote(context, uri)
-        if (saved != null) pendingOpenGallery = true
+        scope.launch(Dispatchers.IO) {
+            val saved = snapNoteManager.processAndSaveNote(context, uri)
+            // 相机临时文件兜底清理（保存成功时 processAndSaveNote 已删除对应源文件）
+            runCatching { snapTempDir(context).listFiles()?.forEach { it.delete() } }
+            withContext(Dispatchers.Main) {
+                if (saved != null) pendingOpenGallery = true
+            }
+        }
     }
+
+    // 拍摄目标文件：TakePicture 只写入启动时传入的 URI，回调必须复用同一文件
+    var pendingCameraFile by remember { mutableStateOf<File?>(null) }
 
     // 系统相机：临时文件 → TakePicture(uri)
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-        if (ok) {
-            processAndSave(Uri.fromFile(snapTempFile(context)))
-            snapTempDir(context).listFiles()?.forEach { it.delete() }
-        }
+        val target = pendingCameraFile
+        pendingCameraFile = null
+        if (ok && target != null) processAndSave(Uri.fromFile(target))
     }
     // 相册选择：Photo Picker（无需存储权限）
     val pickLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -201,6 +214,7 @@ fun SnapNoteCard(
                     showPickerSheet = false
                     runCatching {
                         val tmp = snapTempFile(context)
+                        pendingCameraFile = tmp
                         val uri = androidx.core.content.FileProvider.getUriForFile(
                             context, context.packageName + ".fileprovider", tmp
                         )
@@ -442,8 +456,9 @@ private fun SnapNoteItem(
                 )
             }
         }
+        val locale = androidx.compose.ui.platform.LocalLocale.current.platformLocale
         Text(
-            text = SimpleDateFormat("MM.dd HH:mm", Locale.getDefault()).format(Date(note.timestamp)),
+            text = SimpleDateFormat("MM.dd HH:mm", locale).format(Date(note.timestamp)),
             style = MaterialTheme.typography.labelSmall,
             color = themedTextSecondary(),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)

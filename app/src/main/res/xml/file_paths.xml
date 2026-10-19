@@ -19,4 +19,9 @@
     <cache-path
         name="cache_files"
         path="logs_export/" />
+
+    <!-- 应用缓存目录（用于快拍笔记系统拍照 EXTRA_OUTPUT 临时文件） -->
+    <cache-path
+        name="snap_tmp"
+        path="snap/" />
 </paths>

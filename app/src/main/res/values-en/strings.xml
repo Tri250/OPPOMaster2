@@ -928,4 +928,35 @@
     <string name="discover_daily_shuffle">Shuffle</string>
     <string name="discover_favorites_title">My favorites</string>
     <string name="discover_favorites_empty">No saved inspirations yet — go discover tones you love</string>
+    <!-- ═══════════════ Lint MissingTranslation backfill ═══════════════ -->
+    <string name="shortcut_floating_show_short">Floating window</string>
+    <string name="shortcut_floating_show_long">Open OMaster floating window</string>
+    <string name="shortcut_floating_disabled">Floating window unavailable</string>
+    <string name="shortcut_open_home_short">Home</string>
+    <string name="shortcut_open_home_long">Open OMaster</string>
+    <string name="shortcut_open_home_disabled">OMaster unavailable</string>
+    <string name="shortcut_ai_snap_short">AI Snap Import</string>
+    <string name="widget_label">OMaster Today</string>
+    <string name="widget_desc">Today\'s featured presets — tap to open OMaster</string>
+    <string name="widget_today_title">For %1$s · Featured</string>
+    <string name="widget_empty">No presets yet — open OMaster to subscribe</string>
+    <string name="widget_loading">Loading…</string>
+    <string name="sub_changelog_title">Subscription updated</string>
+    <string name="sub_changelog_added">%d presets added</string>
+    <string name="sub_changelog_modified">%d presets updated</string>
+    <string name="sub_changelog_removed">%d presets removed</string>
+    <string name="ok">OK</string>
+    <string name="search_preset_placeholder">Search presets, styles, tags…</string>
+    <string name="sort_default">Default</string>
+    <string name="sort_new_first">Newest first</string>
+    <string name="sort_favorite_first">Favorites first</string>
+    <string name="sort_name_a_z">Name A → Z</string>
+    <string name="filter_favorites_only">Favorites only</string>
+    <string name="filter_new_only">New only</string>
+    <string name="filter_result_count">%d presets</string>
+    <string name="clear_all">Clear filters</string>
+    <string name="floating_window_mode_framing">Viewfinder-safe</string>
+    <string name="floating_window_mode_framing_desc">Auto-avoids the camera viewfinder area · Recommended for ColorOS 17 / Find X10</string>
+    <string name="follow_camera_framing">Auto avoid viewfinder</string>
+    <string name="follow_camera_framing_desc">Switches to viewfinder-safe mode when the camera opens, never covering the viewfinder</string>
 </resources>
