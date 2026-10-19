@@ -75,6 +75,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import com.silas.omaster.ui.components.FluidExpandable
 import com.silas.omaster.R
 import com.silas.omaster.data.config.ConfigCenter
 import com.silas.omaster.data.local.UpdateChannel
@@ -277,11 +282,28 @@ fun ProfileScreen(
  * 【v1.6.13】当前设备卡片（Find X10 机型感知）
  * 展示识别到的机型名称、ColorOS 17 适配徽章与硬件特性徽章（哈苏 / 2亿）。
  */
+/**
+ * 【v1.6.14】当前设备卡片 —— 从"徽章展示"升级为"能力档案"
+ *
+ * 变更：
+ * 1. ColorOS 适配徽章改为运行时检测（[DeviceDetector.isColorOsAtLeast]），
+ *    不再硬编码"ColorOS 17 适配"，识别不到时降级为"适配检测中"；
+ * 2. 采集到硬件规格的机型（当前 Find X10 系列）可展开硬件档案：
+ *    屏幕 / 电池 / 视频规格 / 防抖 四项真实参数 + 四维能力雷达图；
+ * 3. 未采集到规格的机型不显示展开入口（避免出现 0 值占位）。
+ */
 @Composable
 private fun DeviceCard(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val device = remember { DeviceDetector.getCurrentDevice(context) }
     val displayName = device.displayNameZh.ifBlank { device.model }
+    var expanded by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
+
+    // 【v1.6.14】运行时检测 ColorOS 版本（替代硬编码徽章）
+    val colorOsReady = remember {
+        runCatching { DeviceDetector.isColorOsAtLeast(context, 17) }.getOrDefault(false)
+    }
 
     Card(
         modifier = modifier.border(
@@ -292,54 +314,270 @@ private fun DeviceCard(modifier: Modifier = Modifier) {
         colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Box(
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Smartphone,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Smartphone,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.about_device_title),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = themedTextSecondary().copy(alpha = 0.7f)
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = displayName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = themedTextPrimary(),
-                    maxLines = 1
-                )
-                Spacer(modifier = Modifier.height(6.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.about_device_title),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = themedTextSecondary().copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = displayName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = themedTextPrimary(),
+                        maxLines = 1
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                // 徽章行：ColorOS 17 适配 + 机型硬件特性
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    DeviceBadge(text = stringResource(R.string.about_device_coloros_ready))
-                    if (device.isProImaging) {
-                        DeviceBadge(text = stringResource(R.string.device_badge_hasselblad))
-                    }
-                    if (device.has200Mp) {
-                        DeviceBadge(text = stringResource(R.string.device_badge_200mp))
+                    // 徽章行：ColorOS 运行时检测结果 + 机型硬件特性
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        DeviceBadge(
+                            text = if (colorOsReady) {
+                                stringResource(R.string.about_device_coloros_ready)
+                            } else {
+                                stringResource(R.string.about_device_coloros_checking)
+                            }
+                        )
+                        if (device.isProImaging) {
+                            DeviceBadge(text = stringResource(R.string.device_badge_hasselblad))
+                        }
+                        if (device.has200Mp) {
+                            DeviceBadge(text = stringResource(R.string.device_badge_200mp))
+                        }
                     }
                 }
+            }
+
+            // 【v1.6.14】硬件档案展开入口（仅采集到规格的机型显示）
+            if (device.hasHardwareSpecs) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = themedTextSecondary().copy(alpha = 0.1f)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
+                            expanded = !expanded
+                        }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.about_device_spec_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = if (expanded) {
+                            stringResource(R.string.about_device_spec_collapse)
+                        } else {
+                            stringResource(R.string.about_device_spec_expand)
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = themedTextSecondary().copy(alpha = 0.7f)
+                    )
+                }
+            }
+
+            // 展开区：四项真实参数 + 能力雷达图
+            FluidExpandable(expanded = expanded && device.hasHardwareSpecs) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                ) {
+                    if (device.screenSizeInch > 0f) {
+                        DeviceSpecRow(
+                            label = stringResource(R.string.about_device_spec_screen),
+                            value = stringResource(
+                                R.string.about_device_spec_screen_value,
+                                device.screenSizeInch,
+                                device.maxRefreshRateHz
+                            )
+                        )
+                    }
+                    if (device.batteryCapacityMah > 0) {
+                        DeviceSpecRow(
+                            label = stringResource(R.string.about_device_spec_battery),
+                            value = stringResource(
+                                R.string.about_device_spec_battery_value,
+                                device.batteryCapacityMah
+                            )
+                        )
+                    }
+                    if (device.maxVideoSpec.isNotBlank()) {
+                        DeviceSpecRow(
+                            label = stringResource(R.string.about_device_spec_video),
+                            value = device.maxVideoSpec
+                        )
+                    }
+                    if (device.opticalStabilization.isNotBlank()) {
+                        DeviceSpecRow(
+                            label = stringResource(R.string.about_device_spec_ois),
+                            value = device.opticalStabilization
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 四维能力雷达
+                    CapabilityRadar(
+                        scores = device.capabilityScores,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(170.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 硬件规格行 */
+@Composable
+private fun DeviceSpecRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = themedTextSecondary().copy(alpha = 0.8f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = themedTextPrimary(),
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+/**
+ * 【v1.6.14】四维能力雷达图 —— 影像 / 性能 / 屏幕 / 续航
+ * 从中心以 L2 弹簧错开展开，Canvas 绘制（纯 GPU 合成，异常时降级为空）。
+ */
+@Composable
+private fun CapabilityRadar(
+    scores: List<Pair<String, Float>>,
+    modifier: Modifier = Modifier
+) {
+    if (scores.isEmpty()) return
+    val primary = MaterialTheme.colorScheme.primary
+    val gridColor = themedTextSecondary()
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        progress.animateTo(targetValue = 1f, animationSpec = tween(600))
+    }
+
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(140.dp)
+        ) {
+            val n = scores.size
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val radius = size.minDimension / 2f * 0.72f
+            val p = progress.value
+
+            // 三层网格（菱形）
+            for (level in listOf(0.34f, 0.67f, 1f)) {
+                val pts = (0 until n).map { i ->
+                    val angle = (Math.PI * 2 * i / n - Math.PI / 2)
+                    Offset(
+                        cx + (Math.cos(angle) * radius * level).toFloat(),
+                        cy + (Math.sin(angle) * radius * level).toFloat()
+                    )
+                }
+                for (i in pts.indices) {
+                    drawLine(
+                        color = gridColor.copy(alpha = 0.18f),
+                        start = pts[i],
+                        end = pts[(i + 1) % pts.size],
+                        strokeWidth = 1.dp.toPx()
+                    )
+                }
+            }
+            // 轴线
+            for (i in 0 until n) {
+                val angle = (Math.PI * 2 * i / n - Math.PI / 2)
+                drawLine(
+                    color = gridColor.copy(alpha = 0.12f),
+                    start = Offset(cx, cy),
+                    end = Offset(
+                        cx + (Math.cos(angle) * radius).toFloat(),
+                        cy + (Math.sin(angle) * radius).toFloat()
+                    ),
+                    strokeWidth = 1.dp.toPx()
+                )
+            }
+            // 数据多边形
+            val dataPts = scores.mapIndexed { i, (_, score) ->
+                val angle = (Math.PI * 2 * i / n - Math.PI / 2)
+                val r = radius * (score / 100f) * p
+                Offset(
+                    cx + (Math.cos(angle) * r).toFloat(),
+                    cy + (Math.sin(angle) * r).toFloat()
+                )
+            }
+            for (i in dataPts.indices) {
+                drawLine(
+                    color = primary,
+                    start = dataPts[i],
+                    end = dataPts[(i + 1) % dataPts.size],
+                    strokeWidth = 2.dp.toPx()
+                )
+            }
+            dataPts.forEach { pt ->
+                drawCircle(color = primary, radius = 3.dp.toPx(), center = pt)
+            }
+        }
+
+        // 维度标签（Canvas 不便绘制中文，改用 Text 排布）
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            scores.forEach { (label, score) ->
+                Text(
+                    text = "$label ${score.toInt()}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = themedTextSecondary().copy(alpha = 0.75f)
+                )
             }
         }
     }
