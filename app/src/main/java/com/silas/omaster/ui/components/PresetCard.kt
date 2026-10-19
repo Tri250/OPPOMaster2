@@ -3,9 +3,12 @@ package com.silas.omaster.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Surface
 import com.silas.omaster.ui.animation.FluidPressSpring
 import androidx.compose.foundation.layout.Box
@@ -32,7 +35,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,6 +65,18 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import com.silas.omaster.util.perform
 
+/**
+ * 预设卡片
+ *
+ * 【v1.6.14】新增：
+ * - 长按弹出 ColorOS 17 风格快捷菜单（应用至悬浮窗 / 复制参数 / 分享 / 收藏），
+ *   把"进详情才能操作"压缩为一步直达（对齐系统长按交互范式）；
+ * - 一键应用浮钮（[onApplyToFloat] 非 null 时显示），直接把参数写入悬浮窗。
+ *
+ * @param onApplyToFloat 应用至悬浮窗回调；传 null 则不显示应用按钮与菜单项
+ * @param onCopyParams 复制参数回调；传 null 则不显示该菜单项
+ * @param onSharePreset 分享预设回调；传 null 则不显示该菜单项
+ */
 @Composable
 fun PresetCard(
     preset: MasterPreset,
@@ -70,11 +87,19 @@ fun PresetCard(
     showDeleteButton: Boolean = false,
     modifier: Modifier = Modifier,
     imageHeight: Int = 200,
-    usePremiumGlass: Boolean = true
+    usePremiumGlass: Boolean = true,
+    onApplyToFloat: (() -> Unit)? = null,
+    onCopyParams: (() -> Unit)? = null,
+    onSharePreset: (() -> Unit)? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val haptic = LocalHapticFeedback.current
+
+    // 长按快捷菜单（ColorOS 17 长按范式）；无任何可选项时不启用长按
+    val hasContextMenu = onApplyToFloat != null || onCopyParams != null || onSharePreset != null ||
+            showFavoriteButton || (showDeleteButton && preset.isCustom)
+    var showContextMenu by remember { mutableStateOf(false) }
 
     // 【v1.6.13】ColorOS 17 液态按压反馈：按下轻微缩小，松手细腻回弹
     val pressScale by animateFloatAsState(
@@ -87,10 +112,16 @@ fun PresetCard(
         modifier = modifier
             .fillMaxWidth()
             .scale(pressScale)
-            .clickable(
+            .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = onClick
+                onClick = onClick,
+                onLongClick = {
+                    if (hasContextMenu) {
+                        haptic.perform(HapticFeedbackType.LongPress)
+                        showContextMenu = true
+                    }
+                }
             ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
@@ -256,6 +287,90 @@ fun PresetCard(
                         color = OffWhite,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // 【v1.6.14】一键应用至悬浮窗（卡片右下角浮钮，直达核心使用场景）
+            if (onApplyToFloat != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(PureBlack.copy(alpha = 0.55f))
+                        .clickable {
+                            haptic.perform(HapticFeedbackType.Confirm)
+                            onApplyToFloat()
+                        }
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.preset_apply_float),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = OffWhite,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            // 【v1.6.14】长按快捷菜单（ColorOS 17 长按交互范式）
+            DropdownMenu(
+                expanded = showContextMenu,
+                onDismissRequest = { showContextMenu = false }
+            ) {
+                if (onApplyToFloat != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.preset_apply_float)) },
+                        onClick = {
+                            showContextMenu = false
+                            onApplyToFloat()
+                        }
+                    )
+                }
+                if (onCopyParams != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.preset_copy_params)) },
+                        onClick = {
+                            showContextMenu = false
+                            onCopyParams()
+                        }
+                    )
+                }
+                if (onSharePreset != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.preset_share)) },
+                        onClick = {
+                            showContextMenu = false
+                            onSharePreset()
+                        }
+                    )
+                }
+                if (showFavoriteButton) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (preset.isFavorite) R.string.preset_favorited
+                                    else R.string.preset_favorite
+                                )
+                            )
+                        },
+                        onClick = {
+                            showContextMenu = false
+                            haptic.perform(HapticFeedbackType.ToggleOn)
+                            onFavoriteClick()
+                        }
+                    )
+                }
+                if (showDeleteButton && preset.isCustom) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.preset_delete)) },
+                        onClick = {
+                            showContextMenu = false
+                            onDeleteClick()
+                        }
                     )
                 }
             }

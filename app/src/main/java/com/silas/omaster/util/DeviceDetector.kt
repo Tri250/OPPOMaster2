@@ -29,6 +29,10 @@ object DeviceDetector {
             brandTag = "oppo",
             totalPixelsMp = 200, sensorSize = "1/1.4", maxAperture = "f/1.6",
             isProImaging = true, maxRefreshRateHz = 144, colorOsVersion = 17,
+            // 【v1.6.14】真实硬件参数（来源：OPPO 官网 Find X10 规格页 / 发布会通稿）
+            screenSizeInch = 6.59f, batteryCapacityMah = 8000,
+            maxVideoSpec = "8K 30fps", opticalStabilization = "两轴 OIS",
+            telephotoStabilizationCipa = 7.0f,
             displayNameZh = "Find X10 · 哈苏 2亿像素",
             displayNameEn = "Find X10 · Hasselblad 200MP"
         ),
@@ -38,6 +42,8 @@ object DeviceDetector {
             brandTag = "oppo",
             totalPixelsMp = 200, sensorSize = "1/1.4", maxAperture = "f/1.4",
             isProImaging = true, maxRefreshRateHz = 144, colorOsVersion = 17,
+            batteryCapacityMah = 8000, maxVideoSpec = "8K 30fps",
+            opticalStabilization = "两轴 OIS",
             displayNameZh = "Find X10 Pro · 哈苏 2亿像素",
             displayNameEn = "Find X10 Pro · Hasselblad 200MP"
         ),
@@ -47,6 +53,8 @@ object DeviceDetector {
             brandTag = "oppo",
             totalPixelsMp = 200, sensorSize = "1/1.0", maxAperture = "f/1.2",
             isProImaging = true, maxRefreshRateHz = 144, colorOsVersion = 17,
+            batteryCapacityMah = 8000, maxVideoSpec = "8K 30fps",
+            opticalStabilization = "两轴 OIS",
             displayNameZh = "Find X10 Pro Max · 哈苏 1英寸",
             displayNameEn = "Find X10 Pro Max · Hasselblad 1-inch"
         ),
