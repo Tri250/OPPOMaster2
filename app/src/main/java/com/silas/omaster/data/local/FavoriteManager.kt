@@ -133,14 +133,11 @@ class FavoriteManager(context: Context) {
         // 创建新的 HashSet 保存，避免引用问题
         val newSet = HashSet(favorites)
         android.util.Log.d("FavoriteManager", "Saving to SharedPreferences: $newSet")
-        // 使用 commit() 同步保存，确保数据立即写入（不是 apply() 的异步）
-        val success = prefs.edit().putStringSet(KEY_FAVORITES, newSet).commit()
-        android.util.Log.d("FavoriteManager", "Commit result: $success")
+        // v1.6.15 性能修复：commit() 同步落盘在调用方调度器（Main）执行磁盘 IO，
+        // 每次点收藏都阻塞主线程（ANR 风险 + StrictMode diskWriteViolation）。
+        // 内存 StateFlow（_favoritesFlow）已保证 UI 即时性，apply() 异步落盘语义足够。
+        prefs.edit().putStringSet(KEY_FAVORITES, newSet).apply()
         _favoritesFlow.value = newSet
-        
-        // 验证保存结果
-        val saved = prefs.getStringSet(KEY_FAVORITES, emptySet())
-        android.util.Log.d("FavoriteManager", "Verified saved to SharedPreferences: $saved")
     }
 
     companion object {

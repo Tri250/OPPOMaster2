@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -238,6 +239,8 @@ fun DetailScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(scrollState)
+                        // v1.6.15 兼容性修复：底部"开启悬浮窗"按钮避让手势导航条热区
+                        .windowInsetsPadding(WindowInsets.navigationBars)
                         .padding(16.dp)
                 ) {
                     // 图片画廊（支持自动轮播和手动切换）

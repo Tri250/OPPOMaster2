@@ -215,6 +215,14 @@ class MainActivity : ComponentActivity() {
                                 config = config
                             )
 
+                            // v1.6.15 兼容性修复：存量升级用户（已同意过隐私政策）
+                            // 此前从不请求 POST_NOTIFICATIONS → 悬浮窗前台服务常驻通知
+                            // 永久缺失（服务在跑、用户无控制入口）。
+                            // 此处对存量用户补一次请求；系统在两次拒绝后自动不再弹窗，无骚扰。
+                            LaunchedEffect(Unit) {
+                                requestNotificationPermissionIfNeeded()
+                            }
+
                             // FD-01c：外部分享的预设文本直接进入统一导入对话框
                             pendingSharedText?.let { shared ->
                                 com.silas.omaster.ui.create.ClipboardImportDialog(
@@ -478,6 +486,8 @@ fun MainApp(
                     showUpdateDialog = result
                 }
             } catch (e: Exception) {
+                // v1.6.15 稳定性修复：空 catch 导致线上无法诊断更新链路失败，补日志
+                android.util.Log.w("MainActivity", "自动检查更新失败", e)
             }
         }
     }
@@ -495,7 +505,9 @@ fun MainApp(
                     PresetRepository.getInstance(context).reloadDefaultPresets()
                     config.markSubscriptionsUpdated()
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                // v1.6.15 稳定性修复：空 catch 导致线上无法诊断订阅更新失败，补日志
+                android.util.Log.w("MainActivity", "自动更新订阅失败", e)
             }
         }
     }

@@ -209,7 +209,8 @@ fun PresetSelectionScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(presets) { preset ->
+                // v1.6.15 性能修复：补 key，预设列表变化时保持 item 状态与复用率
+                items(presets, key = { it.id ?: it.name }) { preset ->
                     PresetCard(
                         preset = preset,
                         onClick = { onPresetSelected(preset.id) }

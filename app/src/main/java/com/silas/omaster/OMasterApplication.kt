@@ -46,15 +46,26 @@ class OMasterApplication : Application() {
             android.util.Log.e("OMaster", "Logger.init failed (non-fatal)", e)
         }
 
-        // MU-24 / v1.6：注册 ColorOS 17 侧边键快捷键（Find X10 额外注册 AI 闪记）
-        com.silas.omaster.util.ShortcutRegistrar.refresh(this)
+        // v1.6.15 性能修复：ShortcutRegistrar.refresh（系统 binder 调用）与
+        // ConfigCenter 首访（SharedPreferences 磁盘 IO + 版本迁移）均为非关键路径，
+        // 移入后台线程，避免阻塞 Application.onCreate 主线程。
+        // ConfigCenter 为进程级单例，后台预热后主线程后续访问直接命中。
+        Thread {
+            runCatching {
+                // MU-24 / v1.6：注册 ColorOS 17 侧边键快捷键（Find X10 额外注册 AI 闪记）
+                com.silas.omaster.util.ShortcutRegistrar.refresh(this)
+            }.onFailure { Logger.w("OMaster", "ShortcutRegistrar.refresh failed (non-fatal): ${it.message}") }
 
-        // 初始化震动设置（ConfigCenter 构造失败时静默降级，绝不连带阻断冷启动）
-        try {
-            HapticSettings.enabled = ConfigCenter.getInstance(this).isVibrationEnabled
-        } catch (e: Throwable) {
-            Logger.w("OMaster", "ConfigCenter init failed in Application.onCreate (non-fatal): ${e.message}")
-        }
+            // 初始化震动设置（ConfigCenter 构造失败时静默降级，绝不连带阻断冷启动）
+            try {
+                HapticSettings.enabled = ConfigCenter.getInstance(this).isVibrationEnabled
+            } catch (e: Throwable) {
+                Logger.w("OMaster", "ConfigCenter init failed in Application.onCreate (non-fatal): ${e.message}")
+            }
+        }.apply {
+            isDaemon = true
+            name = "omaster-bg-init"
+        }.start()
 
         // 冷启动性能：后台线程预热预设缓存。
         // 解析 assets/presets.json 属磁盘 IO + JSON 反序列化，首个界面（PresetRepository.init）

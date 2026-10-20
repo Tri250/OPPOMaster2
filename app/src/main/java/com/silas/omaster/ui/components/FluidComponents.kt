@@ -277,18 +277,6 @@ fun AuroraRefreshIndicator(
     val tint = if (color == Color.Unspecified) MaterialTheme.colorScheme.primary else color
     val sizePx = size
 
-    // 刷新中：持续旋转；完成：定格
-    val transition = rememberInfiniteTransition(label = "auroraRefresh")
-    val spin by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "auroraSpin"
-    )
-
     val sweepProgress by animateFloatAsState(
         targetValue = when {
             finished -> 1f
@@ -305,6 +293,20 @@ fun AuroraRefreshIndicator(
     )
 
     if (appear <= 0.01f) return
+
+    // v1.6.15 性能修复：无限旋转动画仅在"刷新中且未完成"时创建。
+    // 此前 rememberInfiniteTransition 无条件创建，指示器不可见时（appear<=0 提前 return 之前）
+    // 动画仍在 144Hz 设备上持续占用帧回调。
+    val transition = rememberInfiniteTransition(label = "auroraRefresh")
+    val spin by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "auroraSpin"
+    )
 
     Canvas(
         modifier = modifier

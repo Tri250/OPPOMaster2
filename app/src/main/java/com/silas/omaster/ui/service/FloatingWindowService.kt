@@ -211,8 +211,14 @@ class FloatingWindowService : Service() {
             ServiceCompat.startForeground(this, NOTIFICATION_ID, buildNotification(), type)
             isForeground = true
         } catch (e: Exception) {
-            // 前台提升失败不应中断悬浮窗功能（部分 ROM 可能限制），降级为普通服务
+            // 前台提升失败不应中断悬浮窗功能（部分 ROM 可能限制），降级为普通服务。
+            // v1.6.15 修复：若本服务由 startForegroundService 启动（侧边键广播路径），
+            // 系统要求 5s 内必须调用 startForeground，否则抛 RemoteServiceException 崩溃。
+            // 提升失败时主动 stopSelf 收尾，避免"启动即崩溃"。
             Logger.e("FloatingWindowService", "startForeground 失败，降级为普通服务", e)
+            if (!isForeground) {
+                stopSelf()
+            }
         }
     }
 
@@ -374,17 +380,24 @@ class FloatingWindowService : Service() {
                     when (mode) {
                         FloatingWindowMode.STANDARD -> updateStandardContent(sections)
                         FloatingWindowMode.COMPACT -> updateCompactContent(sections)
-                        // FRAMING 模式无专用 updateContent —— 降级重建
-                        FloatingWindowMode.FRAMING -> showFramingWindow(
-                            name, sections, params?.x ?: 50, params?.y ?: 300,
-                            currentIndex, totalCount
-                        )
+                        // FRAMING 模式无专用 updateContent —— 降级重建。
+                        // v1.6.15 修复：重建前必须先 removeWindow()，否则旧视图仍附着在
+                        // WindowManager 上成为孤儿（双窗 + 视图泄漏，onDestroy 只能回收最新的一个）。
+                        FloatingWindowMode.FRAMING -> {
+                            removeWindow()
+                            showFramingWindow(
+                                name, sections, params?.x ?: 50, params?.y ?: 300,
+                                currentIndex, totalCount
+                            )
+                        }
                     }
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            // 如果更新失败（如 sections 结构变化），降级为重建窗口
+            // 如果更新失败（如 sections 结构变化），降级为重建窗口。
+            // v1.6.15 修复：同上，重建前先 removeWindow() 防止孤儿视图双窗泄漏。
+            removeWindow()
             when (mode) {
                 FloatingWindowMode.STANDARD -> showExpandedWindow(
                     name, sections, params?.x ?: 50, params?.y ?: 300,

@@ -959,4 +959,20 @@
     <string name="floating_window_mode_framing_desc">Auto-avoids the camera viewfinder area · Recommended for ColorOS 17 / Find X10</string>
     <string name="follow_camera_framing">Auto avoid viewfinder</string>
     <string name="follow_camera_framing_desc">Switches to viewfinder-safe mode when the camera opens, never covering the viewfinder</string>
+    <string name="preset_apply_float">Apply to floating window</string>
+    <string name="preset_apply_float_failed">Cannot start floating window, please check overlay permission</string>
+    <string name="preset_copy_params">Copy parameters</string>
+    <string name="preset_share">Share preset</string>
+    <string name="about_device_coloros_checking">Checking ColorOS compatibility</string>
+    <string name="about_device_spec_title">Hardware profile</string>
+    <string name="about_device_spec_expand">Expand</string>
+    <string name="about_device_spec_collapse">Collapse</string>
+    <string name="about_device_spec_screen">Display</string>
+    <string name="about_device_spec_screen_value">%1$.1f\" · %2$dHz</string>
+    <string name="about_device_spec_battery">Battery</string>
+    <string name="about_device_spec_battery_value">%1$d mAh</string>
+    <string name="about_device_spec_video">Max video</string>
+    <string name="about_device_spec_ois">Stabilization</string>
+    <string name="colorwalk_apply_theme">Apply to app theme</string>
+    <string name="colorwalk_theme_applied">Theme applied: %1$s</string>
 </resources>

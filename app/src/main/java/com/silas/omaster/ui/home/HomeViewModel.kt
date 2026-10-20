@@ -18,7 +18,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 
@@ -182,7 +185,10 @@ class HomeViewModel(
             SortOrder.NAME_A_Z -> result.sortedBy { it.name }.toList()
         }
         sorted
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    // v1.6.15 性能修复：过滤+排序在 Default（CPU）调度器执行。
+    // 此前运行在 stateIn 收集上下文（Main），每次击键/收藏切换都全量 filter+sortedBy 阻塞主线程。
+    }.flowOn(Dispatchers.Default)
+     .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // ═══════════════════════════════════════════════════════════
     // FD-10 公开动作
@@ -276,7 +282,11 @@ class HomeViewModel(
      */
     fun deleteCustomPreset(presetId: String) {
         viewModelScope.launch {
-            repository.deleteCustomPreset(presetId)
+            // v1.6.15 性能修复：删除链路含全量 JSON 反序列化 + 同步文件删除，
+            // 此前在 Main 调度器执行，切换预设时主线程磁盘 IO。整体移入 IO。
+            withContext(Dispatchers.IO) {
+                repository.deleteCustomPreset(presetId)
+            }
         }
     }
 

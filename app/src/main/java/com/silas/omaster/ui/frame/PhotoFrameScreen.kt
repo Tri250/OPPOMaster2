@@ -13,12 +13,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -119,6 +124,9 @@ fun PhotoFrameScreen(
     ) {
         OMasterTopAppBar(
             title = stringResource(R.string.photoframe_card_title),
+            // v1.6.15 兼容性修复：targetSdk 36 强制 edge-to-edge，
+            // 顶部工具栏必须避让状态栏/挖孔，否则被遮挡
+            modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
             onBack = onBack,
             actions = {
                 if (state.renderedBitmap != null) {
@@ -146,6 +154,10 @@ fun PhotoFrameScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
+                    // v1.6.15 兼容性修复：输入框（拍摄时间）需避让键盘；
+                    // 底部内容需避让手势导航条
+                    .imePadding()
+                    .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(AppDesign.ScreenPadding),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {

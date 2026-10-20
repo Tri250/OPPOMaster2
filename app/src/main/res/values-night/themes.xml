@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        v1.6.15 兼容性修复：深色模式冷启动白闪。
+        Compose 深色主题应用前，窗口背景由本主题决定。
+        原 parent 为 Light，ColorOS 深色用户冷启动可见白屏闪烁。
+        此处提供 Night 变体，窗口背景即深色，消除闪烁。
+    -->
+    <style name="Theme.OMaster" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/background_dark</item>
+    </style>
+</resources>

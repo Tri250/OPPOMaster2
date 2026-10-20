@@ -153,6 +153,9 @@ fun UniversalCreatePresetScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                // v1.6.15 兼容性修复：targetSdk 35+ 窗口不再随 IME 自动 resize，
+                // 底部输入框会被键盘完全遮挡。imePadding 让内容随键盘高度避让。
+                .imePadding()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {

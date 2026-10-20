@@ -81,54 +81,55 @@ object PresetRemoteManager {
                 return Result.failure(Exception("订阅文件过大（${bytes.size / 1024 / 1024}MB > 10MB 上限）"))
             }
             val text: String = bytes.toString(Charsets.UTF_8)
-            
-            // 验证 JSON 是否有效
-            val presetList = try {
-                Json.decodeFromString(PresetList.serializer(), text)
-            } catch (e: Exception) {
-                Log.e("PresetRemoteManager", "Invalid JSON received", e)
-                return Result.failure(Exception("JSON 格式错误"))
-            }
 
-            // 验证必填字段
-            val missingFields = mutableListOf<String>()
-            if (presetList.name.isNullOrBlank()) missingFields.add("name (订阅名称)")
-            if (presetList.author.isNullOrBlank()) missingFields.add("author (作者)")            
-            if (missingFields.isNotEmpty()) {
-                val errorMsg = "缺少必要字段: ${missingFields.joinToString(", ")}"
-                return Result.failure(Exception(errorMsg))
-            }
-
-            val config = ConfigCenter.getInstance(context)
-            val currentSub = config.subscriptionsFlow.value.find { it.url == url }
-
-            // 检查版本号是否相同（判定规则见 SubscriptionUpdatePolicy，ED-03 有单测覆盖）
-            if (SubscriptionUpdatePolicy.shouldSkipUpdate(
-                    remoteBuild = presetList.build,
-                    localBuild = currentSub?.build,
-                    forceUpdate = forceUpdate
-                )
-            ) {
-                return Result.failure(Exception("无需更新"))
-            }
-
-            // FD-02③ 回退保护：远端 build 低于本地时拒绝写入，保留本地「最后已知良好」数据
-            if (SubscriptionUpdatePolicy.shouldRejectRegression(
-                    remoteBuild = presetList.build,
-                    localBuild = currentSub?.build,
-                    forceUpdate = forceUpdate
-                )
-            ) {
-                return Result.failure(
-                    Exception("远端版本回退（build ${presetList.build} < ${currentSub?.build}），已保留本地数据")
-                )
-            }
-
-
-            // FD-11：计算本次更新的增量 diff（本地已有预设 vs 新拉到的）
-            val changelog = computeDelta(context, url, presetList)
-
+            // v1.6.15 性能修复：JSON 解析 / diff 计算（含本地文件读取）/ 落盘全部移入 IO 线程。
+            // 此前仅文件写入包了 withContext(IO)，解析与 computeDelta 在调用方调度器（Main）执行，
+            // 冷启动自动更新订阅时主线程解析数百毫秒（响应体上限 10MB）。
             withContext(Dispatchers.IO) {
+                // 验证 JSON 是否有效
+                val presetList = try {
+                    Json.decodeFromString(PresetList.serializer(), text)
+                } catch (e: Exception) {
+                    Log.e("PresetRemoteManager", "Invalid JSON received", e)
+                    return@withContext Result.failure(Exception("JSON 格式错误"))
+                }
+
+                // 验证必填字段
+                val missingFields = mutableListOf<String>()
+                if (presetList.name.isNullOrBlank()) missingFields.add("name (订阅名称)")
+                if (presetList.author.isNullOrBlank()) missingFields.add("author (作者)")
+                if (missingFields.isNotEmpty()) {
+                    val errorMsg = "缺少必要字段: ${missingFields.joinToString(", ")}"
+                    return@withContext Result.failure(Exception(errorMsg))
+                }
+
+                val config = ConfigCenter.getInstance(context)
+                val currentSub = config.subscriptionsFlow.value.find { it.url == url }
+
+                // 检查版本号是否相同（判定规则见 SubscriptionUpdatePolicy，ED-03 有单测覆盖）
+                if (SubscriptionUpdatePolicy.shouldSkipUpdate(
+                        remoteBuild = presetList.build,
+                        localBuild = currentSub?.build,
+                        forceUpdate = forceUpdate
+                    )
+                ) {
+                    return@withContext Result.failure(Exception("无需更新"))
+                }
+
+                // FD-02③ 回退保护：远端 build 低于本地时拒绝写入，保留本地「最后已知良好」数据
+                if (SubscriptionUpdatePolicy.shouldRejectRegression(
+                        remoteBuild = presetList.build,
+                        localBuild = currentSub?.build,
+                        forceUpdate = forceUpdate
+                    )
+                ) {
+                    return@withContext Result.failure(
+                        Exception("远端版本回退（build ${presetList.build} < ${currentSub?.build}），已保留本地数据")
+                    )
+                }
+
+                // FD-11：计算本次更新的增量 diff（本地已有预设 vs 新拉到的）
+                val changelog = computeDelta(context, url, presetList)
 
                 val fileName = config.getSubscriptionFileName(url)
                 val file = File(context.filesDir, fileName)
@@ -151,8 +152,8 @@ object PresetRemoteManager {
                 } catch (e: Exception) {
                     Log.w("PresetRemoteManager", "Failed to invalidate JsonUtil cache", e)
                 }
+                Result.success(FetchResult(presetList, changelog))
             }
-            Result.success(FetchResult(presetList, changelog))
         } catch (e: Exception) {
             Log.e("PresetRemoteManager", "Failed to save presets", e)
             Result.failure(e)

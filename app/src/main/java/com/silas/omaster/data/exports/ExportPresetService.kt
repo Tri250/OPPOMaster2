@@ -41,7 +41,10 @@ object ExportPresetService {
         if (presets.size > PresetImportValidator.MAX_PRESET_COUNT) {
             return ExportResult.Failure("预设数量超出导出上限")
         }
-        val text = when (format) {
+        // v1.6.15 稳定性修复：序列化异常（预设字段非法等）此前直接抛出，
+        // 调用方在 onClick 中同步调用 → 崩溃。统一收敛为 Failure。
+        val text = try {
+            when (format) {
             Format.SINGLE -> json.encodeToString(
                 serializer<List<MasterPreset>>(),
                 presets
@@ -57,6 +60,9 @@ object ExportPresetService {
                     put("presets", json.encodeToJsonElement(serializer<List<MasterPreset>>(), presets))
                 }
             )
+            }
+        } catch (e: Exception) {
+            return ExportResult.Failure("导出失败：${e.message ?: "序列化错误"}")
         }
         return ExportResult.Success(text, format)
     }
