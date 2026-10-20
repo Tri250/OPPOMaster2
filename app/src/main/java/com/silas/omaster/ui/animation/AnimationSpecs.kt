@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 
 /**
  * 全局动画配置
@@ -231,7 +232,7 @@ val FluidComponentIntOffset = spring<IntOffset>(
 val FluidComponentDp = spring<Dp>(
     dampingRatio = 0.92f,
     stiffness = 380f,
-    visibilityThreshold = 0.01f
+    visibilityThreshold = 0.01.dp
 )
 
 /** L3 页面转场弹簧（Float）—— 路由切换淡入淡出 */
