@@ -273,6 +273,16 @@ object UpdateChecker {
 class DownloadCompleteReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
+        // v1.6.15 稳定性修复：receiver exported=true 接收设备上所有 DOWNLOAD_COMPLETE 广播，
+        // cursor 查询/列索引/URI 解析任一环节抛异常即崩溃。整体包 try-catch 兜底。
+        try {
+            handleDownloadComplete(context, intent)
+        } catch (e: Exception) {
+            Log.e("DownloadReceiver", "处理下载完成广播失败", e)
+        }
+    }
+
+    private fun handleDownloadComplete(context: Context, intent: Intent) {
         val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
         if (downloadId == -1L) return
 
@@ -280,7 +290,8 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
         val query = DownloadManager.Query().setFilterById(downloadId)
         val cursor = downloadManager.query(query)
 
-        if (cursor.moveToFirst()) {
+        cursor.use {
+            if (cursor.moveToFirst()) {
             val status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
             if (status == DownloadManager.STATUS_SUCCESSFUL) {
                 // 获取本地文件路径
@@ -312,8 +323,8 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                 val reason = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
                 Log.e("DownloadReceiver", "下载失败，错误码: $reason")
             }
+            }
         }
-        cursor.close()
     }
 
     private fun getFileFromContentUri(context: Context, uri: Uri): File? {

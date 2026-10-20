@@ -758,4 +758,20 @@
     <string name="floating_window_mode_framing_desc">カメラのファインダー領域を自動的に避ける · ColorOS 17 / Find X10 推奨</string>
     <string name="follow_camera_framing">カメラ自動回避</string>
     <string name="follow_camera_framing_desc">カメラ起動時にファインダー回避モードへ自動切替、ファインダーを塞ぎません</string>
+    <string name="preset_apply_float">フローティングウィンドウに適用</string>
+    <string name="preset_apply_float_failed">フローティングウィンドウを起動できません。オーバーレイ権限を確認してください</string>
+    <string name="preset_copy_params">パラメータをコピー</string>
+    <string name="preset_share">プリセットを共有</string>
+    <string name="about_device_coloros_checking">ColorOS 対応を確認中</string>
+    <string name="about_device_spec_title">ハードウェア情報</string>
+    <string name="about_device_spec_expand">展開</string>
+    <string name="about_device_spec_collapse">折りたたむ</string>
+    <string name="about_device_spec_screen">画面</string>
+    <string name="about_device_spec_screen_value">%1$.1f インチ · %2$dHz</string>
+    <string name="about_device_spec_battery">バッテリー</string>
+    <string name="about_device_spec_battery_value">%1$d mAh</string>
+    <string name="about_device_spec_video">最大ビデオ</string>
+    <string name="about_device_spec_ois">手ぶれ補正</string>
+    <string name="colorwalk_apply_theme">アプリテーマに適用</string>
+    <string name="colorwalk_theme_applied">テーマを適用しました：%1$s</string>
 </resources>

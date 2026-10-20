@@ -35,20 +35,34 @@ object FramerateOptimizer {
             val choreographer = Choreographer.getInstance()
             // frameDelayNanos 是 API 33；低版本用 postFrameCallback 估算
             val frameDelay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // frameDelayNanos 是 API 33 (TIRAMISU) 的公开字段
-                // compileSdk 37 可直接访问；用反射兜底以防 AGP/Kotlin 编译器版本差异
-                runCatching {
-                    try {
-                        // 直接字段访问
-                        val field = Choreographer::class.java.getDeclaredField("frameDelayNanos")
-                        field.isAccessible = true
-                        field.getLong(choreographer)
-                    } catch (_: Throwable) {
-                        // 反射 getter
-                        val method = Choreographer::class.java.getMethod("getFrameDelayNanos")
-                        method.invoke(choreographer) as Long
+                // v1.6.15 兼容性修复：frameDelayNanos 反射访问属非 SDK 接口，
+                // Android 16 进一步收紧黑名单后将静默失效（144Hz 时长系数退化）。
+                // 主路径改用公开 API Display.refreshRate；反射仅作兜底。
+                val displayFps = runCatching {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        context.display?.refreshRate
+                    } else {
+                        @Suppress("DEPRECATION")
+                        (context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager)
+                            .defaultDisplay.refreshRate
                     }
-                }.getOrDefault(16_666_667L)
+                }.getOrNull()
+                if (displayFps != null && displayFps > 0f) {
+                    (NANOS_PER_SECOND / displayFps).toLong()
+                } else {
+                    runCatching {
+                        try {
+                            // 直接字段访问
+                            val field = Choreographer::class.java.getDeclaredField("frameDelayNanos")
+                            field.isAccessible = true
+                            field.getLong(choreographer)
+                        } catch (_: Throwable) {
+                            // 反射 getter
+                            val method = Choreographer::class.java.getMethod("getFrameDelayNanos")
+                            method.invoke(choreographer) as Long
+                        }
+                    }.getOrDefault(16_666_667L)
+                }
             } else {
                 16_666_667L  // 60fps 基准
             } // 60fps 基准

@@ -12,11 +12,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -66,6 +69,9 @@ fun WelcomeDialog(
         modifier = modifier
             .fillMaxSize()
             .background(PureBlack)
+            // v1.6.15 兼容性修复：欢迎首屏为全屏 Box，targetSdk 36 强制 edge-to-edge 后
+            // logo 与底部按钮会被状态栏/挖孔/手势条遮挡。safeDrawing 同时避让三者。
+            .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
         AnimatedVisibility(
             visible = isVisible,

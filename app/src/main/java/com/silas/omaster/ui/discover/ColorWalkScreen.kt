@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -77,6 +78,7 @@ fun ColorWalkScreen(
     onBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val colorWalkManager = remember { ColorWalkManager(context) }
     val checkInManager = remember { CheckInManager(context) }
 
@@ -86,11 +88,13 @@ fun ColorWalkScreen(
     val state by viewModel.state.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
 
-    val showGuideFirst = remember {
+    // 引导标记读取移出组合期：SharedPreferences 首访含磁盘 IO，
+    // 在 LaunchedEffect 中读取避免阻塞首帧（v1.6.15 性能优化）。
+    var showGuide by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        !prefs.getBoolean(KEY_HAS_SEEN_GUIDE, false)
+        showGuide = !prefs.getBoolean(KEY_HAS_SEEN_GUIDE, false)
     }
-    var showGuide by remember { mutableStateOf(showGuideFirst) }
 
     // ═══════════════════════════════════════════════════════════
     // 【v1.6.14】色卡 → App 主题联动（ColorOS 17 个性化主动智能落地）
@@ -172,7 +176,7 @@ fun ColorWalkScreen(
                             onCompleteChallenge = { viewModel.completeChallenge() },
                             onRedraw = {
                                 val card = state.todayCard
-                                if (card != null) viewModel.redrawCard(context.getString(card.themeResId))
+                                if (card != null) viewModel.redrawCard(resources.getString(card.themeResId))
                             },
                             onClear = { viewModel.clearTodayCard() }
                         ),

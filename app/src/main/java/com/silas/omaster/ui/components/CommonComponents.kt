@@ -326,8 +326,12 @@ fun PresetImage(
     val context = LocalContext.current
     var downloadState by remember { mutableStateOf<DownloadState>(DownloadState.Idle) }
 
-    // 使用 ImageCacheManager 获取加载路径（优先本地缓存）
-    val imageUri = ImageCacheManager.getImageLoadPath(context, preset.coverPath)
+    // 使用 ImageCacheManager 获取加载路径（优先本地缓存）。
+    // v1.6.15 性能修复：getImageLoadPath 内含 localFile.exists() 磁盘 stat，
+    // 每张卡每次重组都执行。remember(coverPath) 缓存结果，路径不变则不重复 stat。
+    val imageUri = remember(preset.coverPath) {
+        ImageCacheManager.getImageLoadPath(context, preset.coverPath)
+    }
 
     // 如果是网络图片且未缓存，后台下载
     LaunchedEffect(preset.coverPath) {

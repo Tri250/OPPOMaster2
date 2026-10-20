@@ -68,8 +68,15 @@ class PresetRepository(
     private val defaultPresetsLoaded = MutableStateFlow(false)
 
     init {
-        // 初始化时加载默认预设
-        loadDefaultPresets()
+        // v1.6.15 性能修复：init 同步解析全部预设 JSON（磁盘 IO + 反序列化），
+        // 而单例首次创建点在 HomeScreen 组合期（主线程）→ 冷启动首帧阻塞。
+        // 改为异步加载：_defaultPresets 初始为 emptyList，消费者经 Flow 观察，
+        // 加载完成后自动收到数据（首帧显示 loading 态，无功能差异）。
+        // OMasterApplication.warmUpPresetCache() 已在后台预热 JsonUtil 缓存，
+        // 异步加载通常命中缓存，实际耗时极低。
+        repositoryScope.launch {
+            loadDefaultPresets()
+        }
 
         // 监听订阅状态变化，自动重新加载预设
         // 注意：这里使用 Flow 的特性，只有当订阅列表内容真正发生变化时才触发重载。
@@ -88,8 +95,8 @@ class PresetRepository(
      * 从 assets 加载内置预设
      * 这些数据随 App 打包，更新时会被覆盖
      */
-    private fun loadDefaultPresets() {
-        val presets = JsonUtil.loadPresets(appContext)
+    private suspend fun loadDefaultPresets() {
+        val presets = withContext(Dispatchers.IO) { JsonUtil.loadPresets(appContext) }
         _defaultPresets.value = presets
         defaultPresetsLoaded.value = true
         android.util.Log.d("PresetRepository", "Loaded ${presets.size} default presets")

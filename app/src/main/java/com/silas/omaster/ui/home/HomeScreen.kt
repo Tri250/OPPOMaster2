@@ -739,7 +739,10 @@ private fun PresetGrid(
 
                 itemsIndexed(
                     items = presets,
-                    key = { index, preset -> preset.id?.let { "${it}_$index" } ?: "preset_$index" }
+                    // v1.6.15 性能修复：key 去掉 index 后缀。含 index 时搜索/排序后
+                    // index 位移导致所有 item key 改变 → 状态丢失、复用与 animateItem 失效。
+                    // id 由 processPresets 保证非空且唯一（缺失时回退 name 保证稳定）。
+                    key = { _, preset -> preset.id ?: preset.name }
                 ) { index, preset ->
                     // 【v1.6.14】确定性高度：以预设 id 为种子，同一预设在筛选/排序前后高度不变。
                     // （v1.6.13 用 index % 4，筛选后 index 位移会导致卡片高度集体跳动）
@@ -852,8 +855,10 @@ private fun PresetCardItem(
         PresetCard(
             preset = preset,
             onClick = { onNavigateToDetail(preset) },
-            onFavoriteClick = { onToggleFavorite(preset.id!!) },
-            onDeleteClick = { onDeletePreset(preset.id!!) },
+            // v1.6.15 修复：远程订阅/导入预设可能缺 id 字段，!! 断言会 NPE 崩溃。
+            // id 为 null 时安全跳过（processPresets 已保证展示数据 id 非空，此处为纵深防御）。
+            onFavoriteClick = { preset.id?.let { onToggleFavorite(it) } },
+            onDeleteClick = { preset.id?.let { onDeletePreset(it) } },
             showFavoriteButton = true,
             showDeleteButton = tabIndex == 2,
             imageHeight = imageHeight,
