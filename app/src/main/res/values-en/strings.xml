@@ -854,6 +854,49 @@
     <string name="refresh_partial">Updated %1$d, %2$d already up to date</string>
     <string name="refresh_up_to_date">All subscriptions are up to date</string>
     <string name="refresh_failed">Update failed, check your network</string>
+    <!-- ═══════════════ v1.7.0 Home 2.0 ═══════════════ -->
+    <string name="search_history_title">Recent searches</string>
+    <string name="search_history_clear">Clear</string>
+    <string name="scene_section_title">Shooting scenes</string>
+    <string name="scene_portrait">Portrait</string>
+    <string name="scene_landscape">Landscape</string>
+    <string name="scene_night">Night</string>
+    <string name="scene_food">Food</string>
+    <string name="scene_street">Street</string>
+    <string name="scene_pet">Pets</string>
+    <string name="scene_architecture">Architecture</string>
+    <string name="scene_plant">Flora</string>
+    <string name="scene_sunset">Sunset</string>
+    <string name="scene_mono">B&amp;W film</string>
+    <string name="preset_copy_params_done">Parameters copied to clipboard</string>
+    <string name="refresh_presets">Refresh presets</string>
+    <string name="banner_chip_video">%1$s video</string>
+    <string name="banner_chip_refresh">%1$dHz refresh</string>
+    <string name="banner_chip_stabilization">CIPA %1$d telephoto OIS</string>
+    <string name="banner_chip_battery">%1$d mAh battery</string>
+    <!-- ═══════════════ v1.7.0 Discover 2.0 ═══════════════ -->
+    <string name="discover_tip_title">Today\'s shooting tip</string>
+    <string name="discover_tip_morning">Soft, warm morning light — perfect for portraits and street shots</string>
+    <string name="discover_tip_noon">Harsh midday overhead light: add depth in landscapes, avoid face shadows on people</string>
+    <string name="discover_tip_afternoon">Angled afternoon light is the golden hour for architecture and food</string>
+    <string name="discover_tip_evening">Blue hour is coming — don\'t miss city lights and sunset glow</string>
+    <string name="discover_tip_night">Keep it steady at night: telephoto OIS and a fixed position help</string>
+    <string name="findx10_tips_title">Find X10 imaging secrets</string>
+    <string name="findx10_tips_200mp">200MP: full-pixel output in good light leaves huge room for cropping</string>
+    <string name="findx10_tips_8k">8K 30fps: cinematic footage as the base for time-lapse and slow-mo edits</string>
+    <string name="findx10_tips_cipa">CIPA 7.0 telephoto OIS: rock-steady handheld telephoto shots</string>
+    <string name="findx10_tips_hasselblad">Hasselblad Natural Colour: shoot first, tune later — skin tones stay natural</string>
+    <string name="snapnote_matched_preset">AI matched preset</string>
+    <string name="snapnote_matched_hint">Tap to shoot with this preset</string>
+    <string name="snapnote_no_match">No matching preset found yet</string>
+    <string name="mood_sync_theme">Apply as global theme</string>
+    <string name="mood_sync_theme_done">Global theme switched to %1$s</string>
+    <!-- ═══════════════ v1.7.0 About 2.0 ═══════════════ -->
+    <string name="about_check_update_entry">Check for updates</string>
+    <string name="about_coloros_version">ColorOS %1$d ready</string>
+    <string name="about_device_spec_cipa">Telephoto OIS</string>
+    <string name="about_device_spec_cipa_value">CIPA %1$s</string>
+    <string name="about_device_spec_hint">Tip: these specs decide how well presets fit — the Find X10\'s 200MP sensor and telephoto OIS dramatically improve hit rates for distant and low-light scenes.</string>
     <!-- App shortcuts -->
     <string name="shortcut_ai_snap_long">Snap camera settings with AI Flash Note → OMaster generates the preset</string>
     <string name="shortcut_create_preset_short">New preset</string>

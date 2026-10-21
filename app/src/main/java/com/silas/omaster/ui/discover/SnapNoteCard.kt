@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Photo
@@ -58,12 +59,15 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.silas.omaster.R
 import com.silas.omaster.data.local.SnapNote
 import com.silas.omaster.data.local.SnapNoteManager
+import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.animation.fluidPressScale
+import com.silas.omaster.util.PresetI18n
 import com.silas.omaster.ui.theme.themedBorderLight
 import com.silas.omaster.ui.theme.themedCardBackground
 import com.silas.omaster.ui.theme.themedTextPrimary
@@ -80,11 +84,16 @@ import java.util.Locale
  * 【v1.6.14 发现 2.0】AiSnapNote 快拍笔记卡
  * 拍摄 / 相册选图 → 端上 Palette 取色 → 生成"光影笔记"（场景主色 + 色板），
  * 支持笔记回顾面板浏览与删除。全程本地处理，不上传任何数据。
+ *
+ * 【v1.7.0】AI 闭环：取色后端上匹配气质最合的预设（[com.silas.omaster.util.PresetColorMatcher]），
+ * 回顾面板展示"AI 匹配预设"徽章，点击直达该预设详情（拍同款）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SnapNoteCard(
     snapNoteManager: SnapNoteManager,
+    allPresets: List<MasterPreset> = emptyList(),
+    onNavigateToPresetDetail: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -106,7 +115,8 @@ fun SnapNoteCard(
     fun processAndSave(uri: Uri) {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         scope.launch(Dispatchers.IO) {
-            val saved = snapNoteManager.processAndSaveNote(context, uri)
+            // 【v1.7.0】传入预设库：取色后端上 AI 匹配预设
+            val saved = snapNoteManager.processAndSaveNote(context, uri, allPresets)
             // 相机临时文件兜底清理（保存成功时 processAndSaveNote 已删除对应源文件）
             runCatching { snapTempDir(context).listFiles()?.forEach { it.delete() } }
             withContext(Dispatchers.Main) {
@@ -244,7 +254,9 @@ fun SnapNoteCard(
             SnapNoteGallery(
                 snapNoteManager = snapNoteManager,
                 notes = notes,
-                onDelete = { snapNoteManager.deleteNote(it) }
+                allPresets = allPresets,
+                onDelete = { snapNoteManager.deleteNote(it) },
+                onPresetClick = onNavigateToPresetDetail
             )
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -357,7 +369,9 @@ private fun SnapSourceRow(
 private fun SnapNoteGallery(
     snapNoteManager: SnapNoteManager,
     notes: List<SnapNote>,
-    onDelete: (String) -> Unit
+    allPresets: List<MasterPreset> = emptyList(),
+    onDelete: (String) -> Unit,
+    onPresetClick: (String) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -397,7 +411,9 @@ private fun SnapNoteGallery(
                             SnapNoteItem(
                                 snapNoteManager = snapNoteManager,
                                 note = note,
+                                allPresets = allPresets,
                                 onDelete = onDelete,
+                                onPresetClick = onPresetClick,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -414,9 +430,15 @@ private fun SnapNoteGallery(
 private fun SnapNoteItem(
     snapNoteManager: SnapNoteManager,
     note: SnapNote,
+    allPresets: List<MasterPreset> = emptyList(),
     onDelete: (String) -> Unit,
+    onPresetClick: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    // 【v1.7.0】AI 匹配预设（死字段闭环：note.matchedPresetId → 预设名 + 跳转）
+    val matchedPreset = remember(note.matchedPresetId, allPresets) {
+        note.matchedPresetId?.let { id -> allPresets.firstOrNull { it.id == id } }
+    }
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
@@ -463,6 +485,56 @@ private fun SnapNoteItem(
             color = themedTextSecondary(),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
         )
+        // 【v1.7.0】AI 匹配预设徽章：点击直达预设详情（"用此预设拍同款"）
+        if (matchedPreset != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, end = 8.dp, bottom = 8.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                    .clickable { onPresetClick(matchedPreset.id ?: return@clickable) }
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(14.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.snapnote_matched_preset),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = PresetI18n.getLocalizedPresetName(matchedPreset.name),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = themedTextSecondary(),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = stringResource(R.string.snapnote_matched_hint),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        } else if (note.matchedPresetId != null) {
+            // 预设已被删除/订阅移除：降级为文案
+            Text(
+                text = stringResource(R.string.snapnote_no_match),
+                style = MaterialTheme.typography.labelSmall,
+                color = themedTextSecondary().copy(alpha = 0.6f),
+                modifier = Modifier.padding(horizontal = 8.dp).padding(bottom = 8.dp)
+            )
+        }
     }
 }
 

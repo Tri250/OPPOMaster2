@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import com.silas.omaster.model.MasterPreset
 import java.io.File
 
 /**
@@ -70,8 +71,17 @@ class SnapNoteManager(context: Context) {
      * 一体化处理：解码（最长边 720px）→ Palette 取色（主色 + 按人群占比排序的色板）→ 压缩落盘保存。
      * 同一 bitmap 复用于取色与缩略图，避免二次解码；无论成败均在返回前回收。
      * 相机临时文件（file:// 来源）在保存后清理。
+     *
+     * 【v1.7.0】AI 匹配：取色完成后用 [PresetColorMatcher] 端上启发式匹配预设，
+     * 结果写入 SnapNote.matchedPresetId（v1.6.14 预留字段，此处闭环）。
+     *
+     * @param presets 候选预设库（传空列表时跳过匹配）
      */
-    fun processAndSaveNote(context: Context, sourceUri: android.net.Uri): SnapNote? {
+    fun processAndSaveNote(
+        context: Context,
+        sourceUri: android.net.Uri,
+        presets: List<MasterPreset> = emptyList()
+    ): SnapNote? {
         val bitmap = decodeScaledBitmap(sourceUri) ?: return null
         val note = runCatching {
             val palette = androidx.palette.graphics.Palette.from(bitmap).maximumColorCount(24).generate()
@@ -83,7 +93,13 @@ class SnapNoteManager(context: Context) {
                 .sortedByDescending { it.population }
                 .take(4)
                 .map { String.format(java.util.Locale.US, "#%06X", 0xFFFFFF and it.rgb) }
-            val saved = saveBitmapNote(bitmap, dominantHex, swatches)
+            // 【v1.7.0】端上 AI 场景匹配（本地启发式，无网络无上传）
+            val matchedPresetId = if (presets.isNotEmpty()) {
+                runCatching {
+                    com.silas.omaster.util.PresetColorMatcher.matchPreset(dominantHex, swatches, presets)
+                }.getOrNull()
+            } else null
+            val saved = saveBitmapNote(bitmap, dominantHex, swatches, matchedPresetId)
             if (saved != null && sourceUri.scheme == "file") File(sourceUri.path ?: "").delete()
             saved
         }.getOrNull()

@@ -653,6 +653,49 @@
     <string name="refresh_partial">%1$d 件更新、%2$d 件は最新です</string>
     <string name="refresh_up_to_date">すべての購読は最新です</string>
     <string name="refresh_failed">更新に失敗しました。ネットワークを確認してください</string>
+    <!-- ═══════════════ v1.7.0 ホーム 2.0 ═══════════════ -->
+    <string name="search_history_title">検索履歴</string>
+    <string name="search_history_clear">クリア</string>
+    <string name="scene_section_title">撮影シーン</string>
+    <string name="scene_portrait">ポートレート</string>
+    <string name="scene_landscape">風景</string>
+    <string name="scene_night">夜景</string>
+    <string name="scene_food">グルメ</string>
+    <string name="scene_street">ストリート</string>
+    <string name="scene_pet">ペット</string>
+    <string name="scene_architecture">建築</string>
+    <string name="scene_plant">花草</string>
+    <string name="scene_sunset">夕景</string>
+    <string name="scene_mono">白黒フィルム</string>
+    <string name="preset_copy_params_done">パラメータをクリップボードにコピーしました</string>
+    <string name="refresh_presets">プリセットを更新</string>
+    <string name="banner_chip_video">%1$s 動画</string>
+    <string name="banner_chip_refresh">%1$dHz リフレッシュ</string>
+    <string name="banner_chip_stabilization">望遠 CIPA %1$d 手ぶれ補正</string>
+    <string name="banner_chip_battery">%1$d mAh 大容量電池</string>
+    <!-- ═══════════════ v1.7.0 発見 2.0 ═══════════════ -->
+    <string name="discover_tip_title">今日の撮影Tips</string>
+    <string name="discover_tip_morning">朝の柔らかい光と暖かい色温度は、ポートレートやストリート撮影に最適</string>
+    <string name="discover_tip_noon">真昼の強い天頂光：風景は階調を活かし、人物は顔の影に注意</string>
+    <string name="discover_tip_afternoon">斜光が立体感を生む午後は、建築とグルメのゴールデンタイム</string>
+    <string name="discover_tip_evening">ブルーアワーの到来——街の灯りと夕焼けを見逃さないで</string>
+    <string name="discover_tip_night">夜間は安定重視：望遠手ぶれ補正と固定機位が頼りになります</string>
+    <string name="findx10_tips_title">Find X10 撮影の秘訣</string>
+    <string name="findx10_tips_200mp">2億画素：十分な光があれば全画素出力で、トリミングの余裕が巨大に</string>
+    <string name="findx10_tips_8k">8K 30fps：シネマ級素材。タイムラプスやスローモーション編集の原稿</string>
+    <string name="findx10_tips_cipa">CIPA 7.0 望遠手ぶれ補正：手持ち望遠も磐石の安定感</string>
+    <string name="findx10_tips_hasselblad">ハッセルブラッド ナチュラルカラー：撮ってから調整、肌色と階調は自然なまま</string>
+    <string name="snapnote_matched_preset">AI マッチしたプリセット</string>
+    <string name="snapnote_matched_hint">タップでこのプリセットを使って撮影</string>
+    <string name="snapnote_no_match">まだマッチするプリセットがありません</string>
+    <string name="mood_sync_theme">グローバルテーマに適用</string>
+    <string name="mood_sync_theme_done">グローバルテーマを %1$s に切り替えました</string>
+    <!-- ═══════════════ v1.7.0 概要 2.0 ═══════════════ -->
+    <string name="about_check_update_entry">更新を確認</string>
+    <string name="about_coloros_version">ColorOS %1$d 対応</string>
+    <string name="about_device_spec_cipa">望遠手ぶれ補正</string>
+    <string name="about_device_spec_cipa_value">CIPA %1$s</string>
+    <string name="about_device_spec_hint">ヒント：これらのスペックがプリセットの適合効果を決めます——Find X10 の 2億画素と望遠手ぶれ補正で、遠距離・低光量シーンの成功率が大幅に向上します。</string>
     <!-- アプランチカット -->
     <string name="shortcut_ai_snap_long">AI スナップメモでカメラ設定を記録 → OMaster がプリセットを自動生成</string>
     <string name="shortcut_create_preset_short">新規プリセット</string>

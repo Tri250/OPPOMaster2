@@ -903,6 +903,49 @@
     <string name="refresh_partial">成功更新 %1$d 个，%2$d 个已是最新</string>
     <string name="refresh_up_to_date">所有订阅均已是最新</string>
     <string name="refresh_failed">更新失败，请检查网络</string>
+    <!-- ═══════════════ v1.7.0 主页 2.0 · 搜索历史 / 场景分区 / 硬件 Banner ═══════════════ -->
+    <string name="search_history_title">搜索历史</string>
+    <string name="search_history_clear">清空</string>
+    <string name="scene_section_title">拍摄场景</string>
+    <string name="scene_portrait">人像</string>
+    <string name="scene_landscape">风光</string>
+    <string name="scene_night">夜景</string>
+    <string name="scene_food">美食</string>
+    <string name="scene_street">街拍</string>
+    <string name="scene_pet">宠物</string>
+    <string name="scene_architecture">建筑</string>
+    <string name="scene_plant">花草</string>
+    <string name="scene_sunset">日落</string>
+    <string name="scene_mono">黑白胶片</string>
+    <string name="preset_copy_params_done">参数已复制到剪贴板</string>
+    <string name="refresh_presets">刷新预设库</string>
+    <string name="banner_chip_video">%1$s 视频</string>
+    <string name="banner_chip_refresh">%1$dHz 高刷</string>
+    <string name="banner_chip_stabilization">长焦 CIPA %1$d 级防抖</string>
+    <string name="banner_chip_battery">%1$d mAh 大电池</string>
+    <!-- ═══════════════ v1.7.0 发现 2.0 · 拍摄技巧 / Find X10 影像卡 / 快拍 AI / 心情联动 ═══════════════ -->
+    <string name="discover_tip_title">今日拍摄技巧</string>
+    <string name="discover_tip_morning">清晨光线柔和、色温偏暖，人像与街拍最出片</string>
+    <string name="discover_tip_noon">正午顶光强烈：拍风光突出层次，拍人注意避开脸部阴影</string>
+    <string name="discover_tip_afternoon">午后斜射光立体感强，是建筑与美食的黄金时段</string>
+    <string name="discover_tip_evening">傍晚蓝调时刻开启，城市灯光与晚霞不要错过</string>
+    <string name="discover_tip_night">夜间拍摄保持稳定：长焦防抖与固定机位是好帮手</string>
+    <string name="findx10_tips_title">Find X10 影像秘籍</string>
+    <string name="findx10_tips_200mp">2亿像素：光线充足时全像素输出，后期裁剪空间巨大</string>
+    <string name="findx10_tips_8k">8K 30fps：录制影视级素材，延时与慢动作二创的底料</string>
+    <string name="findx10_tips_cipa">CIPA 7.0 长焦防抖：手持长焦端也稳如磐石</string>
+    <string name="findx10_tips_hasselblad">哈苏自然色彩：先拍后调，肤色与过渡始终自然</string>
+    <string name="snapnote_matched_preset">AI 匹配预设</string>
+    <string name="snapnote_matched_hint">点击用此预设拍同款</string>
+    <string name="snapnote_no_match">暂未匹配到气质相投的预设</string>
+    <string name="mood_sync_theme">同步全局主题</string>
+    <string name="mood_sync_theme_done">全局主题已切换为 %1$s</string>
+    <!-- ═══════════════ v1.7.0 关于 2.0 · 真 ColorOS 检测 / 硬件科普 / 检查更新 ═══════════════ -->
+    <string name="about_check_update_entry">检查更新</string>
+    <string name="about_coloros_version">ColorOS %1$d 已适配</string>
+    <string name="about_device_spec_cipa">长焦防抖</string>
+    <string name="about_device_spec_cipa_value">CIPA %1$s 级</string>
+    <string name="about_device_spec_hint">小贴士：这些参数决定了预设的适配效果——Find X10 的 2亿像素与长焦防抖，让远距离与暗光场景的成片率大幅提升。</string>
     <!-- 发现页 -->
     <string name="greeting_morning">早上好</string>
     <string name="greeting_afternoon">下午好</string>

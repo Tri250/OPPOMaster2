@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Mood
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -54,12 +55,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.silas.omaster.R
+import com.silas.omaster.data.config.ConfigCenter
 import com.silas.omaster.data.local.Mood
 import com.silas.omaster.data.local.MoodManager
 import com.silas.omaster.model.DeviceProfile
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.animation.fluidPressScale
 import com.silas.omaster.ui.components.PresetImage
+import com.silas.omaster.ui.theme.BrandTheme
 import com.silas.omaster.ui.theme.themedBorderLight
 import com.silas.omaster.ui.theme.themedCardBackground
 import com.silas.omaster.ui.theme.themedTextPrimary
@@ -152,9 +155,18 @@ fun MoodColorCard(
                 )
             }
 
-            // 已选心情时提供灵感直达
+            // 已选心情时提供灵感直达 + 心情同步全局主题
             if (todayMood != null) {
-                MoodInspirationChip(onClick = { showInspirationSheet = true })
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    MoodInspirationChip(onClick = { showInspirationSheet = true })
+                    MoodSyncThemeChip(
+                        mood = todayMood,
+                        onSynced = { showInspirationSheet = true }
+                    )
+                }
             } else {
                 Icon(
                     Icons.Default.ChevronRight, null,
@@ -242,6 +254,112 @@ private fun MoodInspirationChip(onClick: () -> Unit) {
             text = stringResource(R.string.mood_inspiration_cta),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+/**
+ * 【v1.6.14 发现 2.0】心情 → 全局主题一键同步 chip
+ * 点击后按心情色相匹配最近品牌主题，写入 ConfigCenter 全局联动（MainActivity 监听 themeFlow 实时重绘）。
+ */
+@Composable
+private fun MoodSyncThemeChip(mood: Mood, onSynced: () -> Unit) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val matchedTheme = remember(mood) { matchBrandThemeForMood(mood) }
+
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(matchedTheme.primaryColor.copy(alpha = 0.12f))
+            .fluidPressScale(interactionSource, pressedScale = 0.94f)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    applyMoodTheme(context, mood)
+                    onSynced()
+                }
+            )
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Icon(
+            Icons.Default.Palette, null,
+            tint = matchedTheme.primaryColor,
+            modifier = Modifier.size(14.dp)
+        )
+        Text(
+            text = stringResource(R.string.mood_sync_theme),
+            style = MaterialTheme.typography.labelMedium,
+            color = matchedTheme.primaryColor
+        )
+    }
+}
+
+/** 将心情主色匹配的品牌主题写入 ConfigCenter 并Toast 反馈（全局生效，下次启动保持） */
+private fun applyMoodTheme(context: android.content.Context, mood: Mood) {
+    val theme: BrandTheme = matchBrandThemeForMood(mood)
+    ConfigCenter.getInstance(context).currentTheme = theme
+    android.widget.Toast.makeText(
+        context,
+        context.getString(R.string.mood_sync_theme_done, context.getString(theme.colorNameResId)),
+        android.widget.Toast.LENGTH_SHORT
+    ).show()
+}
+
+/** 灵感面板内的整行同步主题行动按钮（展示匹配结果预览） */
+@Composable
+private fun MoodSyncThemeAction(mood: Mood, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val matchedTheme = remember(mood) { matchBrandThemeForMood(mood) }
+
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(matchedTheme.primaryColor.copy(alpha = 0.08f))
+            .border(1.dp, matchedTheme.primaryColor.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+            .fluidPressScale(interactionSource, pressedScale = 0.97f)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    applyMoodTheme(context, mood)
+                }
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(Brush.linearGradient(mood.gradient.map { Color(it) }))
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.mood_sync_theme),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = themedTextPrimary()
+            )
+            Text(
+                text = stringResource(matchedTheme.colorNameResId),
+                style = MaterialTheme.typography.labelSmall,
+                color = matchedTheme.primaryColor
+            )
+        }
+        Icon(
+            Icons.Default.Palette, null,
+            tint = matchedTheme.primaryColor,
+            modifier = Modifier.size(20.dp)
         )
     }
 }
@@ -516,6 +634,11 @@ private fun MoodInspirationSheet(
             style = MaterialTheme.typography.bodySmall,
             color = themedTextSecondary()
         )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 心情 → 全局主题一键同步（ColorOS 17 个性化，同步后面板保持打开便于继续浏览）
+        MoodSyncThemeAction(mood = mood, modifier = Modifier.fillMaxWidth())
+
         Spacer(modifier = Modifier.height(14.dp))
 
         if (matched.isEmpty()) {

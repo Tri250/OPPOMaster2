@@ -124,6 +124,14 @@ object DeviceDetector {
     @Volatile
     private var cachedScreenSize: Pair<Int, Int>? = null
 
+    /** 运行时真实 ColorOS 版本缓存（反射读取失败为 null，仅读一次） */
+    @Volatile
+    private var runtimeColorOsVersion: Int? = null
+
+    /** 运行时 ColorOS 检测是否已尝试（避免失败后重复反射） */
+    @Volatile
+    private var runtimeColorOsProbed: Boolean = false
+
     // ═══════════════════════════════════════════════════════════
     // 公开 API
     // ═══════════════════════════════════════════════════════════
@@ -182,11 +190,42 @@ object DeviceDetector {
 
     /**
      * 检查 ColorOS 版本是否 ≥ required（如 17）。
-     * 未识别到 ColorOS 版本返回 false（避免错误启用 ColorOS 专属特性）。
+     * 优先使用运行时真实检测（反射 ro.build.version.oplusrom），
+     * 运行时不可用时回退到机型档案值；均无有效版本返回 false（避免错误启用 ColorOS 专属特性）。
      */
     fun isColorOsAtLeast(context: Context, required: Int): Boolean {
-        val profile = getCurrentDevice(context)
-        return profile.colorOsVersion in 1..999 && profile.colorOsVersion >= required
+        val version = getRuntimeColorOsVersion() ?: getCurrentDevice(context).colorOsVersion
+        return version in 1..999 && version >= required
+    }
+
+    /**
+     * 【v1.6.14 关于 2.0】运行时真实 ColorOS 版本（如 ColorOS 17 返回 17）。
+     * 反射读取系统属性 ro.build.version.oplusrom（如 "V17.0.1" / "16.1"），
+     * 非 OPPO/一加/realme 机型或属性不可访问时返回 null。
+     * 结果缓存，仅反射一次；调用线程安全。
+     */
+    fun getRuntimeColorOsVersion(): Int? {
+        if (runtimeColorOsProbed) return runtimeColorOsVersion
+        synchronized(this) {
+            if (runtimeColorOsProbed) return runtimeColorOsVersion
+            val parsed = readSystemProperty("ro.build.version.oplusrom")
+                ?.let { raw -> Regex("""(\d+)""").find(raw)?.groupValues?.get(1)?.toIntOrNull() }
+            runtimeColorOsVersion = parsed
+            runtimeColorOsProbed = true
+            return parsed
+        }
+    }
+
+    /** 反射读取系统属性（系统 API 不在 SDK 公开，失败返回 null 不抛异常） */
+    private fun readSystemProperty(key: String): String? {
+        return try {
+            @Suppress("PrivateApi")
+            val clazz = Class.forName("android.os.SystemProperties")
+            val getter = clazz.getMethod("get", String::class.java)
+            getter.invoke(null, key) as? String
+        } catch (_: Exception) {
+            null
+        }
     }
 
     // ═══════════════════════════════════════════════════════════

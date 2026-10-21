@@ -40,6 +40,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.TipsAndUpdates
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -209,7 +211,8 @@ fun ProfileScreen(
             // 功能入口列表
             ProfileMenuList(
                 onNavigateToSubscription = onNavigateToSubscription,
-                onNavigateToSurvey = onNavigateToSurvey
+                onNavigateToSurvey = onNavigateToSurvey,
+                onCheckUpdate = checkForUpdate
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -303,10 +306,10 @@ private fun DeviceCard(modifier: Modifier = Modifier) {
     var expanded by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
 
-    // 【v1.6.14】运行时检测 ColorOS 版本（替代硬编码徽章）
-    val colorOsReady = remember {
-        runCatching { DeviceDetector.isColorOsAtLeast(context, 17) }.getOrDefault(false)
-    }
+    // 【v1.6.14】运行时检测真实 ColorOS 版本（反射系统属性），回退机型档案值
+    val runtimeColorOsVersion = remember { DeviceDetector.getRuntimeColorOsVersion() }
+    val colorOsVersion = runtimeColorOsVersion
+        ?: device.colorOsVersion.takeIf { it in 1..999 }
 
     Card(
         modifier = modifier.border(
@@ -356,11 +359,11 @@ private fun DeviceCard(modifier: Modifier = Modifier) {
                     )
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    // 徽章行：ColorOS 运行时检测结果 + 机型硬件特性
+                    // 徽章行：ColorOS 真实运行时版本 + 机型硬件特性
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         DeviceBadge(
-                            text = if (colorOsReady) {
-                                stringResource(R.string.about_device_coloros_ready)
+                            text = if (colorOsVersion != null) {
+                                stringResource(R.string.about_coloros_version, colorOsVersion)
                             } else {
                                 stringResource(R.string.about_device_coloros_checking)
                             }
@@ -448,6 +451,16 @@ private fun DeviceCard(modifier: Modifier = Modifier) {
                             value = device.opticalStabilization
                         )
                     }
+                    // 【v1.6.14 关于 2.0】长焦防抖等级（Find X10 系列 CIPA 7.0）
+                    if (device.telephotoStabilizationCipa > 0f) {
+                        DeviceSpecRow(
+                            label = stringResource(R.string.about_device_spec_cipa),
+                            value = stringResource(
+                                R.string.about_device_spec_cipa_value,
+                                formatCipaLevel(device.telephotoStabilizationCipa)
+                            )
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -458,11 +471,38 @@ private fun DeviceCard(modifier: Modifier = Modifier) {
                             .fillMaxWidth()
                             .height(170.dp)
                     )
+
+                    // 【v1.6.14 关于 2.0】硬件小贴士（科普参数与预设效果的关系）
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.06f))
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TipsAndUpdates,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.about_device_spec_hint),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = themedTextSecondary()
+                        )
+                    }
                 }
             }
         }
     }
 }
+
+/** CIPA 等级格式化：整数等级去小数位（7.0 → "7"），非整数保留一位（7.5 → "7.5"） */
+private fun formatCipaLevel(value: Float): String =
+    if (value % 1f == 0f) value.toInt().toString() else String.format("%.1f", value)
 
 /** 硬件规格行 */
 @Composable
@@ -1188,7 +1228,8 @@ private fun QQGroupCard(context: android.content.Context) {
 @Composable
 private fun ProfileMenuList(
     onNavigateToSubscription: () -> Unit,
-    onNavigateToSurvey: () -> Unit
+    onNavigateToSurvey: () -> Unit,
+    onCheckUpdate: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -1219,6 +1260,16 @@ private fun ProfileMenuList(
                 icon = Icons.Default.CloudUpload,
                 title = stringResource(R.string.survey_title),
                 onClick = onNavigateToSurvey
+            )
+            // 【v1.6.14 关于 2.0】显性检查更新入口（除版本号点击外的第二路径）
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                color = themedTextSecondary().copy(alpha = 0.1f)
+            )
+            ProfileMenuItem(
+                icon = Icons.Default.SystemUpdate,
+                title = stringResource(R.string.about_check_update_entry),
+                onClick = onCheckUpdate
             )
         }
     }
@@ -1318,8 +1369,8 @@ private fun FooterSection(
                 style = MaterialTheme.typography.bodySmall,
                 color = themedTextSecondary().copy(alpha = 0.7f),
                 modifier = Modifier.clickable {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://ocnquih40x3i.feishu.cn/docx/NSgednMU0oeq9RxnGmcc9vRenvd?from=from_copylink"))
-                    context.startActivity(intent)
+                    // 【v1.6.14 关于 2.0】隐私政策本地页（无网络可读，替代飞书外链）
+                    onNavigateToPrivacyPolicy()
                 }
             )
 

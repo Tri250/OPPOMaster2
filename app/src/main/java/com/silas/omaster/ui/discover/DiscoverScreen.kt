@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
@@ -58,7 +59,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -109,6 +112,8 @@ fun DiscoverScreen(
     val inspirationManager = remember { InspirationManager(context) }
     val configCenter = remember { ConfigCenter.getInstance(context) }
     val scrollState = rememberScrollState()
+    // 【v1.7.0】全量预设（快拍笔记 AI 匹配 + 场景感知灵感流共用）
+    val allPresets by repository.getAllPresets().collectAsState(initial = emptyList())
     var previousScrollValue by remember { mutableIntStateOf(0) }
     var isScrollingUp by remember { mutableStateOf(true) }
 
@@ -161,10 +166,22 @@ fun DiscoverScreen(
 
             Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
 
+            // 【v1.7.0】今日拍摄技巧（按时段生成，ColorOS 17 智能服务风格）
+            ShootingTipCard()
+
+            Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
+
+            // 【v1.7.0】Find X10 专属影像卡（仅 Find X10 / 专业影像机型显示）
+            if (deviceDp.isProImaging || deviceDp.has200Mp) {
+                FindX10ImagingTipsCard()
+                Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
+            }
+
             // 【v1.6.14 发现 2.0】今日灵感流：每日 5 张精选（机型感知），横滑 + 换一批 + 收藏
             InspirationFlowCard(
                 repository = repository,
                 inspirationManager = inspirationManager,
+                allPresets = allPresets,
                 onPresetClick = onNavigateToPresetDetail
             )
 
@@ -233,6 +250,8 @@ fun DiscoverScreen(
             // 【v1.6.14 发现 2.0】AiSnapNote 快拍笔记（原占位模块转正）
             SnapNoteCard(
                 snapNoteManager = snapNoteManager,
+                allPresets = allPresets,
+                onNavigateToPresetDetail = onNavigateToPresetDetail,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -498,6 +517,183 @@ private fun CheckInEntryCard(
 }
 
 /**
+ * 【v1.7.0】今日拍摄技巧卡（按时段生成）
+ * ColorOS 17 智能服务风格：不打扰、有用、可扫读。
+ */
+@Composable
+private fun ShootingTipCard(modifier: Modifier = Modifier) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val tipRes = remember {
+        val hour = LocalTime.now().hour
+        when (hour) {
+            in 5..10 -> R.string.discover_tip_morning
+            in 11..12 -> R.string.discover_tip_noon
+            in 13..16 -> R.string.discover_tip_afternoon
+            in 17..19 -> R.string.discover_tip_evening
+            else -> R.string.discover_tip_night
+        }
+    }
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .fluidPressScale(interactionSource)
+            .border(1.dp, themedBorderLight(), RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
+        shape = RoundedCornerShape(16.dp),
+        onClick = {},
+        interactionSource = interactionSource
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.linearGradient(listOf(Color(0xFFFFD86F), Color(0xFFFC6262)))
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Lightbulb, null,
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.discover_tip_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = themedTextPrimary()
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = stringResource(tipRes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = themedTextSecondary(),
+                    maxLines = 2
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 【v1.7.0】Find X10 专属影像卡
+ * 仅 Find X10 系列 / 专业影像机型显示；把硬件卖点翻译成"怎么拍"。
+ */
+@Composable
+private fun FindX10ImagingTipsCard(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val deviceDp = remember { DeviceDetector.getCurrentDevice(context) }
+    var expanded by remember { mutableStateOf(false) }
+    val haptic = LocalHapticFeedback.current
+
+    // 按已采集硬件动态生成条目（未采集的规格不出条目，避免空话）
+    val tips = buildList {
+        if (deviceDp.has200Mp) add(stringResource(R.string.findx10_tips_200mp))
+        if (deviceDp.maxVideoSpec.isNotBlank()) add(stringResource(R.string.findx10_tips_8k))
+        if (deviceDp.telephotoStabilizationCipa > 0f) add(stringResource(R.string.findx10_tips_cipa))
+        if (deviceDp.isProImaging) add(stringResource(R.string.findx10_tips_hasselblad))
+    }
+    if (tips.isEmpty()) return
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(1.dp, themedBorderLight(), RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
+        shape = RoundedCornerShape(16.dp),
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            expanded = !expanded
+        }
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            Brush.linearGradient(listOf(Color(0xFF0BA360), Color(0xFF3CBA92)))
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.CameraAlt, null,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.findx10_tips_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = themedTextPrimary()
+                    )
+                    Text(
+                        text = deviceDp.displayNameZh.ifBlank { deviceDp.model },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = themedTextSecondary().copy(alpha = 0.6f)
+                    )
+                }
+                Text(
+                    text = if (expanded) "收起" else "展开",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            if (expanded) {
+                Spacer(modifier = Modifier.height(10.dp))
+                tips.forEach { tip ->
+                    Row(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(5.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = tip,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = themedTextSecondary()
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 【v1.7.0】时段 → 场景标签关键词（灵感流场景感知排序用）
+ * 与拍摄技巧卡的时段划分保持一致。
+ */
+private fun timeSceneKeywords(): List<String> {
+    val hour = LocalTime.now().hour
+    return when (hour) {
+        in 5..10 -> listOf("人像", "portr", "街拍", "street", "暖", "warm", "晨", "morning")
+        in 11..12 -> listOf("风光", "landscap", "建筑", "architect", "山", "海", "sea")
+        in 13..16 -> listOf("建筑", "architect", "美食", "food", "花", "flower", "植物", "plant")
+        in 17..19 -> listOf("日落", "sunset", "夕阳", "晚霞", "glow", "城市", "city")
+        else -> listOf("夜景", "night", "夜", "霓虹", "neon", "星空", "star", "城市", "city")
+    }
+}
+
+/**
  * 【v1.6.13】时段问候头部（ColorOS 17 个性化体验）
  * 本地化日期 + 早上好 / 下午好 / 晚上好 + 今日主题问句
  * 日期格式由系统 Locale 决定（对齐 ColorOS 桌面智能信息服务）
@@ -539,17 +735,20 @@ private fun GreetingHeader(modifier: Modifier = Modifier) {
  * 【v1.6.14 发现 2.0】今日灵感流
  * 每日从精选池（机型专属优先）确定性抽取 5 张灵感，横滑浏览；
  * 支持"换一批"重新洗牌、单卡收藏、收藏夹回顾，点击进入参数详情。
+ *
+ * 【v1.7.0】场景感知：按当前时段匹配预设 tags（晨拍人像 / 午拍风光 /
+ * 夕拍日落 / 夜拍夜景），匹配项优先；同日确定性不变。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun InspirationFlowCard(
     repository: PresetRepository,
     inspirationManager: InspirationManager,
+    allPresets: List<MasterPreset> = emptyList(),
     onPresetClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val allPresets by repository.getAllPresets().collectAsState(initial = emptyList())
     val deviceProfile = remember { DeviceDetector.getCurrentDevice(context) }
     val favorites by inspirationManager.favoritesFlow.collectAsState()
 
@@ -571,8 +770,23 @@ private fun InspirationFlowCard(
                             p.deviceSupport?.contains(deviceKey) == true
                 }
                 val pool = deviceSpecific.ifEmpty { candidates }
+                // 【v1.7.0】时段场景偏好：匹配当前时段的预设优先（确定性排序，同日不变）
+                val timeKeywords = timeSceneKeywords()
+                val scored = pool.map { p ->
+                    val score = p.tags?.count { tag ->
+                        timeKeywords.any { kw -> tag.contains(kw, ignoreCase = true) }
+                    } ?: 0
+                    p to score
+                }
                 val seedBase = LocalDate.now().toEpochDay().toInt() + shuffleNonce * 7919
-                pool.shuffled(java.util.Random(seedBase.toLong())).take(FLOW_SIZE)
+                scored
+                    .sortedWith(
+                        compareByDescending<Pair<MasterPreset, Int>> { it.second }
+                            .thenBy { it.first.name }
+                    )
+                    .map { it.first }
+                    .shuffled(java.util.Random(seedBase.toLong()))
+                    .take(FLOW_SIZE)
             }
         }
     }

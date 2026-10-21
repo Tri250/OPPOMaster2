@@ -1,6 +1,10 @@
 package com.silas.omaster.ui.home
 
 import android.app.Application
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.Surface
@@ -31,8 +35,21 @@ import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridS
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Apartment
+import androidx.compose.material.icons.filled.Contrast
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Landscape
+import androidx.compose.material.icons.filled.LocalFlorist
+import androidx.compose.material.icons.filled.LocationCity
+import androidx.compose.material.icons.filled.Nightlight
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.AlertDialog
@@ -66,6 +83,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -74,12 +93,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.silas.omaster.R
 import com.silas.omaster.data.config.ConfigCenter
 import com.silas.omaster.data.repository.PresetRepository
+import com.silas.omaster.model.DeviceProfile
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.animation.AnimationSpecs
 import com.silas.omaster.ui.animation.ListItemFadeInSpec
@@ -99,7 +120,6 @@ import com.silas.omaster.util.PresetI18n
 import com.silas.omaster.util.hapticClickable
 import com.silas.omaster.util.perform
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Search
@@ -155,6 +175,10 @@ fun HomeScreen(
     val sortOrder by viewModel.sortOrder.collectAsState()
     val showFavoritesOnly by viewModel.showFavoritesOnly.collectAsState()
     val showNewOnly by viewModel.showNewOnly.collectAsState()
+    // 【v1.7.0】主页 2.0：搜索历史 + 场景分区
+    val searchHistory by viewModel.searchHistory.collectAsState()
+    val availableScenes by viewModel.availableScenes.collectAsState()
+    val selectedScene by viewModel.selectedScene.collectAsState()
     // 当 refreshTrigger 变化时刷新数据
     LaunchedEffect(refreshTrigger) {
         if (refreshTrigger > 0) {
@@ -192,6 +216,9 @@ fun HomeScreen(
     // 删除确认对话框状态
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var presetToDelete by remember { mutableStateOf<String?>(null) }
+
+    // 【v1.7.0】长按 Tab 快捷菜单（null = 隐藏；值为 Tab 索引）
+    var showTabLongPressMenu by remember { mutableStateOf<Int?>(null) }
     
     // 提取 usePremiumGlass 为局部变量，便于在 lambda 中使用
     val usePremiumGlassLocal = usePremiumGlass
@@ -243,7 +270,11 @@ fun HomeScreen(
                     stringResource(R.string.tab_all) to allPresets.size,
                     stringResource(R.string.tab_favorites) to favorites.size,
                     stringResource(R.string.tab_my) to customPresets.size
-                )
+                ),
+                // 【v1.7.0】长按 Tab → 快捷操作菜单（ColorOS 17 长按范式）
+                onTabLongPress = { index ->
+                    showTabLongPressMenu = index
+                }
             )
 
             // ═══════════════════════════════════════════════════════════
@@ -261,8 +292,7 @@ fun HomeScreen(
             if (deviceSpecificCount >= 3) {
                 DeviceRecommendedBanner(
                     deviceDisplayName = viewModel.deviceDisplayName,
-                    is200Mp = deviceDp.has200Mp,
-                    hasProImaging = deviceDp.isProImaging,
+                    deviceProfile = deviceDp,
                     presets = recommended,
                     onPresetClick = onNavigateToDetail,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -280,9 +310,21 @@ fun HomeScreen(
                 SearchFilterBar(
                     searchQuery = searchQuery,
                     onSearchChange = { viewModel.updateSearchQuery(it) },
+                    onSearchSubmit = { viewModel.submitSearch(it) },
+                    searchHistory = searchHistory,
+                    onHistoryClick = { history ->
+                        viewModel.updateSearchQuery(history)
+                        viewModel.submitSearch(history)
+                    },
+                    onHistoryRemove = { viewModel.removeSearchHistory(it) },
+                    onHistoryClear = { viewModel.clearSearchHistory() },
                     availableFilters = availableFilters,
                     selectedFilters = selectedFilters,
                     onToggleFilter = { viewModel.toggleFilter(it) },
+                    // 【v1.7.0】场景化分区（从 tags 派生）
+                    availableScenes = availableScenes,
+                    selectedScene = selectedScene,
+                    onToggleScene = { viewModel.toggleScene(it) },
                     sortOrder = sortOrder,
                     onSortChange = { viewModel.setSortOrder(it) },
                     showFavoritesOnly = showFavoritesOnly,
@@ -388,6 +430,82 @@ fun HomeScreen(
         )
     }
 
+    // 【v1.7.0】长按 Tab 快捷菜单（ColorOS 17 长按交互范式）
+    // 入口：HomeTabRow.onTabLongPress（v1.6.14 预留回调，此处接线）
+    showTabLongPressMenu?.let { tabIndex ->
+        val tabName = when (tabIndex) {
+            1 -> stringResource(R.string.tab_favorites)
+            2 -> stringResource(R.string.tab_my)
+            else -> stringResource(R.string.tab_all)
+        }
+        AlertDialog(
+            onDismissRequest = { showTabLongPressMenu = null },
+            title = { Text(tabName) },
+            text = {
+                Column {
+                    TextButton(
+                        onClick = {
+                            showTabLongPressMenu = null
+                            onNavigateToCreate()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.create_preset),
+                            color = themedTextPrimary(),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    if (onNavigateToClipboardImport != null) {
+                        TextButton(
+                            onClick = {
+                                showTabLongPressMenu = null
+                                onNavigateToClipboardImport()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = stringResource(R.string.paste_import),
+                                color = themedTextPrimary(),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                    TextButton(
+                        onClick = {
+                            showTabLongPressMenu = null
+                            viewModel.refresh()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(R.string.refresh_presets),
+                            color = themedTextPrimary(),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    if (tabIndex == 1 && favorites.isNotEmpty()) {
+                        TextButton(
+                            onClick = {
+                                showTabLongPressMenu = null
+                                scope.launch { pagerState.scrollToPage(0) }
+                                viewModel.selectTab(0)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = stringResource(R.string.tab_all),
+                                color = themedTextPrimary(),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {}
+        )
+    }
+
     // 删除确认对话框
     if (showDeleteConfirm) {
         AlertDialog(
@@ -434,20 +552,38 @@ fun HomeScreen(
 //   2) 特色标签随 DeviceProfile 能力动态生成（哈苏专业影像 / 2亿像素）
 //   3) 缩略图从主色方块占位升级为真实预设样片（复用 PresetImage 缓存管线）
 //   4) Chip 按压液态缩放反馈（fluidPressScale）
+// 【v1.7.0】硬件感知 Banner：芯片扩展至 8K 视频 / 144Hz / 长焦防抖 / 大电池，
+//   数据源 DeviceProfile 在 v1.6.14 已采集，此处消费（从"两枚徽章"到"硬件卖点全景"）。
 // ═══════════════════════════════════════════════════════════
 
 @Composable
 private fun DeviceRecommendedBanner(
     deviceDisplayName: String,
-    is200Mp: Boolean,
-    hasProImaging: Boolean,
+    deviceProfile: DeviceProfile,
     presets: List<MasterPreset>,
     onPresetClick: (MasterPreset) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val chipTexts = buildList {
-        if (hasProImaging) add(stringResource(R.string.banner_chip_pro_imaging))
-        if (is200Mp) add(stringResource(R.string.banner_chip_200mp))
+        if (deviceProfile.isProImaging) add(stringResource(R.string.banner_chip_pro_imaging))
+        if (deviceProfile.has200Mp) add(stringResource(R.string.banner_chip_200mp))
+        if (deviceProfile.maxVideoSpec.isNotBlank()) {
+            add(stringResource(R.string.banner_chip_video, deviceProfile.maxVideoSpec))
+        }
+        if (deviceProfile.maxRefreshRateHz >= 120) {
+            add(stringResource(R.string.banner_chip_refresh, deviceProfile.maxRefreshRateHz))
+        }
+        if (deviceProfile.telephotoStabilizationCipa > 0f) {
+            add(
+                stringResource(
+                    R.string.banner_chip_stabilization,
+                    deviceProfile.telephotoStabilizationCipa.toInt()
+                )
+            )
+        }
+        if (deviceProfile.batteryCapacityMah >= 6000) {
+            add(stringResource(R.string.banner_chip_battery, deviceProfile.batteryCapacityMah))
+        }
         add(stringResource(R.string.banner_chip_curated))
     }
 
@@ -783,7 +919,6 @@ private fun PresetGrid(
                         )
                     }
                 }
-
                 // 底部提示（仅在全部预设页面显示）
                 if (showLoadingTip) {
                     item(span = StaggeredGridItemSpan.FullLine) {
@@ -874,10 +1009,54 @@ private fun PresetCardItem(
                         Toast.LENGTH_SHORT
                     ).show()
                 }
+            },
+            // 【v1.7.0】长按菜单补齐：复制参数（文本进剪贴板）/ 分享（系统分享面板）
+            onCopyParams = {
+                val paramsText = buildPresetParamsText(cardContext, preset)
+                val clipboard = cardContext.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                    as? android.content.ClipboardManager
+                if (clipboard != null) {
+                    clipboard.setPrimaryClip(
+                        android.content.ClipData.newPlainText(preset.name, paramsText)
+                    )
+                    Toast.makeText(
+                        cardContext,
+                        cardResources.getString(R.string.preset_copy_params_done),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            },
+            onSharePreset = {
+                val paramsText = buildPresetParamsText(cardContext, preset)
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, preset.name)
+                    putExtra(Intent.EXTRA_TEXT, paramsText)
+                }
+                runCatching {
+                    cardContext.startActivity(Intent.createChooser(shareIntent, null))
+                }
             }
         )
     }
 }
+
+/**
+ * 【v1.7.0】预设参数纯文本 —— 复制 / 分享共用
+ * 含名称、作者、风格与关键参数（与详情页展示口径一致）。
+ */
+private fun buildPresetParamsText(context: android.content.Context, preset: MasterPreset): String = buildString {
+    appendLine(preset.name)
+    if (preset.author.isNotBlank()) appendLine(preset.author)
+    preset.filter?.let { appendLine("${context.getString(R.string.param_filter)}: $it") }
+    val items = preset.getDisplaySections(context)
+        .flatMap { it.items }
+        .take(MAX_SHARED_PARAMS)
+    items.forEach { appendLine("${it.label}: ${it.value}") }
+}.trim()
+
+/** 复制 / 分享文本最多携带的参数条数（避免过长） */
+private const val MAX_SHARED_PARAMS = 12
 
 /**
  * 【v1.6.13】空状态可操作化：
@@ -1044,6 +1223,10 @@ private fun LoadingMoreTip() {
 
 // ═══════════════════════════════════════════════════════════
 // FD-10 / v1.6：搜索 + 多维筛选 + 排序 一体化栏
+// 【v1.7.0】主页 2.0 升级：
+//   ① 搜索历史面板（防抖 + 历史 + 全文检索后端见 HomeViewModel）；
+//   ② 场景化分区行（从预设 tags 派生，无需改订阅 Schema）；
+//   ③ 计数 + 一键清除独立成行（小屏防挤压）。
 // 位置：HomeTabRow → DeviceRecommendedBanner → SearchFilterBar → HorizontalPager
 // Tab 0 专属；Tab 切换时状态保留（不重建 Composable，只是条件渲染）
 // ═══════════════════════════════════════════════════════════
@@ -1052,9 +1235,19 @@ private fun LoadingMoreTip() {
 private fun SearchFilterBar(
     searchQuery: String,
     onSearchChange: (String) -> Unit,
+    // 【v1.7.0】搜索历史（防抖后端 + 历史持久化）
+    onSearchSubmit: (String) -> Unit = {},
+    searchHistory: List<String> = emptyList(),
+    onHistoryClick: (String) -> Unit = {},
+    onHistoryRemove: (String) -> Unit = {},
+    onHistoryClear: () -> Unit = {},
     availableFilters: List<String>,
     selectedFilters: Set<String>,
     onToggleFilter: (String) -> Unit,
+    // 【v1.7.0】场景化分区
+    availableScenes: List<HomeViewModel.SceneCategory> = emptyList(),
+    selectedScene: HomeViewModel.SceneCategory? = null,
+    onToggleScene: (HomeViewModel.SceneCategory) -> Unit = {},
     sortOrder: HomeViewModel.SortOrder,
     onSortChange: (HomeViewModel.SortOrder) -> Unit,
     showFavoritesOnly: Boolean,
@@ -1068,6 +1261,9 @@ private fun SearchFilterBar(
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     var sortExpanded by remember { mutableStateOf(false) }
+    // 【v1.7.0】搜索框聚焦时展示历史面板
+    var searchFocused by remember { mutableStateOf(false) }
+    val showHistory = searchFocused && searchHistory.isNotEmpty() && searchQuery.isBlank()
 
     Card(
         modifier = modifier
@@ -1078,11 +1274,13 @@ private fun SearchFilterBar(
     ) {
         Column(modifier = Modifier.padding(AppDesign.ContentPadding)) {
 
-            // ① 搜索框
+            // ① 搜索框（聚焦时上浮展示历史面板）
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchChange,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { searchFocused = it.isFocused },
                 placeholder = { Text(stringResource(R.string.search_preset_placeholder)) },
                 singleLine = true,
                 leadingIcon = {
@@ -1112,9 +1310,116 @@ private fun SearchFilterBar(
                 )
             )
 
+            // 【v1.7.0】搜索历史面板（聚焦 + 无输入时展示）
+            if (showHistory) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.search_history_title),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = themedTextSecondary().copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = stringResource(R.string.search_history_clear),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clickable { onHistoryClear() }
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                searchHistory.forEach { history ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(AppDesign.PillShape)
+                            .clickable {
+                                haptic.perform(HapticFeedbackType.ToggleOn)
+                                onHistoryClick(history)
+                            }
+                            .padding(horizontal = 4.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = null,
+                            tint = themedTextSecondary().copy(alpha = 0.5f),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = history,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = themedTextPrimary(),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(R.string.clear),
+                            tint = themedTextSecondary().copy(alpha = 0.5f),
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clickable { onHistoryRemove(history) }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+
             Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
 
-            // ② 风格 ChipGroup（多选，滚动横排）
+            // ② 【v1.7.0】场景化分区 ChipGroup（从 tags 派生；单选切换）
+            if (availableScenes.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.scene_section_title),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = themedTextSecondary().copy(alpha = 0.7f)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(AppDesign.ItemSpacing / 2),
+                    contentPadding = PaddingValues(vertical = 2.dp)
+                ) {
+                    items(availableScenes) { scene ->
+                        val selected = scene == selectedScene
+                        val chipInteraction = remember { MutableInteractionSource() }
+                        FilterChip(
+                            selected = selected,
+                            onClick = {
+                                haptic.perform(HapticFeedbackType.ToggleOn)
+                                onToggleScene(scene)
+                            },
+                            modifier = Modifier.fluidPressScale(chipInteraction, pressedScale = 0.92f),
+                            interactionSource = chipInteraction,
+                            label = { Text(sceneLabel(scene)) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = sceneIcon(scene),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                                selectedLabelColor = Color.White,
+                                selectedLeadingIconColor = Color.White,
+                                containerColor = themedCardBackground(),
+                                labelColor = themedTextPrimary()
+                            )
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
+            }
+
+            // ③ 风格 ChipGroup（多选，滚动横排）
             if (availableFilters.isNotEmpty()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1151,7 +1456,7 @@ private fun SearchFilterBar(
 
             Spacer(modifier = Modifier.height(AppDesign.ItemSpacing))
 
-            // ③ 排序下拉 + 快捷 Toggle
+            // ④ 排序下拉 + 快捷 Toggle
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1253,14 +1558,15 @@ private fun SearchFilterBar(
                 }
             }
 
-            // ④ 【v1.6.13】计数 + 一键清除独立成行（修复小屏与排序/Toggle 挤压溢出）
+            // ⑤ 【v1.6.13】计数 + 一键清除独立成行（修复小屏与排序/Toggle 挤压溢出）
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val hasActiveFilter = searchQuery.isNotBlank() || selectedFilters.isNotEmpty() ||
-                        showFavoritesOnly || showNewOnly || sortOrder != HomeViewModel.SortOrder.DEFAULT
+                        showFavoritesOnly || showNewOnly || sortOrder != HomeViewModel.SortOrder.DEFAULT ||
+                        selectedScene != null
                 Text(
                     text = stringResource(R.string.filter_result_count, presetCount),
                     style = MaterialTheme.typography.bodySmall,
@@ -1281,4 +1587,36 @@ private fun SearchFilterBar(
             }
         }
     }
+}
+
+/** 【v1.7.0】场景 Chip 文案（本地化） */
+@Composable
+private fun sceneLabel(scene: HomeViewModel.SceneCategory): String {
+    val resId = when (scene) {
+        HomeViewModel.SceneCategory.PORTRAIT -> R.string.scene_portrait
+        HomeViewModel.SceneCategory.LANDSCAPE -> R.string.scene_landscape
+        HomeViewModel.SceneCategory.NIGHT -> R.string.scene_night
+        HomeViewModel.SceneCategory.FOOD -> R.string.scene_food
+        HomeViewModel.SceneCategory.STREET -> R.string.scene_street
+        HomeViewModel.SceneCategory.PET -> R.string.scene_pet
+        HomeViewModel.SceneCategory.ARCHITECTURE -> R.string.scene_architecture
+        HomeViewModel.SceneCategory.PLANT -> R.string.scene_plant
+        HomeViewModel.SceneCategory.SUNSET -> R.string.scene_sunset
+        HomeViewModel.SceneCategory.MONO -> R.string.scene_mono
+    }
+    return stringResource(resId)
+}
+
+/** 【v1.7.0】场景 Chip 图标 */
+private fun sceneIcon(scene: HomeViewModel.SceneCategory): ImageVector = when (scene) {
+    HomeViewModel.SceneCategory.PORTRAIT -> Icons.Default.Person
+    HomeViewModel.SceneCategory.LANDSCAPE -> Icons.Default.Landscape
+    HomeViewModel.SceneCategory.NIGHT -> Icons.Default.Nightlight
+    HomeViewModel.SceneCategory.FOOD -> Icons.Default.Restaurant
+    HomeViewModel.SceneCategory.STREET -> Icons.Default.LocationCity
+    HomeViewModel.SceneCategory.PET -> Icons.Default.Pets
+    HomeViewModel.SceneCategory.ARCHITECTURE -> Icons.Default.Apartment
+    HomeViewModel.SceneCategory.PLANT -> Icons.Default.LocalFlorist
+    HomeViewModel.SceneCategory.SUNSET -> Icons.Default.WbTwilight
+    HomeViewModel.SceneCategory.MONO -> Icons.Default.Contrast
 }
