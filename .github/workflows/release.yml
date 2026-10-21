@@ -19,7 +19,7 @@ on:
         default: false
         type: boolean
       release_tag:
-        description: 'Release 标签 (例如: v1.5.1)'
+        description: 'Release 标签 (例如: v1.7.0，必须与 app/build.gradle.kts 的 versionName 一致)'
         required: false
         type: string
       release_name:
@@ -114,11 +114,20 @@ jobs:
           fi
 
       # G-3：tag 必须与 versionName 一致（五者一致性由本检查 + git-cliff + Release 说明保障）
-      - name: Verify tag / versionName consistency (tag push only)
-        if: github.ref_type == 'tag'
+      # 【v1.7.0 修复】原实现仅在 tag push 路径生效，workflow_dispatch 手动触发时被绕过——
+      # 传错 release_tag 会直接发布错误版本。现将两种触发路径统一校验。
+      - name: Verify tag / versionName consistency
+        if: github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
         run: |
           VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
-          TAG="${{ github.ref_name }}"
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="${{ github.event.inputs.release_tag }}"
+          fi
+          if [ -z "$TAG" ]; then
+            echo "❌ 错误: 未提供 release_tag，无法校验版本一致性"; exit 1
+          fi
           if [ "v$VERSION_NAME" != "$TAG" ]; then
             echo "❌ 版本不一致：tag=$TAG 但 versionName=$VERSION_NAME"
             echo "   请修正 tag 或 app/build.gradle.kts 中的 versionName 后重试。"
