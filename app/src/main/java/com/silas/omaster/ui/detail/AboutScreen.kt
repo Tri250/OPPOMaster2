@@ -1194,8 +1194,8 @@ private fun QQGroupCard(context: android.content.Context) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "QQ",
-                        style = MaterialTheme.typography.titleSmall,
+                        text = "推荐",
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
@@ -1206,12 +1206,6 @@ private fun QQGroupCard(context: android.content.Context) {
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = themedTextPrimary()
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = stringResource(R.string.about_qq_group_number, "1083543279"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = themedTextSecondary().copy(alpha = 0.6f)
                     )
                 }
             }
