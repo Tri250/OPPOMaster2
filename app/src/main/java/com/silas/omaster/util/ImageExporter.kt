@@ -36,7 +36,7 @@ object ImageExporter {
                 )
                 uri?.let {
                     context.contentResolver.openOutputStream(it)?.use { out ->
-                        if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)) {
+                        if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 98, out)) {
                             return false
                         }
                     } ?: return false
@@ -59,7 +59,7 @@ object ImageExporter {
                     .apply { mkdirs() }
                 val file = File(dir, fileName)
                 FileOutputStream(file).use { out ->
-                    if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)) {
+                    if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 98, out)) {
                         return false
                     }
                 }
@@ -76,6 +76,64 @@ object ImageExporter {
             }
         } catch (e: Exception) {
             android.util.Log.e("ImageExporter", "Failed to save image", e)
+            false
+        }
+    }
+
+    /**
+     * 【v1.7.8】原始 JPEG 字节直通保存（零解码、零重编码）。
+     *
+     * 用于 POP 即拍"预设无可套用参数"场景：相机成片的传感器原始 JPEG 字节
+     * 直接写入相册，画质与系统相机完全一致（此前会重新压缩进 2048px 位图）。
+     */
+    fun saveJpegBytes(
+        context: Context,
+        bytes: ByteArray,
+        fileName: String = "omaster_${System.currentTimeMillis()}.jpg"
+    ): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(
+                        MediaStore.Images.Media.RELATIVE_PATH,
+                        Environment.DIRECTORY_PICTURES + "/OMaster"
+                    )
+                }
+                val uri = context.contentResolver.insert(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    values
+                ) ?: return false
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    out.write(bytes)
+                } ?: return false
+            } else {
+                @Suppress("DEPRECATION")
+                val publicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                val hasPublicPermission = ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ) == PackageManager.PERMISSION_GRANTED
+                val appDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                    ?: context.getExternalFilesDir(null)
+                    ?: context.cacheDir
+                val dir = File(if (hasPublicPermission) publicDir else appDir, "OMaster")
+                    .apply { mkdirs() }
+                val file = File(dir, fileName)
+                FileOutputStream(file).use { out -> out.write(bytes) }
+                if (!hasPublicPermission) {
+                    MediaScannerConnection.scanFile(
+                        context.applicationContext,
+                        arrayOf(file.absolutePath),
+                        arrayOf("image/jpeg"),
+                        null
+                    )
+                }
+            }
+            android.util.Log.i("ImageExporter", "saveJpegBytes: name=$fileName bytes=${bytes.size}")
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("ImageExporter", "saveJpegBytes failed: name=$fileName", e)
             false
         }
     }

@@ -303,3 +303,67 @@ release（git-cliff 说明 + 草稿 Release，5 APK ~46–47MB）→ success
 | 全模块自检修复 | ✅ P0×1 / P1×4 / P2×8 全部修复并复验 |
 | 本地验收（语法/XML/66 单测/空实现） | ✅ 全绿 |
 | CI 三阶段门禁 + Release 发布 + Latest 校验 | ✅ 运行 44729887495 全绿，Latest = v1.7.7 |
+
+---
+
+# v1.7.8「POP 即拍全分辨率画质管线」
+
+> 背景：v1.7.7 发布后用户反馈「POP 即拍画质非常差」。本章定位画质损失根因并实施全分辨率画质管线，画质目标对标 OPPO Reno17 Pro。
+
+## 七、画质损失根因定位（四项，按影响排序）
+
+| # | 根因 | 位置（v1.7.7） | 画质影响 |
+|---|---|---|---|
+| 1 | `CONTROL_CAPTURE_INTENT_MANUAL` | PopCaptureScreen.buildImageCapture | MANUAL 意图让 HAL 关闭厂商画质增强——ColorOS 的 HDR / 多帧合成 / 降噪在 MANUAL 下不触发，成片动态范围与噪点显著劣化。**影响最大** |
+| 2 | `CAPTURE_MODE_MINIMIZE_LATENCY` | 同上 | 低延迟模式跳过厂商全链路后处理，并可能降低输出规格 |
+| 3 | `POP_STYLE_MAX_SIDE = 2048` 降采样 | stylePhoto / loadBitmap | 12MP 成片先缩到 ~3MP 再套色，成片细节直接损失 4 倍像素；保存的就是低分辨率图 |
+| 4 | 无效果预设也走「解码→重编码 JPEG 95」 | stylePhoto / ImageExporter | 明明没有可套用参数，仍把传感器原图重新压缩进低分辨率位图，白丢一代画质 |
+
+辅助缺陷：锐化为 4 邻域近似（半径 1、强度封顶 1.0），无高 ISO 降噪，JPEG 95 而非 98。
+
+## 八、全分辨率画质管线（v1.7.8 实施）
+
+**1. 拍摄请求恢复厂商画质管线**
+- `CAPTURE_MODE_MAXIMIZE_QUALITY` 替代 MINIMIZE_LATENCY（[PopCaptureScreen.kt](file:///workspace/app/src/main/java/com/silas/omaster/recognition/PopCaptureScreen.kt)）；
+- 意图改 `STILL_CAPTURE` + 保留 `CONTROL_AE_MODE_OFF`：手动 ISO/快门/EV 仍逐字生效（标准手动模式语义），厂商 HDR/MFNR/NR 保持开启。
+
+**2. 条带化全分辨率处理**（[PopImageProcessor.kt](file:///workspace/app/src/main/java/com/silas/omaster/recognition/PopImageProcessor.kt) + [PresetPixelEffects.kt](file:///workspace/app/src/main/java/com/silas/omaster/recognition/PresetPixelEffects.kt) 新增 `processBandInto`）
+- 成片不再降采样，按 192 行/带处理全分辨率位图，带上下留 2 行重叠供邻域运算、只写中心行——**任意分带数量结果逐位一致**（单测锁定）；
+- 带内顺序：4x5 色彩矩阵 → 保边降噪 → 亮度域 unsharp → 径向暗角；
+- 峰值内存：12MP 约 105MB（原 300MB 方案需 2048px 降采样才压到 75MB，现在是全分辨率下 105MB）；
+- 内存守卫 `chooseStyleMaxSide(堆上限)`：2 张整图 + 32MB 瞬态超堆 45% 时按面积等比收缩（256MB 堆 12MP → ~3720px，512MB 堆 → 全分辨率），108MP 极端模式自动收缩。
+
+**3. 画质增强细节**
+- unsharp 升级为**可分离高斯**（5 taps）+ **luma-only**（结构增强、色彩零串染）；
+- **smoothstep 边缘权重**：高频残差 <6 视为噪点（锐化权重 0，交给降噪）、>30 视为真实边缘（满额）——既增强细节又不放大噪点（单测：噪点方差不升、边缘梯度增强、暗侧更暗亮侧更亮）；
+- **高 ISO 保边降噪**（ISO≥400 自动启用）：平坦区向四邻均值 blend，边缘不动；
+- 暗角与旧版 `applyVignette` 同公式，逐像素定位。
+
+**4. 无效果直通**
+- `hasVisibleEffect == false` 时：快门回调经 `ImageProxy` buffer duplicate 取出传感器原始 JPEG 字节，保存走 [ImageExporter.saveJpegBytes](file:///workspace/app/src/main/java/com/silas/omaster/util/ImageExporter.kt)（零解码零重编码）；预览仍显示原图；
+- JPEG 导出质量 95 → 98。
+
+**5. 相册/系统相机路径**
+- `loadBitmap` 的 2048px 固定上限改同一内存守卫（堆充裕保留原图全分辨率）+ EXIF 方向修正 + 精确缩放。
+
+## 九、自检验收（v1.7.8）
+
+```
+bash /tmp/harness/build.sh → OK (84 tests)
+```
+新增 [PopImageQualityTest.kt](file:///workspace/app/src/test/java/com/silas/omaster/recognition/PopImageQualityTest.kt)（16 项）：条带无接缝（7 行一带 vs 整带逐位一致）、与独立参考实现交叉一致、矩阵/钳位/单位矩阵/全关闭直通、降噪压噪（方差降 >25%）保边缘（梯度保留 ≥90%）、锐化增梯度不放大噪点、组合净降噪、暗角公式、内存守卫 5 规格、高斯模糊均匀/阶梯。原有 68 项测试全绿（无回归）。
+
+- 四个改动文件 kotlinc 语法校验 0 错误；
+- CI 门禁：quality（单测+lint）→ build（签名 + R8 冒烟）→ release 全绿后发布。
+
+## 十、最终验收结论（v1.7.8）
+
+| 验收项 | 结果 |
+|---|---|
+| 拍摄请求画质（MAXIMIZE_QUALITY + STILL_CAPTURE） | ✅ 厂商 HDR/MFNR/NR 恢复，手动参数仍生效 |
+| 全分辨率成片（无 2048px 降采样） | ✅ 条带化 + 内存守卫，12MP 全分辨率输出 |
+| 质感细节（luma unsharp + smoothstep 边缘保护） | ✅ 噪点不放大、强边满额、细纹理过渡 |
+| 高 ISO 降噪 | ✅ ISO≥400 自动保边降噪 |
+| 无效果预设零画质损失 | ✅ 原始 JPEG 字节直通保存 |
+| 导出质量 | ✅ JPEG 98 |
+| 测试 / 语法 / 资源 / CI / Release | ✅ 84 单测、0 语法错误、CI 全绿、Latest = v1.7.8 |

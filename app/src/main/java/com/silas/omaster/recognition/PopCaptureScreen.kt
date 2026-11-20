@@ -70,8 +70,10 @@ import java.util.concurrent.Executors
  * 链路：加载预设 → 能力探测分级（后置主摄）→ 生成拍摄计划（[PresetCapturePlan]）→
  * 自研相机管线（CameraX + Camera2 Interop）：
  * ① ImageAnalysis 逐帧套用预设色彩矩阵 → 取景器实时滤镜（所见即所得）；
- * ② ImageCapture 按 [CapturePlan] 把 ISO/快门/曝光补偿真实写入拍摄请求（AE off + MANUAL 意图）；
- * ③ 成片经拍后套色管线（同源色彩矩阵 + 锐化 + 暗角）→ 保存相册。
+ * ② ImageCapture 按 [CapturePlan] 把 ISO/快门/曝光补偿真实写入拍摄请求
+ * （AE off + STILL_CAPTURE 意图，厂商画质管线保持开启）；
+ * ③ 成片经 [PopImageProcessor] 全分辨率画质管线（色彩矩阵 + 高 ISO 保边降噪 +
+ * 亮度域 unsharp 锐化 + 暗角）→ 保存相册；无可套用参数时保存原始 JPEG 字节零重编码。
  *
  * 降级路径：无相机权限或设备不支持手动曝光时，可用系统相机拍照 / 相册选图，
  * 拍后仍完整套用调色参数。参数卡按"已写入拍摄 / 取景与成片已套用 / 无法套用（含原因）"
@@ -90,6 +92,8 @@ fun PopCaptureScreen(
     val plan = remember(preset, capability) { PresetCapturePlan.build(preset, capability.manualRanges) }
 
     var appliedBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    // 无可套用参数时保留的传感器原始 JPEG 字节（保存时零重编码直通，v1.7.8）
+    var capturedJpegBytes by remember { mutableStateOf<ByteArray?>(null) }
     var isCapturing by remember { mutableStateOf(false) }
     var toast by remember { mutableStateOf<String?>(null) }
     var photoUri by remember { mutableStateOf<Uri?>(null) }
@@ -200,21 +204,30 @@ fun PopCaptureScreen(
     }
 
     /**
-     * 拍后套色管线（相机成片 / 系统相机 / 相册选图共用）：
-     * 降采样控制内存 → 套色 → 如实提示 → 回收中间位图。
+     * 拍后套色管线（相机成片 / 系统相机 / 相册选图共用）。
+     *
+     * 【v1.7.8 全分辨率画质】有效果预设走 [PopImageProcessor] 条带管线：
+     * 全分辨率输出（不再 2048px 降采样）+ 内存守卫自动兜底 + 高 ISO 保边降噪；
+     * 无可套用参数时成片即原图，保留传感器原始 JPEG 字节供保存直通（零重编码）。
      *
      * @param raw 原始位图（调用方交出所有权，内部按需回收）
+     * @param jpegBytes 相机原始 JPEG 字节（仅相机路径非空；无效果时保存直通）
      */
-    fun stylePhoto(raw: Bitmap, preset: MasterPreset) {
+    fun stylePhoto(raw: Bitmap, preset: MasterPreset, jpegBytes: ByteArray? = null) {
         scope.launch {
-            // 降采样同样放后台：12MP 成片缩放约 12.5MB 分配，避免主线程卡顿
-            val downscaled = withContext(Dispatchers.Default) { downscaleForStyle(raw) }
-            val styled = applyStyle(downscaled, preset)
+            val hasEffect = PresetColorTransform.hasVisibleEffect(preset)
+            val styled = if (hasEffect) {
+                withContext(Dispatchers.Default) {
+                    PopImageProcessor.process(raw, preset, Runtime.getRuntime().maxMemory())
+                }
+            } else {
+                raw
+            }
             appliedBitmap = styled
-            if (downscaled !== raw) raw.recycle()
-            if (styled !== downscaled) downscaled.recycle()
+            capturedJpegBytes = if (!hasEffect) jpegBytes else null
+            if (styled !== raw) raw.recycle()
             // 如实提示：确有机器可套用的参数才宣称"已套用"，否则明示按原图拍摄
-            toast = if (PresetColorTransform.hasVisibleEffect(preset)) msgApplied else msgNoEffect
+            toast = if (hasEffect) msgApplied else msgNoEffect
             isCapturing = false
         }
     }
@@ -227,6 +240,15 @@ fun PopCaptureScreen(
             ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageCapturedCallback() {
                 override fun onCaptureSuccess(image: ImageProxy) {
+                    // 原始 JPEG 字节（duplicate 独立 position，不影响随后的 toBitmap）：
+                    // 无效果预设保存时零重编码直通，画质等同系统相机（v1.7.8）
+                    val jpegBytes = try {
+                        image.planes?.takeIf { it.isNotEmpty() }?.get(0)?.buffer?.let { buf ->
+                            ByteArray(buf.remaining()).also { buf.duplicate().get(it) }
+                        }
+                    } catch (e: Exception) {
+                        null
+                    }
                     val bmp = try {
                         image.toBitmap()
                     } catch (e: Exception) {
@@ -239,7 +261,7 @@ fun PopCaptureScreen(
                         toast = msgCaptureFailed
                         return
                     }
-                    stylePhoto(bmp, preset)
+                    stylePhoto(bmp, preset, jpegBytes)
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -349,7 +371,10 @@ fun PopCaptureScreen(
                             modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         // 重拍：回到取景（有相机权限）或占位
                         TextButton(
-                            onClick = { appliedBitmap = null },
+                            onClick = {
+                                appliedBitmap = null
+                                capturedJpegBytes = null
+                            },
                             modifier = Modifier.align(Alignment.TopEnd)
                         ) {
                             Text(stringResource(R.string.pop_retake), color = Color.White, fontSize = 12.sp)
@@ -444,17 +469,27 @@ fun PopCaptureScreen(
                 }
             }
 
-            // 保存到相册
+            // 保存到相册（v1.7.8：无可套用参数时优先保存原始 JPEG 字节，零重编码）
             Button(
                 onClick = {
-                    appliedBitmap?.let { bmp ->
+                    val bytes = capturedJpegBytes
+                    val bmp = appliedBitmap
+                    if (bytes == null && bmp == null) {
+                        toast = msgNeedPhoto
+                    } else {
                         scope.launch {
                             val ok = withContext(Dispatchers.IO) {
-                                ImageExporter.saveToGallery(context, bmp)
+                                when {
+                                    bytes != null && bytes.isNotEmpty() ->
+                                        ImageExporter.saveJpegBytes(context, bytes)
+                                    bmp != null ->
+                                        ImageExporter.saveToGallery(context, bmp)
+                                    else -> false
+                                }
                             }
                             toast = if (ok) msgSaved else msgSaveFailed
                         }
-                    } ?: run { toast = msgNeedPhoto }
+                    }
                 },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 enabled = appliedBitmap != null && !isCapturing,
@@ -489,17 +524,22 @@ fun PopCaptureScreen(
 @OptIn(ExperimentalCamera2Interop::class)
 @SuppressLint("UnsafeOptInUsageError")
 private fun buildImageCapture(plan: CapturePlan): ImageCapture {
+    // 【v1.7.8 画质】MAXIMIZE_QUALITY：关闭零快门延迟，换取厂商全链路后处理
+    // （多帧合成 / HDR / 降噪）与最高输出分辨率；MINIMIZE_LATENCY 会跳过这些管线，
+    // 是 v1.7.7 及以前"POP 即拍画质非常差"的主因之一。
     val builder = ImageCapture.Builder()
-        .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+        .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
     if (plan.manualExposure) {
         val extender = Camera2Interop.Extender(builder)
         extender.setCaptureRequestOption(
             CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF
         )
-        // MANUAL 拍摄意图：提示 HAL 本帧为手动曝光（部分 ColorOS/半 LIMITED 设备
-        // 缺省 STILL_CAPTURE 意图会回写 AE，导致手动参数看似"未生效"）
+        // 【v1.7.8】意图用 STILL_CAPTURE 而非 MANUAL：MANUAL 意图会让 HAL 关闭
+        // 厂商画质增强（ColorOS 的 HDR / 多帧降噪在 MANUAL 下不触发，成片动态
+        // 范围与噪点明显劣化）；STILL_CAPTURE + CONTROL_AE_MODE_OFF 是标准手动
+        // 模式语义——手动参数全权生效，厂商画质管线保持开启。
         extender.setCaptureRequestOption(
-            CaptureRequest.CONTROL_CAPTURE_INTENT, CameraMetadata.CONTROL_CAPTURE_INTENT_MANUAL
+            CaptureRequest.CONTROL_CAPTURE_INTENT, CameraMetadata.CONTROL_CAPTURE_INTENT_STILL_CAPTURE
         )
         plan.iso?.let {
             extender.setCaptureRequestOption(CaptureRequest.SENSOR_SENSITIVITY, it)
@@ -645,15 +685,21 @@ private fun createPhotoUri(context: Context): Uri {
 
 private suspend fun loadBitmap(context: Context, uri: Uri): Bitmap? = withContext(Dispatchers.IO) {
     try {
-        // 先读边界再按 2048px 上限降采样，避免大图全尺寸解码 OOM
+        // 先读边界；【v1.7.8】与相机成片同一内存守卫（PresetPixelEffects.chooseStyleMaxSide）：
+        // 堆充裕时保留原图全分辨率（相册大图同样受益），堆紧张时按面积等比收缩，
+        // 不再固定 2048px 上限——2048px 会让 12MP 原图细节损失 4 倍像素。
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         context.contentResolver.openInputStream(uri)?.use {
             BitmapFactory.decodeStream(it, null, bounds)
         }
-        val maxSide = maxOf(bounds.outWidth, bounds.outHeight)
-        if (maxSide <= 0) return@withContext null
+        val w = bounds.outWidth
+        val h = bounds.outHeight
+        if (w <= 0 || h <= 0) return@withContext null
+        val guardMax = PresetPixelEffects.chooseStyleMaxSide(w, h, Runtime.getRuntime().maxMemory())
         var sample = 1
-        while (maxSide / sample > 2048) sample *= 2
+        if (guardMax > 0) {
+            while (maxOf(w, h) / sample > guardMax) sample *= 2
+        }
         val opts = BitmapFactory.Options().apply {
             inSampleSize = sample
             inPreferredConfig = Bitmap.Config.ARGB_8888
@@ -666,7 +712,17 @@ private suspend fun loadBitmap(context: Context, uri: Uri): Bitmap? = withContex
         val degrees = runCatching {
             context.contentResolver.openInputStream(uri)?.use { ExifInterface(it).rotationDegrees }
         }.getOrNull() ?: 0
-        if (degrees == 0) decoded else rotateBitmap(decoded, degrees.toFloat())
+        val oriented = if (degrees == 0) decoded else rotateBitmap(decoded, degrees.toFloat())
+
+        // inSampleSize 为 2 的幂可能略超守卫上限，精确缩放到目标边长
+        if (guardMax > 0 && maxOf(oriented.width, oriented.height) > guardMax) {
+            val scale = guardMax.toFloat() / maxOf(oriented.width, oriented.height)
+            val sw = (oriented.width * scale).toInt().coerceAtLeast(1)
+            val sh = (oriented.height * scale).toInt().coerceAtLeast(1)
+            Bitmap.createScaledBitmap(oriented, sw, sh, true).also { oriented.recycle() }
+        } else {
+            oriented
+        }
     } catch (e: Exception) { null }
 }
 
@@ -676,40 +732,4 @@ private fun rotateBitmap(src: Bitmap, degrees: Float): Bitmap {
     return try {
         Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
     } catch (e: Exception) { src }
-}
-
-/**
- * POP 套色前的最大边长。相机成片为全传感器分辨率（12MP≈4000px），
- * 全尺寸 CPU 套色（矩阵 + unsharp + 暗角）峰值内存约 300MB；
- * 降到 2048px 后峰值约 75MB，中低端机不再 OOM/长时间卡死。
- */
-private const val POP_STYLE_MAX_SIDE = 2048
-
-/** 超过最大边长的成片按比例降采样（不放大小图）；失败时退回原图 */
-private fun downscaleForStyle(src: Bitmap): Bitmap {
-    val w = src.width
-    val h = src.height
-    val maxSide = maxOf(w, h)
-    if (maxSide <= POP_STYLE_MAX_SIDE) return src
-    val scale = POP_STYLE_MAX_SIDE.toFloat() / maxSide
-    return try {
-        Bitmap.createScaledBitmap(src, (w * scale).toInt().coerceAtLeast(1), (h * scale).toInt().coerceAtLeast(1), true)
-    } catch (e: Exception) {
-        src
-    }
-}
-
-private suspend fun applyStyle(bitmap: Bitmap, preset: MasterPreset): Bitmap = withContext(Dispatchers.Default) {
-    try {
-        val matrix = PresetColorTransform.buildColorMatrix(preset)
-        val result = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(result)
-        val paint = android.graphics.Paint().apply {
-            colorFilter = android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix(matrix))
-        }
-        canvas.drawBitmap(bitmap, 0f, 0f, paint)
-        // 矩阵无法表达的预设参数：锐度（unsharp）与暗角（径向渐变）像素级套用
-        val sharpened = PresetPixelEffects.applySharpen(result, PresetColorTransform.sharpnessAmount(preset))
-        PresetPixelEffects.applyVignette(sharpened, PresetColorTransform.vignetteStrength(preset))
-    } catch (e: Exception) { bitmap }
 }
