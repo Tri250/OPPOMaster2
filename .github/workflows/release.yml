@@ -201,7 +201,6 @@ jobs:
             'Lcom/silas/omaster/navigation/Screen$Home;'
             'Lcom/silas/omaster/navigation/Screen$PresetSelection;'
             'Lcom/silas/omaster/navigation/Screen$Settings;'
-            'Lcom/silas/omaster/navigation/Screen$Profile;'
             'Lcom/silas/omaster/navigation/Screen$About;'
             'Lcom/silas/omaster/navigation/Screen$Discover;'
             'Lcom/silas/omaster/navigation/Screen$ColorWalk;'
@@ -212,6 +211,9 @@ jobs:
             'Lcom/silas/omaster/navigation/Screen$Detail$$serializer;'
             'Lcom/silas/omaster/navigation/Screen$EditPreset$$serializer;'
             'Lcom/silas/omaster/navigation/Screen$CreatePreset$$serializer;'
+            # v1.7.1 P1 识别 → POP 即拍链路（data class 路由 → $$serializer）
+            'Lcom/silas/omaster/navigation/Screen$PhotoRecognition$$serializer;'
+            'Lcom/silas/omaster/navigation/Screen$PopCapture$$serializer;'
             'Lcom/silas/omaster/data/local/DarkMode;'
             'Lcom/silas/omaster/data/local/AppLanguage;'
             'Lcom/silas/omaster/data/local/FloatingWindowMode;'
