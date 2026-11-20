@@ -149,7 +149,9 @@ fun HomeScreen(
     refreshTrigger: Int = 0,
     usePremiumGlass: Boolean = true,
     // 【v1.6.14】悬浮按钮次级动作：剪贴板导入（由宿主传入；未传入时 FAB 无次级菜单）
-    onNavigateToClipboardImport: (() -> Unit)? = null
+    onNavigateToClipboardImport: (() -> Unit)? = null,
+    // P1-PHOTO-RECOGNITION：照片识别导入入口
+    onNavigateToPhotoRecognition: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val repository = remember { PresetRepository.getInstance(context) }
@@ -466,6 +468,22 @@ fun HomeScreen(
                         ) {
                             Text(
                                 text = stringResource(R.string.paste_import),
+                                color = themedTextPrimary(),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                    // P1-PHOTO-RECOGNITION：照片识别导入
+                    if (onNavigateToPhotoRecognition != null) {
+                        TextButton(
+                            onClick = {
+                                showTabLongPressMenu = null
+                                onNavigateToPhotoRecognition()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "从照片识别参数 / POP 即拍",
                                 color = themedTextPrimary(),
                                 modifier = Modifier.fillMaxWidth()
                             )
