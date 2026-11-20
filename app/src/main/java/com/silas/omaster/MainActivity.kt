@@ -694,6 +694,9 @@ fun MainApp(
                     onEdit = { presetId ->
                         navController.navigate(Screen.EditPreset(presetId))
                     },
+                    onPopCapture = { presetId ->
+                        navController.navigate(Screen.PopCapture(presetId))
+                    },
                     refreshTrigger = refreshTrigger
                 )
             }

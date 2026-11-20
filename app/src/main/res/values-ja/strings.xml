@@ -201,6 +201,7 @@
 
     <!-- 詳細ページ -->
     <string name="detail_title">プリセット詳細</string>
+    <string name="detail_pop_capture">POP撮影</string>
     <string name="detail_load_failed">プリセットデータの読み込みに失敗しました</string>
     <string name="floating_window">フローティングウィンドウ</string>
 

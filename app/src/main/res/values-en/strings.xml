@@ -188,6 +188,7 @@
 
     <!-- Detail Page -->
     <string name="detail_title">Preset Details</string>
+    <string name="detail_pop_capture">POP Capture</string>
     <string name="detail_load_failed">Failed to load preset data</string>
     <string name="floating_window">Floating Window</string>
 

@@ -241,6 +241,7 @@
 
     <!-- 详情页 -->
     <string name="detail_title">预设详情</string>
+    <string name="detail_pop_capture">POP 即拍</string>
     <string name="detail_load_failed">预设数据加载失败</string>
     <string name="floating_window">悬浮窗</string>
 

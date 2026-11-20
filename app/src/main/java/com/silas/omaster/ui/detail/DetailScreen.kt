@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Icon
@@ -76,6 +77,7 @@ fun DetailScreen(
     presetId: String,
     onBack: () -> Unit,
     onEdit: ((String) -> Unit)? = null,
+    onPopCapture: ((String) -> Unit)? = null,
     refreshTrigger: Int = 0
 ) {
     val context = LocalContext.current
@@ -120,6 +122,22 @@ fun DetailScreen(
                 onBack()
             },
             actions = {
+                // P1-POP：按当前预设直接进入 POP 即拍（选预设 → 拍摄套色，PRD FR-10 主入口）
+                if (preset != null && onPopCapture != null) {
+                    IconButton(
+                        onClick = {
+                            haptic.perform(HapticFeedbackType.Confirm)
+                            preset?.id?.let { id -> onPopCapture(id) }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.PhotoCamera,
+                            contentDescription = stringResource(R.string.detail_pop_capture),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
                 // 悬浮窗按钮
                 IconButton(
                     onClick = {
