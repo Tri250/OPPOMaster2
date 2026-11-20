@@ -1091,6 +1091,7 @@
     <string name="pop_hint_l2">Some manual controls available; unsupported items will be flagged</string>
     <string name="pop_hint_l3">Camera capability limited; switched to floating-window guidance + post-capture styling</string>
     <string name="pop_preview">Styled photo</string>
+    <string name="pop_preview_filtered">Preset applied live</string>
     <string name="pop_viewfinder_hint">Tap the shutter to shoot, or pick a photo from gallery to restyle</string>
     <string name="pop_applied_params">Applied parameters</string>
     <string name="pop_no_params">This preset has no camera parameters; only the filter style is applied</string>

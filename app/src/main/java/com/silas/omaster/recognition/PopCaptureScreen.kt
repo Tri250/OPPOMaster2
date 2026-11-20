@@ -12,15 +12,14 @@ import android.net.Uri
 import android.annotation.SuppressLint
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.camera2.interop.Camera2Interop
-import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
-import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -40,7 +39,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -49,7 +52,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
@@ -62,6 +64,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.Executors
 
 /**
  * POP 预设即拍页（PRD FR-10~14 / 16.2）。
@@ -116,27 +119,54 @@ fun PopCaptureScreen(
         cameraGranted = granted
     }
 
-    // ── 自研相机管线：按拍摄计划配置 ImageCapture（Camera2 Interop 写入请求键） ──
-    val previewView = remember { PreviewView(context) }
-    val preview = remember { Preview.Builder().build() }
+    // ── 自研相机管线：ImageAnalysis 取景（实时套用预设调色）+ ImageCapture 拍摄 ──
+    // v1.7.5：取景画面与成片共用同一套色彩矩阵，所见即所得；手动曝光同时写入
+    // 取景重复请求与拍摄请求，Reno 等支持 AE_MODE_OFF 的机型 ISO/快门真实生效。
+    val presetColorMatrix = remember(preset) { PresetColorTransform.buildColorMatrix(preset) }
+    val previewColorFilter = remember(presetColorMatrix) {
+        ColorFilter.colorMatrix(ColorMatrix(presetColorMatrix))
+    }
+    val previewVignette = remember(preset) { PresetColorTransform.vignetteStrength(preset) }
+    val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
+    var liveFrame by remember { mutableStateOf<ImageBitmap?>(null) }
+
+    val analysis = remember(plan) {
+        val builder = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+        applyPlanToAnalysis(builder, plan)
+        builder.build()
+    }
     val imageCapture = remember(plan) { buildImageCapture(plan) }
     val providerFuture = remember { ProcessCameraProvider.getInstance(context) }
     var boundProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var cameraBound by remember { mutableStateOf(false) }
 
-    DisposableEffect(cameraGranted, imageCapture) {
+    DisposableEffect(cameraGranted, plan) {
         if (cameraGranted) {
+            var lastFrameAt = 0L
+            analysis.setAnalyzer(analysisExecutor) { image ->
+                try {
+                    val now = System.currentTimeMillis()
+                    if (now - lastFrameAt >= 66) {
+                        lastFrameAt = now
+                        image.toRgbaBitmap()?.let { liveFrame = it.asImageBitmap() }
+                    }
+                } catch (_: Exception) {
+                } finally {
+                    image.close()
+                }
+            }
             val listener = Runnable {
                 try {
                     val provider = providerFuture.get()
                     provider.unbindAll()
                     provider.bindToLifecycle(
                         lifecycleOwner,
-                        CameraSelector.DEFAULT_BACK_CAMERA,
-                        preview,
+                        backCameraSelector(capability.cameraId),
+                        analysis,
                         imageCapture
                     )
-                    preview.setSurfaceProvider(previewView.surfaceProvider)
                     boundProvider = provider
                     cameraBound = true
                 } catch (e: Exception) {
@@ -145,6 +175,7 @@ fun PopCaptureScreen(
             }
             providerFuture.addListener(listener, ContextCompat.getMainExecutor(context))
             onDispose {
+                runCatching { analysis.clearAnalyzer() }
                 runCatching { boundProvider?.unbindAll() }
                 boundProvider = null
                 cameraBound = false
@@ -152,6 +183,9 @@ fun PopCaptureScreen(
         } else {
             onDispose { }
         }
+    }
+    DisposableEffect(Unit) {
+        onDispose { analysisExecutor.shutdown() }
     }
 
     /** 快门：拍摄 → 拍后套色 → 预览 */
@@ -163,7 +197,10 @@ fun PopCaptureScreen(
             object : ImageCapture.OnImageCapturedCallback() {
                 override fun onCaptureSuccess(image: ImageProxy) {
                     val bmp = try {
-                        image.toBitmap()
+                        // JPEG 输出不含像素旋转，需按 sensor 方向校正，否则成片横躺
+                        val raw = image.toBitmap()
+                        val degrees = image.imageInfo.rotationDegrees
+                        if (degrees != 0) rotateBitmap(raw, degrees.toFloat()) else raw
                     } catch (e: Exception) {
                         null
                     } finally {
@@ -296,8 +333,50 @@ fun PopCaptureScreen(
                             Text(stringResource(R.string.pop_retake), color = Color.White, fontSize = 12.sp)
                         }
                     }
+                    cameraGranted && cameraBound && liveFrame != null -> {
+                        Box(Modifier.fillMaxSize()) {
+                            Image(
+                                bitmap = liveFrame!!,
+                                contentDescription = stringResource(R.string.pop_preview),
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                                colorFilter = previewColorFilter
+                            )
+                            // 暗角在取景层同样可见（成片由 PresetPixelEffects 像素级应用）
+                            if (previewVignette > 0.01f) {
+                                Canvas(Modifier.fillMaxSize()) {
+                                    drawRect(
+                                        Brush.radialGradient(
+                                            0.55f to Color.Transparent,
+                                            1.0f to Color.Black.copy(
+                                                alpha = (previewVignette * 0.75f).coerceIn(0f, 0.85f)
+                                            ),
+                                            center = center,
+                                            radius = size.minDimension * 0.78f
+                                        )
+                                    )
+                                }
+                            }
+                            Surface(
+                                color = Color.Black.copy(alpha = 0.55f),
+                                shape = RoundedCornerShape(6.dp),
+                                modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
+                            ) {
+                                Text(
+                                    stringResource(R.string.pop_preview_filtered),
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+                    }
                     cameraGranted && cameraBound -> {
-                        AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(
+                                color = accent, strokeWidth = 2.dp, modifier = Modifier.size(26.dp)
+                            )
+                        }
                     }
                     else -> ViewfinderPlaceholder(accent)
                 }
@@ -415,8 +494,67 @@ fun PopCaptureScreen(
     }
 }
 
+/**
+ * 取景（ImageAnalysis）同样写入拍摄计划：手动曝光关闭 AE 后，取景画面亮度/噪点
+ * 与成片一致；否则写入曝光补偿，让用户在取景时就看到预设曝光。
+ */
+@SuppressLint("UnsafeOptInUsageError")
+private fun applyPlanToAnalysis(builder: ImageAnalysis.Builder, plan: CapturePlan) {
+    val extender = Camera2Interop.Extender(builder)
+    if (plan.manualExposure) {
+        extender.setCaptureRequestOption(
+            CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF
+        )
+        plan.iso?.let { extender.setCaptureRequestOption(CaptureRequest.SENSOR_SENSITIVITY, it) }
+        plan.shutterNs?.let {
+            extender.setCaptureRequestOption(CaptureRequest.SENSOR_EXPOSURE_TIME, it)
+        }
+    } else {
+        plan.evSteps?.let {
+            extender.setCaptureRequestOption(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, it)
+        }
+    }
+}
+
+/** 绑定与能力探测相同的后置相机；探测 id 不在可用列表时回退到任意后摄 */
+@SuppressLint("UnsafeOptInUsageError")
+private fun backCameraSelector(preferredId: String?): CameraSelector {
+    val builder = CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK)
+    if (preferredId != null) {
+        builder.addCameraFilter { infos ->
+            infos.filter { info ->
+                runCatching { Camera2CameraInfo.from(info).cameraId }.getOrNull() == preferredId
+            }.ifEmpty { infos }
+        }
+    }
+    return builder.build()
+}
+
+/** ImageAnalysis(RGBA_8888) 帧 → 按传感器方向摆正的 Bitmap（取景用） */
+private fun ImageProxy.toRgbaBitmap(): Bitmap? {
+    val plane = planes.firstOrNull() ?: return null
+    val buffer = plane.buffer
+    buffer.rewind()
+    val pixelStride = plane.pixelStride
+    if (pixelStride != 4) return null
+    val rowPadding = plane.rowStride - pixelStride * width
+    val src = if (rowPadding <= 0) {
+        Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also {
+            it.copyPixelsFromBuffer(buffer)
+        }
+    } else {
+        val padded = Bitmap.createBitmap(
+            width + rowPadding / pixelStride, height, Bitmap.Config.ARGB_8888
+        )
+        padded.copyPixelsFromBuffer(buffer)
+        val cropped = Bitmap.createBitmap(padded, 0, 0, width, height)
+        padded.recycle()
+        cropped
+    }
+    return rotateBitmap(src, imageInfo.rotationDegrees.toFloat())
+}
+
 /** 按拍摄计划构造 ImageCapture：手动曝光设备关闭 AE 并写入 ISO/快门，其余按步进写 EV */
-@OptIn(ExperimentalCamera2Interop::class)
 @SuppressLint("UnsafeOptInUsageError")
 private fun buildImageCapture(plan: CapturePlan): ImageCapture {
     val builder = ImageCapture.Builder()

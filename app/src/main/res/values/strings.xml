@@ -1111,6 +1111,7 @@
     <string name="pop_hint_l2">部分手动可用，未生效项将提示</string>
     <string name="pop_hint_l3">相机能力受限，已切换为悬浮窗照着调 + 拍后套色</string>
     <string name="pop_preview">套色后照片</string>
+    <string name="pop_preview_filtered">取景已实时套用预设</string>
     <string name="pop_viewfinder_hint">点击快门拍照 · 或从相册选图套色</string>
     <string name="pop_applied_params">已套用参数</string>
     <string name="pop_no_params">该预设无摄影参数，仅套用滤镜风格</string>

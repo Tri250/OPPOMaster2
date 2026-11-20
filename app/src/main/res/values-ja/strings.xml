@@ -890,6 +890,7 @@
     <string name="pop_hint_l2">一部マニュアル対応。未対応項目は提示します</string>
     <string name="pop_hint_l3">カメラ性能が制限済み。フローティング照合 + 撮影後套色に切替</string>
     <string name="pop_preview">スタイル適用後の写真</string>
+    <string name="pop_preview_filtered">ファインダーに反映中</string>
     <string name="pop_viewfinder_hint">シャッターで撮影 · ギャラリーから選んで套色</string>
     <string name="pop_applied_params">適用パラメータ</string>
     <string name="pop_no_params">このプリセットに撮影パラメータはなく、フィルタースタイルのみ適用します</string>
