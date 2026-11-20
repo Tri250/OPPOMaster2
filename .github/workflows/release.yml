@@ -354,13 +354,30 @@ jobs:
           path: ./apk
           merge-multiple: true
 
-      - name: Create GitHub Release (draft)
+      # 重复构建守护：同一 tag 重推/重跑时，先删除旧 Release（保留 tag 本身），
+      # 避免 softprops 更新旧条目时把已发布版重置回草稿、资产名冲突等问题
+      - name: Delete stale release for this tag (if any)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.tag.outputs.TAG }}"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "🧹 发现 tag $TAG 的旧 Release，删除后重建"
+            gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes
+          else
+            echo "✅ 无同名旧 Release"
+          fi
+
+      - name: Create GitHub Release (auto-publish)
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.TAG }}
           name: ${{ github.event.inputs.release_name || steps.tag.outputs.TAG }}
           body_path: RELEASE_NOTES.md
-          draft: true
+          # 门禁全绿后直接发布正式 Release，闭环产出（不再停留草稿等手动发布）
+          draft: false
+          # 防御：产物缺失时立即失败，避免发布空 Release
+          fail_on_unmatched_files: true
           prerelease: ${{ github.event.inputs.prerelease == 'true' || contains(steps.tag.outputs.TAG, 'beta') }}
           files: ./apk/**/*.apk
         env:
@@ -368,7 +385,7 @@ jobs:
 
       - name: Release summary
         run: |
-          echo "🎉 Release 草稿创建成功！"
+          echo "🎉 Release 发布成功！"
           echo "  标签: ${{ steps.tag.outputs.TAG }}"
           echo "🔗 查看地址: https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.TAG }}"
-          echo "⚠️ 请维护者真机验收后手动发布草稿，并同步蒲公英 / 蓝奏云镜像（6.3 发布流程）。"
+          echo "⚠️ 可选维护动作：同步蒲公英 / 蓝奏云镜像（6.3 发布流程）。"
