@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.silas.omaster.R
+import com.silas.omaster.model.DeviceProfile
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.theme.CardBorderHighlight
 import com.silas.omaster.ui.theme.CardBorderLight
@@ -263,7 +264,8 @@ fun PresetCard(
                     preset.deviceProfile?.let { dp ->
                         if (dp.isProImaging || dp.totalPixelsMp >= 200) {
                             val badge = listOfNotNull(
-                                if (dp.isProImaging) stringResource(R.string.device_badge_hasselblad) else null,
+                                // 哈苏徽章按影像品牌判定：realme GT7/GT6 isProImaging=true 但非哈苏联调，不能误标
+                                if (dp.imagingBrand == DeviceProfile.IMAGING_BRAND_HASSELBLAD) stringResource(R.string.device_badge_hasselblad) else null,
                                 if (dp.totalPixelsMp >= 200) stringResource(R.string.device_badge_200mp) else null
                             ).joinToString(" · ")
                             Surface(

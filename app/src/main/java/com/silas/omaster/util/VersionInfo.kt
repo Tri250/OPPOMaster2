@@ -32,4 +32,23 @@ object VersionInfo {
         val patch = parts.getOrNull(2)?.toIntOrNull() ?: 0
         return major * 10000 + minor * 100 + patch
     }
+
+    private fun parseSegments(versionName: String): List<Int> =
+        versionName.trim().removePrefix("v").split(".").map { it.toIntOrNull() ?: 0 }
+
+    /**
+     * 逐段比较版本号：candidate 是否比 current 更新。
+     * 修订位 ≥100 时（如 1.7.100 vs 1.8.0）加权和会进位碰撞，
+     * 逐段比较是唯一可靠口径。
+     */
+    fun isNewerVersion(current: String, candidate: String): Boolean {
+        val a = parseSegments(current)
+        val b = parseSegments(candidate)
+        for (i in 0 until maxOf(a.size, b.size)) {
+            val x = a.getOrElse(i) { 0 }
+            val y = b.getOrElse(i) { 0 }
+            if (x != y) return y > x
+        }
+        return false
+    }
 }

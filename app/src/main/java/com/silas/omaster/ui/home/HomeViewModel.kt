@@ -71,7 +71,15 @@ class HomeViewModel(
         DeviceDetector.getCurrentDevice(appContext)
     }
     val deviceDisplayName: String by lazy {
-        currentDeviceProfile.displayNameZh.ifBlank { currentDeviceProfile.model }
+        // 按 locale 选择展示名：en/ja 用户此前恒看中文展示名
+        // ConfigurationCompat 兼容 API 23（Configuration#getLocales 是 API 24+）
+        val locales = androidx.core.os.ConfigurationCompat.getLocales(appContext.resources.configuration)
+        val isZh = locales.isNotEmpty && locales[0].language == "zh"
+        if (isZh) {
+            currentDeviceProfile.displayNameZh.ifBlank { currentDeviceProfile.model }
+        } else {
+            currentDeviceProfile.displayNameEn.ifBlank { currentDeviceProfile.model }
+        }
     }
     val isFindX10Series: Boolean by lazy { DeviceDetector.isFindX10Series(appContext) }
 

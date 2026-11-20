@@ -69,7 +69,9 @@ fun CheckInDetailContent(
                     ActivityItem(
                         icon = Icons.Default.Palette,
                         title = stringResource(R.string.checkin_activity_draw),
-                        description = record.cardTheme ?: stringResource(R.string.checkin_activity_draw_default),
+                        // cardTheme 可能为空串（记录写入时无主题信息），空串需回退默认文案
+                        description = record.cardTheme?.takeIf { it.isNotBlank() }
+                            ?: stringResource(R.string.checkin_activity_draw_default),
                         tint = Color(0xFF667EEA)
                     )
                 }

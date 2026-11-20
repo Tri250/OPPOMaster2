@@ -133,6 +133,10 @@ fun SnapNoteCard(
         val target = pendingCameraFile
         pendingCameraFile = null
         if (ok && target != null) processAndSave(Uri.fromFile(target))
+        else {
+            // 拍照取消/失败：删除 pending 临时文件，避免 snap/ 目录残留孤儿文件
+            runCatching { target?.delete() }
+        }
     }
     // 相册选择：Photo Picker（无需存储权限）
     val pickLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->

@@ -115,6 +115,8 @@ class PresetRepository(
             val presets = withContext(Dispatchers.IO) { JsonUtil.loadPresets(appContext) }
             _defaultPresets.value = presets
             android.util.Log.d("PresetRepository", "Reloaded ${presets.size} default presets")
+            // 订阅刷新/导入会改变预设列表，同步刷新桌面小组件
+            com.silas.omaster.widget.TodayWidget.updateAll(appContext)
         }
     }
 
@@ -135,7 +137,10 @@ class PresetRepository(
         customPresetManager.customPresetsFlow,
         favoriteManager.favoritesFlow
     ) { defaultPresets, customPresets, favorites ->
-        val allPresets = defaultPresets + customPresets
+        // 按 id 去重兜底：历史数据或导入流程可能产生重复 id（如重复导入同一份 JSON），
+        // Compose items key=preset.id 重复会直接崩溃；保留先出现的（保持原有排序不变）
+        val allPresets = (defaultPresets + customPresets)
+            .distinctBy { it.id ?: it.name }
         allPresets
             .map { preset ->
                 preset.copy(isFavorite = preset.id?.let { it in favorites } ?: false)

@@ -32,6 +32,9 @@ fun PhotoRecognitionHost(
 ) {
     val context = LocalContext.current
     val accent = Color(0xFFEC7223)
+    // 识别协程挂载到组合作用域：自建 CoroutineScope 不随组合取消，
+    // 页面退出后回调仍会写 state 引发崩溃/泄漏
+    val recogScope = rememberCoroutineScope()
     var state by remember { mutableStateOf(RecogState.IDLE) }
     var result by remember { mutableStateOf<RecognitionResult?>(null) }
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -39,14 +42,14 @@ fun PhotoRecognitionHost(
 
     val pickLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
-    ) { uri -> if (uri != null) startRecognition(uri, context, { state = it }, { result = it }, { bitmap = it }, { error = it }) }
+    ) { uri -> if (uri != null) startRecognition(uri, context, recogScope, { state = it }, { result = it }, { bitmap = it }, { error = it }) }
 
     // 有外部图片 URI 时自动开始识别（仅一次）
     var consumedInitial by remember { mutableStateOf(false) }
     LaunchedEffect(initialImageUri) {
         if (!consumedInitial && initialImageUri != null) {
             consumedInitial = true
-            startRecognition(Uri.parse(initialImageUri), context, { state = it },
+            startRecognition(Uri.parse(initialImageUri), context, recogScope, { state = it },
                 { result = it }, { bitmap = it }, { error = it })
         }
     }
@@ -125,13 +128,14 @@ private enum class RecogState { IDLE, ANALYZING, RESULT, ERROR }
 private fun startRecognition(
     uri: Uri,
     context: android.content.Context,
+    scope: kotlinx.coroutines.CoroutineScope,
     setState: (RecogState) -> Unit,
     setResult: (RecognitionResult) -> Unit,
     setBitmap: (Bitmap) -> Unit,
     setError: (String) -> Unit
 ) {
     setState(RecogState.ANALYZING)
-    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+    scope.launch {
         when (val res = PhotoRecognitionService.recognize(context, uri)) {
             is PhotoRecognitionService.Result.Success -> {
                 setResult(res.result); setBitmap(res.bitmap); setState(RecogState.RESULT)

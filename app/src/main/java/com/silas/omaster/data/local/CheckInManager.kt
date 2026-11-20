@@ -135,9 +135,14 @@ class CheckInManager(context: Context) {
 
     /**
      * 获取当前连续打卡天数
+     * 断签校正：最后一次打卡早于昨天时 streak 已中断，应显示 0
+     * （存储值只会在下次打卡时被 updateStreak 重置为 1，此前界面会一直显示旧 streak）
      */
     fun getCurrentStreak(): Int {
-        return prefs.getInt(KEY_CURRENT_STREAK, 0)
+        val streak = prefs.getInt(KEY_CURRENT_STREAK, 0)
+        val lastDateStr = prefs.getString(KEY_LAST_CHECK_IN_DATE, null) ?: return 0
+        val lastDate = runCatching { LocalDate.parse(lastDateStr, DATE_FORMATTER) }.getOrNull() ?: return 0
+        return if (lastDate >= LocalDate.now().minusDays(1)) streak else 0
     }
 
     /**

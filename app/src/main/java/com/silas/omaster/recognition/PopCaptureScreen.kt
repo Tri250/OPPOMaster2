@@ -66,6 +66,18 @@ fun PopCaptureScreen(
     var toast by remember { mutableStateOf<String?>(null) }
     var photoUri by remember { mutableStateOf<Uri?>(null) }
     val scope = rememberCoroutineScope()
+    // Snackbar 经 Scaffold 的 snackbarHost 呈现：裸置在布局外会盖住 TopAppBar
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(toast) {
+        toast?.let {
+            snackbarHostState.showSnackbar(it, actionLabel = "知道了")
+            toast = null
+        }
+    }
+    /** 清理 pop_capture 临时目录（拍照取消/处理完成后调用，避免缓存目录积累孤儿文件） */
+    val cleanupTempFiles: () -> Unit = {
+        runCatching { File(context.cacheDir, "pop_capture").listFiles()?.forEach { it.delete() } }
+    }
 
     // 系统相机拍照：写入 FileProvider cache Uri，返回 true 表示拍摄成功
     val takePictureLauncher = rememberLauncherForActivityResult(
@@ -79,13 +91,18 @@ fun PopCaptureScreen(
                     if (bmp != null) {
                         appliedBitmap = applyStyle(bmp, preset)
                         toast = "已套用「${preset.name}」风格"
+                        // applyStyle 产出新位图，源位图即时回收（限 2048 后内存占用可控）
+                        bmp.recycle()
                     } else {
                         toast = "照片读取失败"
                     }
+                    cleanupTempFiles()
                     isCapturing = false
                 }
-            }
+            } ?: cleanupTempFiles()
         } else {
+            // 拍照取消/失败：删除 pending 临时文件
+            cleanupTempFiles()
             isCapturing = false
         }
     }
@@ -101,6 +118,7 @@ fun PopCaptureScreen(
                 if (bmp != null) {
                     appliedBitmap = applyStyle(bmp, preset)
                     toast = "已套用「${preset.name}」风格"
+                    bmp.recycle()
                 } else {
                     toast = "照片读取失败"
                 }
@@ -110,6 +128,7 @@ fun PopCaptureScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("POP 即拍", fontWeight = FontWeight.Bold) },
@@ -236,12 +255,6 @@ fun PopCaptureScreen(
             )
         }
     }
-
-    toast?.let { msg ->
-        Snackbar(modifier = Modifier.padding(16.dp), action = {
-            TextButton(onClick = { toast = null }) { Text("知道了") }
-        }) { Text(msg) }
-    }
 }
 
 @Composable
@@ -304,11 +317,19 @@ private fun createPhotoUri(context: Context): Uri {
     return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
 }
 
+// POP 即拍解码长边上限：全尺寸直接解码在 2 亿像素机型上会瞬间 OOM
+private const val POP_CAPTURE_MAX_EDGE = 2048
+
 private suspend fun loadBitmap(context: Context, uri: Uri): Bitmap? = withContext(Dispatchers.IO) {
     try {
-        val opts = BitmapFactory.Options().apply { inSampleSize = 1 }
+        // 先仅解码边界，计算 inSampleSize 把长边限制在 2048 内再正式解码
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        val longest = maxOf(bounds.outWidth, bounds.outHeight)
+        val sample = if (longest <= POP_CAPTURE_MAX_EDGE) 1 else (longest / POP_CAPTURE_MAX_EDGE).coerceAtLeast(1)
+        val opts = BitmapFactory.Options().apply { inSampleSize = sample }
         context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }
-    } catch (e: Exception) { null }
+    } catch (e: Exception) { null } catch (e: OutOfMemoryError) { null }
 }
 
 private suspend fun applyStyle(bitmap: Bitmap, preset: MasterPreset): Bitmap = withContext(Dispatchers.Default) {
@@ -321,5 +342,5 @@ private suspend fun applyStyle(bitmap: Bitmap, preset: MasterPreset): Bitmap = w
         }
         canvas.drawBitmap(bitmap, 0f, 0f, paint)
         result
-    } catch (e: Exception) { bitmap }
+    } catch (e: Exception) { bitmap } catch (e: OutOfMemoryError) { bitmap }
 }

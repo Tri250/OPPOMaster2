@@ -203,12 +203,13 @@ class ConfigCenter private constructor(context: Context) {
         }
 
     private fun loadFollowCameraFraming(): Boolean {
-        // ColorOS 17 / Find X10 设备默认开启避位；其他设备读取已存值或默认 true（安全回退）
-        val stored = prefs.getString(KEY_FOLLOW_CAMERA_FRAMING, null)
-        if (stored != null) return stored == "true"
+        // 历史版本曾以字符串写入该键，当前写入 putBoolean；两代数据需都兼容，
+        // 否则用户切换过"相机自动避位"后冷启动会 ClassCastException 崩溃循环。
+        val stored = runCatching { prefs.getBoolean(KEY_FOLLOW_CAMERA_FRAMING, true) }
+            .getOrElse { prefs.getString(KEY_FOLLOW_CAMERA_FRAMING, null)?.toBooleanStrictOrNull() ?: true }
+        return stored
         // 未存储时出厂默认 true（避位是安全行为）。此处不再无谓调用 DeviceDetector，
         // 避免冷启动主线程构造阶段的额外机型识别开销。
-        return true
     }
 
     private fun loadFloatingMode(): FloatingWindowMode {
@@ -383,8 +384,8 @@ class ConfigCenter private constructor(context: Context) {
         subscriptionConfig.updateSubscriptionStatus(url, presetCount, lastUpdateTime, name, author, build)
     }
 
-    fun updateSubscriptionUrl(oldUrl: String, newUrl: String) {
-        subscriptionConfig.updateSubscriptionUrl(oldUrl, newUrl)
+    fun updateSubscriptionUrl(oldUrl: String, newUrl: String): Boolean {
+        return subscriptionConfig.updateSubscriptionUrl(oldUrl, newUrl)
     }
 
     fun getSubscriptionFileName(url: String): String {

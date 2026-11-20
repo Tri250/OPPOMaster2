@@ -74,8 +74,9 @@ class ColorWalkManager(context: Context) {
      */
     fun drawTodayCard(): ColorCard? {
         val today = LocalDate.now().format(DATE_FORMATTER)
-        val savedDate = prefs.getString(KEY_TODAY_DATE, null)
-        val isFirstDraw = savedDate != today
+        // 次数以独立的 KEY_DRAW_DATE 计日：clearTodayCard 重置卡片但不重置次数，
+        // 否则清除后 getDrawCount 归零、isFirstDraw 恒 true，可无限重抽
+        val isFirstDraw = prefs.getString(KEY_DRAW_DATE, null) != today
 
         // 检查是否还有抽取机会
         if (!isFirstDraw && getDrawCount() >= MAX_DRAWS_PER_DAY) {
@@ -87,6 +88,7 @@ class ColorWalkManager(context: Context) {
         prefs.edit()
             .putString(KEY_TODAY_DATE, today)
             .putString(KEY_TODAY_CARD_ID, card.id)
+            .putString(KEY_DRAW_DATE, today)
             .apply()
 
         _todayCardFlow.value = card
@@ -107,8 +109,8 @@ class ColorWalkManager(context: Context) {
      * 用户可以重置，但不恢复抽取次数
      */
     fun clearTodayCard() {
+        // 只清卡片，保留 KEY_DRAW_DATE/KEY_DRAW_COUNT（见 drawTodayCard 注释）
         prefs.edit()
-            .remove(KEY_TODAY_DATE)
             .remove(KEY_TODAY_CARD_ID)
             .apply()
 
@@ -139,10 +141,9 @@ class ColorWalkManager(context: Context) {
      * 获取今日已抽取次数
      */
     fun getDrawCount(): Int {
-        val savedDate = prefs.getString(KEY_TODAY_DATE, null)
         val today = LocalDate.now().format(DATE_FORMATTER)
-
-        return if (savedDate == today) {
+        // 次数按 KEY_DRAW_DATE 计日（与卡片日期解耦，见 drawTodayCard 注释）
+        return if (prefs.getString(KEY_DRAW_DATE, null) == today) {
             prefs.getInt(KEY_DRAW_COUNT, 0)
         } else {
             0
@@ -248,6 +249,7 @@ class ColorWalkManager(context: Context) {
         private const val PREFS_NAME = "color_walk_prefs"
         private const val KEY_TODAY_DATE = "today_date"
         private const val KEY_TODAY_CARD_ID = "today_card_id"
+        private const val KEY_DRAW_DATE = "draw_date"
         private const val KEY_HISTORY = "history"
         private const val KEY_DRAW_COUNT = "draw_count"
         private const val MAX_HISTORY_SIZE = 30

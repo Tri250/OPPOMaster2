@@ -77,6 +77,7 @@ import com.silas.omaster.ui.theme.themedTextPrimary
 import com.silas.omaster.ui.theme.themedTextSecondary
 import com.silas.omaster.util.ImageExporter
 import com.silas.omaster.util.OutputRatio
+import kotlinx.coroutines.launch
 
 @Composable
 fun PhotoFrameScreen(
@@ -85,6 +86,7 @@ fun PhotoFrameScreen(
     val context = LocalContext.current
     val viewModel: FrameViewModel = viewModel(factory = FrameViewModelFactory(context.applicationContext as Application))
     val state by viewModel.state.collectAsState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     var dateTimeText by remember { mutableStateOf("") }
     var exifSynced by remember { mutableStateOf(false) }
@@ -133,11 +135,17 @@ fun PhotoFrameScreen(
                     TextButton(
                         onClick = {
                             val bitmap = state.renderedBitmap ?: return@TextButton
-                            val success = ImageExporter.saveToGallery(context, bitmap)
-                            val msg = context.getString(
-                                if (success) R.string.photoframe_saved else R.string.photoframe_save_failed
-                            )
-                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            // 【v1.7.1 修复】saveToGallery 是同步磁盘 IO（MediaStore 写入 + 压缩），
+                            // 主线程直接调用会卡顿甚至 ANR，移入 IO 协程
+                            scope.launch {
+                                val success = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    ImageExporter.saveToGallery(context, bitmap)
+                                }
+                                val msg = context.getString(
+                                    if (success) R.string.photoframe_saved else R.string.photoframe_save_failed
+                                )
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            }
                         }
                     ) {
                         Icon(Icons.Default.Save, null, Modifier.size(18.dp))

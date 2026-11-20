@@ -13,11 +13,62 @@ import com.silas.omaster.util.PresetI18n
  */
 object PresetParamMapper {
 
-    /**
-     * 检测是否为 Realme 预设
-     * Realme 预设特有参数：对比度（亮部）、对比度（暗部）
-     */
-    fun isRealmePreset(sections: List<PresetSection>): Boolean {
+    // param_* 资源名 → 中文规范文本。悬浮窗收到的 sections 已被 PresetI18n.resolveString
+    // 本地化（getDisplaySections），en/ja 下中文关键词 contains 匹配失效；
+    // 先把本地化显示文本反查为中文规范文本（如 "Contrast (Highlight)" → "对比度（亮部）"），
+    // 使 Realme 判定与参数映射在任何 locale 下与 zh 行为一致。
+    private val CANONICAL_PARAM_RESOURCES = listOf(
+        "param_contrast_highlight" to "对比度（亮部）",
+        "param_contrast_shadow" to "对比度（暗部）",
+        "param_contrast" to "对比度",
+        "param_clarity" to "清晰",
+        "param_grain_size" to "颗粒尺寸",
+        "param_grain" to "颗粒强度",
+        "param_filter" to "滤镜",
+        "param_soft_light" to "柔光",
+        "param_tone_curve" to "影调",
+        "param_saturation" to "饱和度",
+        "param_warm_cool" to "冷暖",
+        "param_brightness" to "明暗",
+        "param_cyan_magenta" to "青品",
+        "param_hue" to "色相",
+        "param_sharpness" to "锐度",
+        "param_vignette" to "暗角",
+        "param_tone" to "色调"
+    )
+
+    @Volatile
+    private var cachedParamDisplayTexts: Pair<String, List<Pair<String, String>>>? = null
+
+    /** 本地化显示文本 → 中文规范文本（长文本在前，最长优先替换）；按 locale 缓存 */
+    private fun paramDisplayTexts(context: Context): List<Pair<String, String>> {
+        // ConfigurationCompat 兼容 API 23（Configuration#getLocales 是 API 24+）
+        val locales = androidx.core.os.ConfigurationCompat.getLocales(context.resources.configuration)
+        val locale = if (locales.isEmpty) "zh" else locales[0].toString()
+        cachedParamDisplayTexts?.let { (l, list) -> if (l == locale) return list }
+        val list = CANONICAL_PARAM_RESOURCES.mapNotNull { (resName, canonical) ->
+            val resId = context.resources.getIdentifier(resName, "string", context.packageName)
+            if (resId != 0) {
+                val display = context.getString(resId)
+                // zh 下显示文本即规范文本，无需替换
+                if (display.isNotEmpty() && display != canonical) display to canonical else null
+            } else null
+        }.sortedByDescending { it.first.length }
+        cachedParamDisplayTexts = locale to list
+        return list
+    }
+
+    private fun canonicalizeLabel(context: Context, label: String): String {
+        // 原始 "@string/..." 引用保持原样（映射表中的资源名关键词可直接命中）
+        if (label.startsWith("@string/")) return label
+        var result = label
+        for ((display, canonical) in paramDisplayTexts(context)) {
+            if (display in result) result = result.replace(display, canonical)
+        }
+        return result
+    }
+
+    private fun containsRealmeParams(sections: List<PresetSection>): Boolean {
         sections.forEach { section ->
             section.items.forEach { item ->
                 if (item.label.contains("对比度（亮部）") || item.label.contains("对比度（暗部）")) {
@@ -29,16 +80,39 @@ object PresetParamMapper {
     }
 
     /**
+     * 检测是否为 Realme 预设（历史数据直存中文标签的兼容入口）
+     * Realme 预设特有参数：对比度（亮部）、对比度（暗部）
+     */
+    fun isRealmePreset(sections: List<PresetSection>): Boolean {
+        return containsRealmeParams(sections)
+    }
+
+    /**
+     * 检测是否为 Realme 预设（locale 感知版本）
+     * sections 已本地化时（en/ja），先反查为中文规范文本再判定
+     */
+    fun isRealmePreset(context: Context, sections: List<PresetSection>): Boolean {
+        return containsRealmeParams(
+            sections.map { s -> s.copy(items = s.items.map { it.copy(label = canonicalizeLabel(context, it.label)) }) }
+        )
+    }
+
+    /**
      * 从 sections 提取动态参数序列：List<(value, icon/text)>
      * 根据预设类型（Realme GR / Realme 老版本 / OPPO·一加）自动选择映射表
      */
     fun extractDynamicParams(context: Context, sections: List<PresetSection>): List<Pair<String, String>> {
         val result = mutableListOf<Pair<String, String>>()
 
+        // en/ja 本地化标签 → 中文规范文本，保证下方关键词匹配跨 locale 生效
+        val canonicalSections = sections.map { s ->
+            s.copy(items = s.items.map { it.copy(label = canonicalizeLabel(context, it.label)) })
+        }
+
         // 检查是否有Realme特有参数
         var hasRealmeParams = false
         var hasRealmeExtendedParams = false
-        sections.forEach { section ->
+        canonicalSections.forEach { section ->
             section.items.forEach { item ->
                 if (item.label.contains("对比度（亮部）") || item.label.contains("对比度（暗部）")) {
                     hasRealmeParams = true
@@ -110,7 +184,7 @@ object PresetParamMapper {
             var found = false
             var value = "-"
 
-            sections.forEach { section ->
+            canonicalSections.forEach { section ->
                 section.items.forEach { item ->
                     labels.forEach { label ->
                         if (!found && item.label.contains(label)) {

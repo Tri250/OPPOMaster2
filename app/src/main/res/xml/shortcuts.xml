@@ -15,6 +15,7 @@ OMaster 声明 3 个静态 shortcut，系统设置（ColorOS 17 侧边键 / 长�
         android:shortcutDisabledMessage="@string/shortcut_floating_disabled">
         <intent
             android:action="com.silas.omaster.action.ACTION_SHOW_FLOATING_WINDOW"
+            android:targetClass="com.silas.omaster.MainActivity"
             android:targetPackage="com.silas.omaster" />
     </shortcut>
 
@@ -28,6 +29,7 @@ OMaster 声明 3 个静态 shortcut，系统设置（ColorOS 17 侧边键 / 长�
         android:shortcutDisabledMessage="@string/shortcut_open_home_disabled">
         <intent
             android:action="android.intent.action.MAIN"
+            android:targetClass="com.silas.omaster.MainActivity"
             android:targetPackage="com.silas.omaster" />
     </shortcut>
 

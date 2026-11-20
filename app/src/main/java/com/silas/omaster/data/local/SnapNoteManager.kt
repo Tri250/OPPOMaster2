@@ -122,7 +122,7 @@ class SnapNoteManager(context: Context) {
             .filter { File(notesDir, it.imagePath).exists() }
     }
 
-    /** 解码并缩放原图到最长边 720px，避免 OOM 与存储膨胀 */
+    /** 解码并缩放原图到最长边 720px，避免 OOM 与存储膨胀；先按 EXIF 摆正方向 */
     private fun decodeScaledBitmap(uri: android.net.Uri): Bitmap? {
         return runCatching {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -136,15 +136,42 @@ class SnapNoteManager(context: Context) {
             this@SnapNoteManager.context.contentResolver.openInputStream(uri)?.use {
                 BitmapFactory.decodeStream(it, null, options)
             }?.let { bmp ->
-                val w = bmp.width
-                val h = bmp.height
+                // 相机 JPEG 常带 EXIF orientation，解码后像素仍是存储方向，
+                // 不摆正会导致笔记图横竖颠倒（取色不受影响，显示会转 90°）
+                val oriented = applyExifRotation(bmp, uri)
+                val w = oriented.width
+                val h = oriented.height
                 val scale = TARGET_MAX_SIDE.toFloat() / maxOf(w, h)
                 if (scale < 1f) {
-                    Bitmap.createScaledBitmap(bmp, (w * scale).toInt().coerceAtLeast(1), (h * scale).toInt().coerceAtLeast(1), true)
-                        .also { if (it !== bmp) bmp.recycle() }
-                } else bmp
+                    Bitmap.createScaledBitmap(oriented, (w * scale).toInt().coerceAtLeast(1), (h * scale).toInt().coerceAtLeast(1), true)
+                        .also { if (it !== oriented) oriented.recycle() }
+                } else oriented
             }
         }.getOrNull()
+    }
+
+    /** 依据 EXIF orientation 旋转位图；无旋转需求时原样返回 */
+    private fun applyExifRotation(bmp: Bitmap, uri: android.net.Uri): Bitmap {
+        return runCatching {
+            val exif = androidx.exifinterface.media.ExifInterface(
+                this@SnapNoteManager.context.contentResolver.openInputStream(uri)!!
+            )
+            val orientation = exif.getAttributeInt(
+                androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION,
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL
+            )
+            val degrees = when (orientation) {
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                else -> 0f
+            }
+            if (degrees != 0f && bmp.width.toLong() * bmp.height < 25_000_000L) {
+                val m = android.graphics.Matrix().apply { postRotate(degrees) }
+                Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
+                    .also { if (it !== bmp) bmp.recycle() }
+            } else bmp
+        }.getOrDefault(bmp)
     }
 
     companion object {

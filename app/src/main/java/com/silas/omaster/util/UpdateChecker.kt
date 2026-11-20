@@ -132,7 +132,9 @@ object UpdateChecker {
                     versionCode = versionCode,
                     downloadUrl = downloadUrl,
                     releaseNotes = releaseNotes,
-                    isNewer = versionCode > currentVersionCode && downloadUrl.isNotEmpty()
+                    // 逐段比较版本号：修订位 ≥100 时（如 1.7.100 vs 1.8.0）
+                    // major*10000+minor*100+patch 的进位会碰撞，改为逐段比较
+                    isNewer = VersionInfo.isNewerVersion(VersionInfo.VERSION_NAME, versionName) && downloadUrl.isNotEmpty()
                 )
             } else {
                 Log.e(TAG, "检查更新失败，HTTP 状态码: ${conn.responseCode}")
@@ -199,8 +201,9 @@ object UpdateChecker {
         File(downloadDir, fileName).delete()
 
         val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
-            setTitle("OMaster 更新")
-            setDescription("正在下载 v$versionName...")
+            // 下载通知文案随系统语言（此前硬编码中文，en/ja 用户看到中文通知）
+            setTitle(context.getString(R.string.update_notification_title))
+            setDescription(context.getString(R.string.update_notification_desc, versionName))
             setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             // 【v1.6.13 兼容性修复】setDestinationInExternalFilesDir 为 API 24+ API，
             // minSdk 23 下直接调用会 NoSuchMethodError 崩溃；API 23 使用等价 setDestinationUri。
@@ -229,32 +232,34 @@ object UpdateChecker {
         var status = -1
         var progress = 0
 
-        if (cursor.moveToFirst()) {
-            status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+        // use{} 确保异常路径下 cursor 也被释放
+        cursor.use {
+            if (cursor.moveToFirst()) {
+                status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
 
-            when (status) {
-                DownloadManager.STATUS_PENDING -> {
-                    progress = 0
-                }
-                DownloadManager.STATUS_RUNNING -> {
-                    val downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                    val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
-                }
-                DownloadManager.STATUS_SUCCESSFUL -> {
-                    progress = 100
-                }
-                DownloadManager.STATUS_FAILED -> {
-                    progress = -1
-                }
-                DownloadManager.STATUS_PAUSED -> {
-                    val downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                    val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
+                when (status) {
+                    DownloadManager.STATUS_PENDING -> {
+                        progress = 0
+                    }
+                    DownloadManager.STATUS_RUNNING -> {
+                        val downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                        val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                        progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
+                    }
+                    DownloadManager.STATUS_SUCCESSFUL -> {
+                        progress = 100
+                    }
+                    DownloadManager.STATUS_FAILED -> {
+                        progress = -1
+                    }
+                    DownloadManager.STATUS_PAUSED -> {
+                        val downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                        val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                        progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
+                    }
                 }
             }
         }
-        cursor.close()
         return Pair(status, progress)
     }
 

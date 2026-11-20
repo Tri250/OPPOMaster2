@@ -72,6 +72,9 @@ import java.time.format.DateTimeFormatter
 private const val PREFS_NAME = "color_walk_prefs"
 private const val KEY_HAS_SEEN_GUIDE = "has_seen_guide"
 
+/** 会话级庆祝标记：记录上次庆祝的卡 id，避免每次进入页面都重播庆祝动画 */
+private var lastCelebratedCardId: String? = null
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ColorWalkScreen(
@@ -109,9 +112,13 @@ fun ColorWalkScreen(
             celebrating = false
         }
     }
-    // 抽到新卡 → 触发一次流体庆祝
+    // 抽到新卡 → 触发一次流体庆祝（会话级去重：每次进入页面都重播庆祝动画属于打扰）
     LaunchedEffect(state.todayCard?.id) {
-        if (state.todayCard != null) celebrating = true
+        val cardId = state.todayCard?.id
+        if (cardId != null && cardId != lastCelebratedCardId) {
+            lastCelebratedCardId = cardId
+            celebrating = true
+        }
     }
 
     /** 应用色卡配色到 App 主题 */

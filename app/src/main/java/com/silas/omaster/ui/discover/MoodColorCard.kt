@@ -611,7 +611,8 @@ private fun MoodInspirationSheet(
 ) {
     val context = LocalContext.current
     val repository = remember { com.silas.omaster.data.repository.PresetRepository.getInstance(context) }
-    val allPresets by repository.getAllPresets().collectAsState(initial = emptyList())
+    // remember 缓存 Flow 实例，避免每次重组重新订阅（见 DiscoverScreen 同处注释）
+    val allPresets by remember { repository.getAllPresets() }.collectAsState(initial = emptyList())
 
     val matched = remember(mood, allPresets) {
         matchPresetsForMood(mood, allPresets, DeviceDetector.getCurrentDevice(context))
@@ -725,7 +726,8 @@ internal fun matchPresetsForMood(
     }.ifEmpty { candidates }
     val usedIds = matched.mapNotNull { it.id }.toSet()
     val filler = pool.filter { it.id !in usedIds }
-        .shuffled(java.util.Random(mood.hashCode() + LocalDate.now().toEpochDay()))
+        // 种子用 mood.id（稳定值）：枚举 hashCode 是 identity hash，跨进程不稳定会导致补齐顺序漂移
+        .shuffled(java.util.Random(mood.id.hashCode() + LocalDate.now().toEpochDay()))
         .take(count - matched.size)
     return matched + filler
 }

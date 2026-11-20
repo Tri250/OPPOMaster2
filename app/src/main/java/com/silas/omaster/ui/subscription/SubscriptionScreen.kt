@@ -40,6 +40,7 @@ import com.silas.omaster.ui.theme.CardBorderLight
 import com.silas.omaster.ui.theme.DarkGray
 import com.silas.omaster.ui.theme.PureBlack
 import com.silas.omaster.ui.theme.themedBackground
+import java.io.File
 import com.silas.omaster.ui.theme.themedCardBackground
 import com.silas.omaster.ui.theme.themedTextPrimary
 import com.silas.omaster.ui.theme.themedTextSecondary
@@ -366,22 +367,30 @@ fun SubscriptionScreen(
                 onConfirm = { oldUrl, newUrl ->
                     showEditDialog = null
                     scope.launch {
-                        config.updateSubscriptionUrl(oldUrl, newUrl)
-                        // 更新 URL 后需要重新拉取
+                        // 先拉取新地址，成功后才改名：失败时不做任何变更，
+                        // 避免出现"订阅已指向新 URL 但缓存/元数据仍是旧数据"的错位
                         val result = PresetRemoteManager.fetchAndSave(context, newUrl, forceUpdate = true)
-                        result.onSuccess { presetList ->
-                            config.updateSubscriptionStatus(
-                                url = newUrl,
-                                presetCount = presetList.presetList.presets.size,
-                                lastUpdateTime = System.currentTimeMillis(),
-                                name = presetList.presetList.name,
-                                author = presetList.presetList.author,
-                                build = presetList.presetList.build
-                            )
-                            PresetRepository.getInstance(context).reloadDefaultPresets()
-                            Toast.makeText(context, updatedMsg, Toast.LENGTH_SHORT).show()
-                        }.onFailure { error ->
-                            errorMsg = error.message ?: "更新失败"
+                        val renamed = result.isSuccess && config.updateSubscriptionUrl(oldUrl, newUrl)
+                        if (renamed) {
+                            result.onSuccess { presetList ->
+                                config.updateSubscriptionStatus(
+                                    url = newUrl,
+                                    presetCount = presetList.presetList.presets.size,
+                                    lastUpdateTime = System.currentTimeMillis(),
+                                    name = presetList.presetList.name,
+                                    author = presetList.presetList.author,
+                                    build = presetList.presetList.build
+                                )
+                                PresetRepository.getInstance(context).reloadDefaultPresets()
+                                Toast.makeText(context, updatedMsg, Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            // 拉取失败，或新 URL 与其他订阅重复（updateSubscriptionUrl 返回 false）
+                            if (result.isSuccess) {
+                                // URL 重复被拒：清理刚才落盘的孤儿缓存文件，保持零变更
+                                File(context.filesDir, config.getSubscriptionFileName(newUrl)).delete()
+                            }
+                            errorMsg = result.exceptionOrNull()?.message ?: "更新失败"
                         }
                     }
                 }

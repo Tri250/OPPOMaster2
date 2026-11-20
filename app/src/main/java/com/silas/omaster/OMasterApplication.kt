@@ -39,6 +39,16 @@ class OMasterApplication : Application() {
         CrashReporter.mark(this, "M2_APP_ONCREATE_BEGIN")
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+        // 悬浮窗 ◀/▶ 切换广播接收器必须进程级注册：悬浮窗前台服务 stopWithTask=false
+        // 会在 MainActivity 销毁后继续运行，若接收器随 Activity 注册/注销，
+        // 退出 App 后 SWITCH_PRESET 广播将无人接收（悬浮窗切换预设失效）。
+        // 注册一次、随进程存活，不再注销。
+        try {
+            com.silas.omaster.ui.service.FloatingWindowController.getInstance(this).register()
+        } catch (e: Throwable) {
+            Logger.w("OMaster", "FloatingWindowController.register failed (non-fatal): ${e.message}")
+        }
+
         // 初始化日志系统（非关键，失败不阻断冷启动）
         try {
             Logger.init(this)

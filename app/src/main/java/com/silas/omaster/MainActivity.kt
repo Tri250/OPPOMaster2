@@ -7,7 +7,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
@@ -49,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -148,19 +148,21 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         com.silas.omaster.util.CrashReporter.mark(this, "M4_ACTIVITY_ONCREATE")
 
-        // FD-01c：接收系统分享的预设 JSON 文本
-        if (intent?.action == android.content.Intent.ACTION_SEND) {
-            pendingSharedText = intent.getStringExtra(android.content.Intent.EXTRA_TEXT)
-            // P1-PHOTO-RECOGNITION：接收系统分享的图片 → 照片识别
-            val sharedUri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM)
+        // FD-01c：接收系统分享的预设 JSON 文本；P1-PHOTO-RECOGNITION：接收系统分享的图片。
+        // 注意 ACTION_SEND 与 ACTION_SEND_MULTIPLE 是并列的两种 action，
+        // MULTIPLE 分支不能嵌套在 SEND 判断内（否则恒不可达）
+        when (intent?.action) {
+            android.content.Intent.ACTION_SEND -> {
+                pendingSharedText = intent.getStringExtra(android.content.Intent.EXTRA_TEXT)
+                val sharedUri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM)
+                }
+                sharedUri?.let { pendingSharedImageUri = it.toString() }
             }
-            sharedUri?.let { pendingSharedImageUri = it.toString() }
-            // 多重分享（ACTION_SEND_MULTIPLE）取第一张
-            if (sharedUri == null && intent.action == android.content.Intent.ACTION_SEND_MULTIPLE) {
+            android.content.Intent.ACTION_SEND_MULTIPLE -> {
                 val uris = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                     intent.getParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
                 } else {
@@ -178,9 +180,8 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // 初始化并注册全局悬浮窗控制器
+        // 初始化悬浮窗控制器（广播接收器已在 OMasterApplication 进程级注册，见 Application）
         floatingWindowController = FloatingWindowController.getInstance(this)
-        floatingWindowController.register()
 
         setContent {
             CompositionLocalProvider(LocalActivity provides this) {
@@ -289,8 +290,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // 注销悬浮窗控制器
-        floatingWindowController.unregister()
+        // 广播接收器已在 OMasterApplication 进程级注册，不随 Activity 注销；
+        // 悬浮窗前台服务 stopWithTask=false 会继续运行，注销会导致切换失效
     }
 
     /**
@@ -316,11 +317,11 @@ fun StartupDiagnosticsDialog(report: String, onDismiss: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("启动诊断报告") },
+        title = { Text(stringResource(R.string.diag_report_title)) },
         text = {
             Column {
                 Text(
-                    "检测到上次启动异常。以下为诊断详情，请点击「分享日志」发给开发者，以便精确定位问题。",
+                    stringResource(R.string.diag_report_desc),
                     style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -341,13 +342,15 @@ fun StartupDiagnosticsDialog(report: String, onDismiss: () -> Unit) {
                     runCatching {
                         val send = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
-                            putExtra(Intent.EXTRA_SUBJECT, "OMaster 启动诊断报告")
+                            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.diag_share_subject))
                             putExtra(Intent.EXTRA_TEXT, report)
                         }
-                        context.startActivity(Intent.createChooser(send, "分享诊断日志"))
+                        context.startActivity(
+                            Intent.createChooser(send, context.getString(R.string.diag_share_chooser))
+                        )
                     }
                 }
-            ) { Text("分享日志") }
+            ) { Text(stringResource(R.string.diag_share_log)) }
         },
         dismissButton = {
             Row {
@@ -356,12 +359,19 @@ fun StartupDiagnosticsDialog(report: String, onDismiss: () -> Unit) {
                         runCatching {
                             val cm = context.getSystemService(Context.CLIPBOARD_SERVICE)
                                     as android.content.ClipboardManager
-                            cm.setPrimaryClip(android.content.ClipData.newPlainText("OMaster 诊断", report))
-                            android.widget.Toast.makeText(context, "已复制", android.widget.Toast.LENGTH_SHORT).show()
+                            cm.setPrimaryClip(
+                                android.content.ClipData.newPlainText(
+                                    context.getString(R.string.diag_clip_label), report
+                                )
+                            )
+                            android.widget.Toast.makeText(
+                                context, context.getString(R.string.diag_copied),
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
-                ) { Text("复制") }
-                TextButton(onClick = onDismiss) { Text("知道了") }
+                ) { Text(stringResource(R.string.diag_copy)) }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.diag_got_it)) }
             }
         },
         containerColor = MaterialTheme.colorScheme.surface
@@ -460,8 +470,8 @@ fun MainApp(
     if (showMigrationDialog) {
         AlertDialog(
             onDismissRequest = { /* Force user to decide */ },
-            title = { Text("数据结构更新") },
-            text = { Text("检测到预设数据版本过旧，需要迁移数据以支持新功能。\n\n点击“迁移数据”将重置内置预设（您的自定义预设和收藏不会丢失）。") },
+            title = { Text(stringResource(R.string.migration_dialog_title)) },
+            text = { Text(stringResource(R.string.migration_dialog_msg)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -470,7 +480,7 @@ fun MainApp(
                         showMigrationDialog = false
                     }
                 ) {
-                    Text("迁移数据")
+                    Text(stringResource(R.string.migration_dialog_btn))
                 }
             },
             dismissButton = {
@@ -530,11 +540,20 @@ fun MainApp(
             try {
                 val subs = config.subscriptionsFlow.value.filter { it.isEnabled }
                 if (subs.isNotEmpty()) {
+                    // 逐个拉取并统计结果：任一成功（或明确"无需更新"，即网络可达内容未变）
+                    // 才标记今日已更新；全部失败则不标记，保留当日稍后重试机会
+                    var anyUsable = false
                     for (sub in subs) {
                         PresetRemoteManager.fetchAndSave(context, sub.url)
+                            .onSuccess { anyUsable = true }
+                            .onFailure { if (it.message == "无需更新") anyUsable = true }
                     }
-                    PresetRepository.getInstance(context).reloadDefaultPresets()
-                    config.markSubscriptionsUpdated()
+                    if (anyUsable) {
+                        PresetRepository.getInstance(context).reloadDefaultPresets()
+                        config.markSubscriptionsUpdated()
+                    } else {
+                        android.util.Log.w("MainActivity", "自动更新订阅全部失败，今日不标记已更新")
+                    }
                 }
             } catch (e: Exception) {
                 // v1.6.15 稳定性修复：空 catch 导致线上无法诊断订阅更新失败，补日志
@@ -917,9 +936,9 @@ fun MainApp(
         showUpdateDialog?.let { updateInfo ->
             AlertDialog(
                 onDismissRequest = { showUpdateDialog = null },
-                title = { 
+                title = {
                     Text(
-                        text = "发现新版本",
+                        text = stringResource(R.string.new_version_available),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -943,7 +962,7 @@ fun MainApp(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = "当前版本",
+                                        text = stringResource(R.string.update_current_version),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -959,7 +978,7 @@ fun MainApp(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = "最新版本",
+                                        text = stringResource(R.string.update_latest_version),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -977,7 +996,7 @@ fun MainApp(
                         if (updateInfo.releaseNotes.isNotBlank()) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "更新内容",
+                                text = stringResource(R.string.update_release_notes),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -1022,7 +1041,7 @@ fun MainApp(
                         ),
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
                     ) {
-                        Text("立即更新")
+                        Text(stringResource(R.string.update_now))
                     }
                 },
                 dismissButton = {
@@ -1030,7 +1049,7 @@ fun MainApp(
                         onClick = { showUpdateDialog = null }
                     ) {
                         Text(
-                            "稍后",
+                            stringResource(R.string.later),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

@@ -1018,4 +1018,28 @@
     <string name="about_device_spec_ois">Stabilization</string>
     <string name="colorwalk_apply_theme">Apply to app theme</string>
     <string name="colorwalk_theme_applied">Theme applied: %1$s</string>
+    <string name="new_version_available">New version available</string>
+    <string name="downloading">Downloading</string>
+    <string name="dialog_title_select_floating_mode">Select floating window mode</string>
+    <string name="language_dialog_title">Select language</string>
+    <!-- Version update -->
+    <string name="update_notification_title">OMaster Update</string>
+    <string name="update_notification_desc">Downloading v%1$s…</string>
+    <!-- v1.7.1: dialog copy extracted to resources -->
+    <string name="diag_report_title">Startup Diagnostics Report</string>
+    <string name="diag_report_desc">An abnormal shutdown was detected last launch. Tap \"Share Logs\" to send the details below to the developer for accurate diagnosis.</string>
+    <string name="diag_share_subject">OMaster Startup Diagnostics Report</string>
+    <string name="diag_share_chooser">Share diagnostic logs</string>
+    <string name="diag_share_log">Share Logs</string>
+    <string name="diag_clip_label">OMaster Diagnostics</string>
+    <string name="diag_copied">Copied</string>
+    <string name="diag_copy">Copy</string>
+    <string name="diag_got_it">Got it</string>
+    <string name="migration_dialog_title">Data Structure Update</string>
+    <string name="migration_dialog_msg">The preset data version is outdated and must be migrated to support new features.\n\nTapping \"Migrate Data\" resets the bundled presets (your custom presets and favorites are kept).</string>
+    <string name="migration_dialog_btn">Migrate Data</string>
+    <string name="update_current_version">Current version</string>
+    <string name="update_latest_version">Latest version</string>
+    <string name="update_release_notes">What\'s new</string>
+    <string name="update_now">Update Now</string>
 </resources>

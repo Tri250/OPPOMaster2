@@ -249,18 +249,32 @@ internal class SubscriptionConfig(private val context: Context) {
         File(context.filesDir, fileName).delete()
     }
 
-    fun updateSubscriptionUrl(oldUrl: String, newUrl: String) {
+    /**
+     * 更新订阅地址。
+     * @return false 表示 newUrl 与现有其他订阅重复，未做任何修改（重复会导致
+     * SubscriptionScreen items key=url 崩溃，且 renameTo 会覆盖已有订阅的缓存文件）。
+     */
+    fun updateSubscriptionUrl(oldUrl: String, newUrl: String): Boolean {
+        if (newUrl == oldUrl) return true
+        if (_subscriptionsFlow.value.any { it.url == newUrl }) return false
         val oldFileName = getFileNameForUrl(oldUrl)
         val newFileName = getFileNameForUrl(newUrl)
         val oldFile = File(context.filesDir, oldFileName)
         val newFile = File(context.filesDir, newFileName)
         if (oldFile.exists()) {
-            oldFile.renameTo(newFile)
+            // 新缓存文件可能刚被 fetchAndSave 落盘（先拉取后改名的流程），
+            // 此时直接删除旧文件，避免 renameTo 用旧内容覆盖新内容
+            if (newFile.exists()) {
+                oldFile.delete()
+            } else {
+                oldFile.renameTo(newFile)
+            }
         }
         _subscriptionsFlow.value = _subscriptionsFlow.value.map {
             if (it.url == oldUrl) it.copy(url = newUrl) else it
         }
         saveSubscriptions()
+        return true
     }
 
     fun toggleSubscription(url: String) {

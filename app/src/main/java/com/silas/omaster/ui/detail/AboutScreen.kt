@@ -55,13 +55,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -115,15 +115,17 @@ fun ProfileScreen(
 ) {
     val scrollState = rememberScrollState()
     var previousScrollValue by remember { mutableIntStateOf(0) }
+    var isScrollingUp by remember { mutableStateOf(true) }
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
 
-    val isScrollingUp by remember {
-        derivedStateOf {
-            val currentScroll = scrollState.value
+    // 用 snapshotFlow 检测滚动方向：derivedStateOf 计算块必须为纯函数，
+    // 在其中写 previousScrollValue 属快照内副作用，会导致底部导航隐藏逻辑失效
+    LaunchedEffect(scrollState) {
+        snapshotFlow { scrollState.value }.collect { currentScroll ->
             val isUp = currentScroll <= previousScrollValue
             previousScrollValue = currentScroll
-            isUp
+            isScrollingUp = isUp
         }
     }
 
@@ -302,7 +304,17 @@ fun ProfileScreen(
 private fun DeviceCard(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val device = remember { DeviceDetector.getCurrentDevice(context) }
-    val displayName = device.displayNameZh.ifBlank { device.model }
+    // 按 locale 选择展示名：en/ja 用户此前恒看中文展示名
+    val displayName = remember(device) {
+        // ConfigurationCompat 兼容 API 23（Configuration#getLocales 是 API 24+）
+        val locales = androidx.core.os.ConfigurationCompat.getLocales(context.resources.configuration)
+        val isZh = locales.isNotEmpty && locales[0].language == "zh"
+        if (isZh) {
+            device.displayNameZh.ifBlank { device.model }
+        } else {
+            device.displayNameEn.ifBlank { device.model }
+        }
+    }
     var expanded by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
 
@@ -368,7 +380,7 @@ private fun DeviceCard(modifier: Modifier = Modifier) {
                                 stringResource(R.string.about_device_coloros_checking)
                             }
                         )
-                        if (device.isProImaging) {
+                        if (device.imagingBrand == DeviceProfile.IMAGING_BRAND_HASSELBLAD) {
                             DeviceBadge(text = stringResource(R.string.device_badge_hasselblad))
                         }
                         if (device.has200Mp) {

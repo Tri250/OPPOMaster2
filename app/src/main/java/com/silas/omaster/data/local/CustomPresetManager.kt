@@ -39,6 +39,9 @@ class CustomPresetManager(context: Context) {
     // ED-04：Gson → kotlinx.serialization 统一（显式 null 宽容解码，兼容 Gson 时期写入的数据）
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 
+    // 桌面小组件刷新用 applicationContext（避免持有 Activity 泄漏）
+    private val appContext = context.applicationContext
+
     private val _customPresetsFlow = MutableStateFlow<List<MasterPreset>>(emptyList())
     val customPresetsFlow: StateFlow<List<MasterPreset>> = _customPresetsFlow
 
@@ -61,12 +64,20 @@ class CustomPresetManager(context: Context) {
      */
     fun addCustomPreset(preset: MasterPreset) {
         val presets = getCustomPresets().toMutableList()
+        // 新建语义：传入的 id 若与已有预设重复（如重复导入同一份带 id 的 JSON），
+        // 必须重新生成，否则 Compose items key=preset.id 会重复导致 IllegalArgumentException 崩溃
+        var newId = preset.id ?: UUID.randomUUID().toString()
+        if (presets.any { it.id == newId }) {
+            newId = UUID.randomUUID().toString()
+        }
         val newPreset = preset.copy(
-            id = preset.id ?: UUID.randomUUID().toString(),
+            id = newId,
             isCustom = true
         )
         presets.add(0, newPreset) // 添加到开头（最新的在前面）
         saveCustomPresets(presets)
+        // 预设变更后立即刷新桌面小组件（否则最长 30 分钟才被动刷新）
+        com.silas.omaster.widget.TodayWidget.updateAll(appContext)
     }
 
     /**
@@ -80,6 +91,7 @@ class CustomPresetManager(context: Context) {
         if (index != -1) {
             presets[index] = preset.copy(isCustom = true)
             saveCustomPresets(presets)
+            com.silas.omaster.widget.TodayWidget.updateAll(appContext)
         }
     }
 
@@ -95,6 +107,7 @@ class CustomPresetManager(context: Context) {
         // 从列表中移除
         val presets = getCustomPresets().filter { it.id != presetId }
         saveCustomPresets(presets)
+        com.silas.omaster.widget.TodayWidget.updateAll(appContext)
         
         // 删除关联的图片文件（内部存储中的文件）
         presetToDelete?.let { preset ->

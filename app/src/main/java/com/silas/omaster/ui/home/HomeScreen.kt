@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.Surface
@@ -583,7 +584,7 @@ private fun DeviceRecommendedBanner(
     modifier: Modifier = Modifier
 ) {
     val chipTexts = buildList {
-        if (deviceProfile.isProImaging) add(stringResource(R.string.banner_chip_pro_imaging))
+        if (deviceProfile.imagingBrand == DeviceProfile.IMAGING_BRAND_HASSELBLAD) add(stringResource(R.string.banner_chip_pro_imaging))
         if (deviceProfile.has200Mp) add(stringResource(R.string.banner_chip_200mp))
         if (deviceProfile.maxVideoSpec.isNotBlank()) {
             add(stringResource(R.string.banner_chip_video, deviceProfile.maxVideoSpec))
@@ -1018,14 +1019,29 @@ private fun PresetCardItem(
             usePremiumGlass = usePremiumGlass,
             // 【v1.6.14】一步直达悬浮窗（无需先进详情）：失败时提示，不静默吞掉
             onApplyToFloat = {
-                runCatching {
-                    floatingController.showFloatingWindow(preset)
-                }.onFailure {
-                    Toast.makeText(
-                        cardContext,
-                        cardResources.getString(R.string.preset_apply_float_failed),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                // 【v1.7.1 修复】无悬浮窗权限时 showFloatingWindow 会静默失败，
+                // 先检查权限并引导到系统授权页（与 DetailScreen.handleFloatingWindowClick 口径一致）
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M &&
+                    !android.provider.Settings.canDrawOverlays(cardContext)
+                ) {
+                    runCatching {
+                        cardContext.startActivity(
+                            Intent(
+                                android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                Uri.parse("package:${cardContext.packageName}")
+                            )
+                        )
+                    }
+                } else {
+                    runCatching {
+                        floatingController.showFloatingWindow(preset)
+                    }.onFailure {
+                        Toast.makeText(
+                            cardContext,
+                            cardResources.getString(R.string.preset_apply_float_failed),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             },
             // 【v1.7.0】长按菜单补齐：复制参数（文本进剪贴板）/ 分享（系统分享面板）

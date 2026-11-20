@@ -30,6 +30,12 @@ data class DeviceProfile(
     val maxAperture: String = "",
     /** 是否搭载哈苏 / 徕卡 / 蔡司 等专业影像系统 */
     val isProImaging: Boolean = false,
+    /**
+     * 【v1.7.1 修复】影像系统品牌（"hasselblad" / ""）。
+     * isProImaging 只表示"具备专业影像能力"；哈苏徽章必须按本字段判定，
+     * 否则 realme GT7/GT6（isProImaging=true 但非哈苏联调）会被误标哈苏。
+     */
+    val imagingBrand: String = "",
     /** 屏幕宽度（像素），默认 0 由 DeviceDetector 运行时填充 */
     val screenWidthPx: Int = 0,
     /** 屏幕高度（像素），默认 0 由 DeviceDetector 运行时填充 */
@@ -92,5 +98,7 @@ data class DeviceProfile(
         const val ALL = "all"
         /** 通配品牌标记 */
         const val BRAND_ALL = "all"
+        /** 影像系统品牌：哈苏（OPPO Find X9/X10、OnePlus 13/12 等联调机型） */
+        const val IMAGING_BRAND_HASSELBLAD = "hasselblad"
     }
 }

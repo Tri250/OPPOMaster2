@@ -22,6 +22,7 @@ import com.silas.omaster.R
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.util.DeviceDetector
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /**
  * MU-28 / v1.6：OMaster 桌面小组件（AndroidX Glance API）
@@ -36,6 +37,29 @@ import kotlinx.coroutines.flow.first
  * - runBlocking 可在 provideContent (suspend) 外层调用 StateFlow.first()
  */
 class TodayWidget : GlanceAppWidget() {
+
+    companion object {
+        /**
+         * 数据变更后主动刷新所有已放置的小组件实例。
+         * 此前无任何 updateAll 调用，预设增删/订阅刷新后小组件最长 30 分钟才被动刷新。
+         * Glance update 为 suspend，须在协程中执行；组件数据每次 provideGlance 现读，
+         * 因此在变更点（CustomPresetManager 增删改、订阅 reload 完成处）调用即可。
+         */
+        fun updateAll(context: Context) {
+            val appContext = context.applicationContext
+            val scope = kotlinx.coroutines.CoroutineScope(
+                kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate
+            )
+            scope.launch {
+                runCatching {
+                    val manager = androidx.glance.appwidget.GlanceAppWidgetManager(appContext)
+                    manager.getGlanceIds(TodayWidget::class.java).forEach { id ->
+                        TodayWidget().update(appContext, id)
+                    }
+                }
+            }
+        }
+    }
 
     // Glance 1.x 正确入口是 provideGlance（不是 provideContent）
     // provideContent 是 provideGlance 内部调用的 Composable builder

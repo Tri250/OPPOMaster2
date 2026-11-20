@@ -32,6 +32,9 @@ class FrameViewModel(
 
     private var extractJob: Job? = null
     private var renderJob: Job? = null
+    // 渲染代数：cancel() 无法中断 FrameRenderer.render 的非挂起段，
+    // 只有最新一代允许写回 state，避免旧渲染结果晚到覆盖新画面
+    private var renderGeneration = 0
 
     fun loadImage(uri: Uri) {
         extractJob?.cancel()
@@ -87,6 +90,7 @@ class FrameViewModel(
         if (s.sourceBitmap == null || s.colors == null) return
 
         renderJob?.cancel()
+        val generation = ++renderGeneration
         renderJob = viewModelScope.launch(Dispatchers.Default) {
             try {
                 val selectedColor = s.colors.palette.getOrElse(s.selectedColorIndex) { s.colors.dominant }
@@ -100,11 +104,22 @@ class FrameViewModel(
                         ratio = s.outputRatio
                     )
                 )
-                s.renderedBitmap?.recycle()
-                _state.value = _state.value.copy(renderedBitmap = result)
+                if (generation == renderGeneration) {
+                    _state.value = _state.value.copy(renderedBitmap = result)
+                }
+                // 不手动 recycle 旧位图：并发交错时可能回收正在显示/正在渲染的位图，
+                // 触发 "Canvas: trying to use a recycled bitmap"；API 24-25 像素在 Java 堆、
+                // API 26+ 由 NativeAllocationRegistry 兜底，交给 GC 均安全
+            } catch (e: OutOfMemoryError) {
+                android.util.Log.e("FrameViewModel", "Render OOM", e)
+                if (generation == renderGeneration) {
+                    _state.value = _state.value.copy(error = "内存不足，请缩小图片后重试")
+                }
             } catch (e: Exception) {
                 android.util.Log.e("FrameViewModel", "Failed to render", e)
-                _state.value = _state.value.copy(error = "渲染失败，请重试")
+                if (generation == renderGeneration) {
+                    _state.value = _state.value.copy(error = "渲染失败，请重试")
+                }
             }
         }
     }
@@ -131,8 +146,8 @@ class FrameViewModel(
         super.onCleared()
         extractJob?.cancel()
         renderJob?.cancel()
-        _state.value.sourceBitmap?.recycle()
-        _state.value.renderedBitmap?.recycle()
+        // 不手动 recycle：cancel 存在回收窗口（渲染线程可能仍在读位图），
+        // 交给 GC 回收（API24+ 均安全，见 renderInternal 注释）
     }
 }
 

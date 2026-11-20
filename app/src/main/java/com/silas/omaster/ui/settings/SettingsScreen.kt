@@ -569,6 +569,17 @@ fun SettingsScreen() {
                     }
                 }
             )
+
+            HorizontalDivider(color = themedTextSecondary().copy(alpha = 0.1f))
+
+            // 【v1.7.1 修复】清除日志入口：此前 showClearLogDialog 无任何置 true 路径，
+            // 对话框与 Logger.clearLogs 是死代码，日志只能随文件轮转清理
+            SettingsClickableItem(
+                icon = Icons.Default.Delete,
+                title = stringResource(R.string.clear_logs),
+                subtitle = stringResource(R.string.log_size, logSize),
+                onClick = { showClearLogDialog = true }
+            )
         }
 
         // Clear Cache Confirmation Dialog

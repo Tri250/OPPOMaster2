@@ -58,7 +58,7 @@ fun PresetSelectionScreen(
 ) {
     val context = LocalContext.current
     val repository = remember { PresetRepository.getInstance(context) }
-    val presets by repository.getAllPresets().collectAsState(initial = emptyList())
+    val presets by remember { repository.getAllPresets() }.collectAsState(initial = emptyList())
     // FD-01b 粘贴导入入口；FD-01a 文件导入入口
     var showImportDialog by remember { mutableStateOf(false) }
     var importText by remember { mutableStateOf("") }

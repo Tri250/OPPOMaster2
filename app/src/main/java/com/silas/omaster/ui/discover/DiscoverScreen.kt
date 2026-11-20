@@ -53,6 +53,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,6 +75,7 @@ import com.silas.omaster.data.local.InspirationManager
 import com.silas.omaster.data.local.MoodManager
 import com.silas.omaster.data.local.SnapNoteManager
 import com.silas.omaster.data.repository.PresetRepository
+import com.silas.omaster.model.DeviceProfile
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.ui.animation.fluidPressScale
 import com.silas.omaster.ui.components.OMasterTopAppBar
@@ -113,7 +115,9 @@ fun DiscoverScreen(
     val configCenter = remember { ConfigCenter.getInstance(context) }
     val scrollState = rememberScrollState()
     // 【v1.7.0】全量预设（快拍笔记 AI 匹配 + 场景感知灵感流共用）
-    val allPresets by repository.getAllPresets().collectAsState(initial = emptyList())
+    // remember 缓存 Flow 实例：getAllPresets() 每次调用返回新的 combine 实例，
+    // 直接作为 collectAsState key 会导致每次重组都重新订阅、上游重读数据
+    val allPresets by remember { repository.getAllPresets() }.collectAsState(initial = emptyList())
     var previousScrollValue by remember { mutableIntStateOf(0) }
     var isScrollingUp by remember { mutableStateOf(true) }
 
@@ -130,15 +134,18 @@ fun DiscoverScreen(
     // 【v1.6.13】当前设备能力（Find X10 → 哈苏专业影像 / 2亿像素）
     val deviceDp = remember { DeviceDetector.getCurrentDevice(context) }
 
-    LaunchedEffect(scrollState.value) {
-        val currentValue = scrollState.value
-        if (currentValue != previousScrollValue) {
-            val up = currentValue < previousScrollValue
-            if (isScrollingUp != up) {
-                isScrollingUp = up
-                onScrollStateChanged(up)
+    // snapshotFlow 收集滚动值：LaunchedEffect(scrollState.value) 会在滚动期间每帧
+    // 取消/重启协程，snapshotFlow 对连续值做去抖合并，只在值变化时执行一次
+    LaunchedEffect(Unit) {
+        snapshotFlow { scrollState.value }.collect { currentValue ->
+            if (currentValue != previousScrollValue) {
+                val up = currentValue < previousScrollValue
+                if (isScrollingUp != up) {
+                    isScrollingUp = up
+                    onScrollStateChanged(up)
+                }
+                previousScrollValue = currentValue
             }
-            previousScrollValue = currentValue
         }
     }
 
@@ -217,7 +224,7 @@ fun DiscoverScreen(
                 title = stringResource(R.string.photoframe_card_title),
                 description = stringResource(R.string.photoframe_card_desc),
                 // 【v1.6.13】Find X10 专属：哈苏专业影像能力状态行（其他机型不显示）
-                statusText = if (deviceDp.isProImaging) {
+                statusText = if (deviceDp.imagingBrand == DeviceProfile.IMAGING_BRAND_HASSELBLAD) {
                     stringResource(R.string.photoframe_status_hasselblad)
                 } else {
                     null
@@ -598,7 +605,7 @@ private fun FindX10ImagingTipsCard(modifier: Modifier = Modifier) {
         if (deviceDp.has200Mp) add(stringResource(R.string.findx10_tips_200mp))
         if (deviceDp.maxVideoSpec.isNotBlank()) add(stringResource(R.string.findx10_tips_8k))
         if (deviceDp.telephotoStabilizationCipa > 0f) add(stringResource(R.string.findx10_tips_cipa))
-        if (deviceDp.isProImaging) add(stringResource(R.string.findx10_tips_hasselblad))
+        if (deviceDp.imagingBrand == DeviceProfile.IMAGING_BRAND_HASSELBLAD) add(stringResource(R.string.findx10_tips_hasselblad))
     }
     if (tips.isEmpty()) return
 
@@ -779,13 +786,14 @@ private fun InspirationFlowCard(
                     p to score
                 }
                 val seedBase = LocalDate.now().toEpochDay().toInt() + shuffleNonce * 7919
+                // 按分数分层洗牌：先 sorted 再整体 shuffled 会把打分完全打乱（打分失效纯随机）。
+                // 正确做法：高分层在前，同分层内用同一 Random 确定性洗牌（同日/同 nonce 不变）
+                val rnd = java.util.Random(seedBase.toLong())
                 scored
-                    .sortedWith(
-                        compareByDescending<Pair<MasterPreset, Int>> { it.second }
-                            .thenBy { it.first.name }
-                    )
-                    .map { it.first }
-                    .shuffled(java.util.Random(seedBase.toLong()))
+                    .groupBy { it.second }
+                    .toSortedMap(compareByDescending { it })
+                    .values
+                    .flatMap { tier -> tier.shuffled(rnd).map { it.first } }
                     .take(FLOW_SIZE)
             }
         }

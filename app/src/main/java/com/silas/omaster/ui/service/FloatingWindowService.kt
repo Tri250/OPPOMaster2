@@ -294,7 +294,8 @@ class FloatingWindowService : Service() {
         val shouldFrame = c2.isFollowCameraFramingEnabled &&
                 com.silas.omaster.util.DeviceDetector.isColorOsAtLeast(this, 17)
         val mode = when {
-            PresetParamMapper.isRealmePreset(sections) -> FloatingWindowMode.STANDARD
+            // locale 感知版本：en/ja 下 sections 标签已本地化，须先反查规范文本再判定
+            PresetParamMapper.isRealmePreset(this, sections) -> FloatingWindowMode.STANDARD
             shouldFrame -> FloatingWindowMode.FRAMING
             else -> configMode
         }
@@ -330,6 +331,8 @@ class FloatingWindowService : Service() {
                         name, sections, savedX, savedY
                     )
                 }
+                // 记录窗口状态，供 ACTION_UPDATE 的数据驱动刷新做一致性校验
+                rememberWindowState(mode, sections)
             }
         }
 
@@ -339,6 +342,55 @@ class FloatingWindowService : Service() {
     // 保存视图引用，用于更新内容
     private var mainContainer: LinearLayout? = null
     private var titleTextView: TextView? = null
+
+    // 【v1.7.1 修复】当前窗口的模式 / 内容结构签名 / 展开态：
+    // updateWindowContent 是数据驱动刷新，若请求的 mode 或预设结构与现有窗口不符
+    // （如 STANDARD 窗口收到 COMPACT 数据、预设参数条目数变化），原地更新会
+    // 标签与内容错位或残留旧值，此时必须按新 mode 整窗重建（保留位置）
+    private var currentWindowMode: FloatingWindowMode? = null
+    private var currentContentSignature: String = ""
+    private var currentIsExpanded: Boolean = true
+
+    private fun contentSignature(sections: List<PresetSection>): String =
+        sections.joinToString("|") { s ->
+            (s.title ?: "") + "#" + s.items.joinToString(",") { "${it.label}:${it.span}" }
+        }
+
+    private fun rememberWindowState(mode: FloatingWindowMode, sections: List<PresetSection>) {
+        currentWindowMode = mode
+        currentContentSignature = contentSignature(sections)
+        currentIsExpanded = isExpanded
+    }
+
+    /** 按 mode/展开态重建窗口，优先沿用当前位置 */
+    private fun rebuildWindow(
+        name: String,
+        sections: ArrayList<PresetSection>,
+        mode: FloatingWindowMode,
+        currentIndex: Int,
+        totalCount: Int
+    ) {
+        val x = params?.x ?: 50
+        val y = params?.y ?: 300
+        removeWindow()
+        if (isExpanded) {
+            when (mode) {
+                FloatingWindowMode.STANDARD -> showExpandedWindow(
+                    name, sections, x, y, currentIndex, totalCount
+                )
+                FloatingWindowMode.COMPACT -> showCompactWindow(
+                    name, sections, x, y, currentIndex, totalCount
+                )
+                // MU-27：FRAMING 取景框避位模式 — 在相机取景区域安全区放置悬浮窗
+                FloatingWindowMode.FRAMING -> showFramingWindow(
+                    name, sections, x, y, currentIndex, totalCount
+                )
+            }
+        } else {
+            showCollapsedWindow(name, sections, x, y)
+        }
+        rememberWindowState(mode, sections)
+    }
 
     /**
      * 更新窗口内容（数据驱动刷新，避免 UI 重建）
@@ -350,22 +402,15 @@ class FloatingWindowService : Service() {
         totalCount: Int,
         mode: FloatingWindowMode = FloatingWindowMode.STANDARD
     ) {
-        // 如果窗口不存在，直接创建新窗口
-        if (floatingView == null || mainContainer == null) {
-            when (mode) {
-                FloatingWindowMode.STANDARD -> showExpandedWindow(
-                    name, sections, 50, 300,
-                    currentIndex, totalCount
-                )
-                FloatingWindowMode.COMPACT -> showCompactWindow(
-                    name, sections, 50, 300,
-                    currentIndex, totalCount
-                )
-                FloatingWindowMode.FRAMING -> showFramingWindow(
-                    name, sections, 50, 300,
-                    currentIndex, totalCount
-                )
-            }
+        val signature = contentSignature(sections)
+
+        // 窗口不存在，或与请求的 mode / 内容结构 / 展开态不一致 → 整窗重建
+        if (floatingView == null || mainContainer == null ||
+            currentWindowMode != mode ||
+            currentContentSignature != signature ||
+            currentIsExpanded != isExpanded
+        ) {
+            rebuildWindow(name, sections, mode, currentIndex, totalCount)
             return
         }
 
@@ -384,11 +429,7 @@ class FloatingWindowService : Service() {
                         // v1.6.15 修复：重建前必须先 removeWindow()，否则旧视图仍附着在
                         // WindowManager 上成为孤儿（双窗 + 视图泄漏，onDestroy 只能回收最新的一个）。
                         FloatingWindowMode.FRAMING -> {
-                            removeWindow()
-                            showFramingWindow(
-                                name, sections, params?.x ?: 50, params?.y ?: 300,
-                                currentIndex, totalCount
-                            )
+                            rebuildWindow(name, sections, mode, currentIndex, totalCount)
                         }
                     }
                 }
@@ -397,21 +438,7 @@ class FloatingWindowService : Service() {
             e.printStackTrace()
             // 如果更新失败（如 sections 结构变化），降级为重建窗口。
             // v1.6.15 修复：同上，重建前先 removeWindow() 防止孤儿视图双窗泄漏。
-            removeWindow()
-            when (mode) {
-                FloatingWindowMode.STANDARD -> showExpandedWindow(
-                    name, sections, params?.x ?: 50, params?.y ?: 300,
-                    currentIndex, totalCount
-                )
-                FloatingWindowMode.COMPACT -> showCompactWindow(
-                    name, sections, params?.x ?: 50, params?.y ?: 300,
-                    currentIndex, totalCount
-                )
-                FloatingWindowMode.FRAMING -> showFramingWindow(
-                    name, sections, params?.x ?: 50, params?.y ?: 300,
-                    currentIndex, totalCount
-                )
-            }
+            rebuildWindow(name, sections, mode, currentIndex, totalCount)
         }
     }
 
@@ -463,10 +490,13 @@ class FloatingWindowService : Service() {
     private fun updateCompactContent(sections: List<PresetSection>) {
         val paramData = PresetParamMapper.extractDynamicParams(this, sections)
 
-        // 动态更新参数值 - 只更新实际存在的参数
-        paramData.forEachIndexed { index, (value, _) ->
-            val valueView = floatingView?.findViewWithTag<TextView>("compact_value_$index")
-            valueView?.text = value
+        // 逐个更新已存在的 compact_value_N 视图；参数变少时清空多余视图的旧值，
+        // 否则残留上一次预设的参数内容
+        var i = 0
+        while (true) {
+            val valueView = floatingView?.findViewWithTag<TextView>("compact_value_$i") ?: break
+            valueView.text = paramData.getOrNull(i)?.first ?: ""
+            i++
         }
     }
 
