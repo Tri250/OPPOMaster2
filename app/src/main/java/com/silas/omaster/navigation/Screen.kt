@@ -32,9 +32,6 @@ sealed class Screen {
     data object Settings : Screen()
 
     @Serializable
-    data object Profile : Screen()
-
-    @Serializable
     data object About : Screen()
 
     @Serializable

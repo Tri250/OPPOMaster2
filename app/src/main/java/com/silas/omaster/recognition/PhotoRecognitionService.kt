@@ -4,6 +4,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.annotation.StringRes
+import com.silas.omaster.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.silas.omaster.util.ExifInfo
@@ -17,11 +19,11 @@ import com.silas.omaster.util.ExifReader
  */
 object PhotoRecognitionService {
 
-    /** 识别失败的结构化异常 */
-    sealed class RecognitionError(val hint: String) {
-        object DecodeFailed : RecognitionError("图片无法读取，请换一张照片")
-        object TooSmall : RecognitionError("图片太小（需大于 100px），无法分析")
-        object TooLarge : RecognitionError("图片过大，无法处理")
+    /** 识别失败的结构化异常（文案经资源 ID 本地化，避免硬编码中文） */
+    sealed class RecognitionError(@StringRes val hintRes: Int) {
+        object DecodeFailed : RecognitionError(R.string.recog_error_decode_failed)
+        object TooSmall : RecognitionError(R.string.recog_error_too_small)
+        object TooLarge : RecognitionError(R.string.recog_error_too_large)
     }
 
     sealed class Result {

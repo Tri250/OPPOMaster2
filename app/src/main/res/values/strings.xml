@@ -1039,4 +1039,98 @@
     <string name="colorwalk_apply_theme">应用到 App 主题</string>
     <string name="colorwalk_theme_applied">已应用配色：%1$s</string>
 
+    <!-- ═══════════════ 照片识别 / POP 即拍（v1.7.1） ═══════════════ -->
+    <!-- 主页入口 -->
+    <string name="recog_home_entry">从照片识别参数 / POP 即拍</string>
+    <!-- 识别页 -->
+    <string name="recog_idle_title">导入喜欢的照片</string>
+    <string name="recog_idle_desc">选择一张 Find 哈苏样片或任意风景/人像照片，OMaster 会读取照片参数并分析画面风格，生成可套用的预设。所有处理均在本地完成。</string>
+    <string name="recog_pick_photo">从相册选择照片</string>
+    <string name="recog_analyzing">正在分析照片参数与风格…</string>
+    <string name="recog_result_title">照片识别结果</string>
+    <string name="recog_name_label">预设名称</string>
+    <string name="recog_confirm">确认并保存到自定义预设库</string>
+    <string name="recog_disclaimer">该预设为风格模拟，非哈苏原厂算法。所有处理均在本地完成，不上传照片。</string>
+    <string name="recog_back">返回</string>
+    <string name="recog_ref_photo">参考照片</string>
+    <!-- 摄影参数卡 -->
+    <string name="recog_exif_card">摄影参数</string>
+    <string name="recog_no_exif_params">照片无 EXIF 摄影参数，已生成纯风格预设，参数项可稍后手动补充。</string>
+    <string name="recog_label_iso">ISO</string>
+    <string name="recog_label_shutter">快门</string>
+    <string name="recog_label_aperture">光圈</string>
+    <string name="recog_label_focal">焦距</string>
+    <string name="recog_label_temp">色温</string>
+    <string name="recog_label_wb">白平衡</string>
+    <string name="recog_label_ev">曝光补偿</string>
+    <!-- 画面风格特征卡 -->
+    <string name="recog_style_card">画面风格特征</string>
+    <string name="recog_vec_brightness">亮度</string>
+    <string name="recog_vec_contrast">对比</string>
+    <string name="recog_vec_saturation">饱和</string>
+    <string name="recog_vec_warmth">冷暖</string>
+    <string name="recog_vec_dr">动态</string>
+    <string name="recog_vec_colorfulness">色彩</string>
+    <!-- 候选风格 -->
+    <string name="recog_candidates_card">匹配风格（Top 3）</string>
+    <!-- 置信度与来源 -->
+    <string name="recog_confidence_strong">可直接采用</string>
+    <string name="recog_confidence_medium">建议微调后采用</string>
+    <string name="recog_confidence_low">仅供参考</string>
+    <string name="recog_source_exif">照片 EXIF + 风格</string>
+    <string name="recog_source_style">像素风格</string>
+    <string name="recog_source_line">来源：%1$s · 引擎 v%2$s</string>
+    <!-- 可解释依据 -->
+    <string name="recog_explanation_features">风格依据：%1$s</string>
+    <string name="recog_explanation_source_exif">摄影参数来自照片 EXIF（来源：%1$s）</string>
+    <string name="recog_explanation_source_style">未读取到 EXIF 摄影参数，基于画面像素特征匹配风格</string>
+    <string name="recog_explanation_confidence">综合置信度 %1$d%%</string>
+    <string name="recog_tag_none">色彩分布均衡</string>
+    <string name="recog_tag_bright">明亮</string>
+    <string name="recog_tag_dark">偏暗</string>
+    <string name="recog_tag_low_sat">饱和度偏低</string>
+    <string name="recog_tag_vivid">色彩鲜艳</string>
+    <string name="recog_tag_warm">色调偏暖</string>
+    <string name="recog_tag_cool">色调偏冷</string>
+    <string name="recog_tag_wide_dr">动态范围大</string>
+    <!-- 结构化警告 -->
+    <string name="recog_warn_compressed">图片较大，已降采样分析</string>
+    <string name="recog_warn_no_exif">照片无 EXIF 摄影参数，参数项需手动补充</string>
+    <string name="recog_warn_temp_conflict">EXIF 色温（%1$dK）与画面冷暖倾向不一致，已以画面风格为准，色温仅作参考</string>
+    <string name="recog_warn_samples">样本特征不足，采用中性风格</string>
+    <!-- 错误提示 -->
+    <string name="recog_error_decode_failed">图片无法读取，请换一张照片</string>
+    <string name="recog_error_too_small">图片太小（需大于 100px），无法分析</string>
+    <string name="recog_error_too_large">图片过大，无法处理</string>
+    <!-- POP 即拍页 -->
+    <string name="pop_title">POP 即拍</string>
+    <string name="pop_back">返回</string>
+    <string name="pop_capability">设备相机能力：%1$s · %2$s</string>
+    <string name="pop_hint_l1">支持手动参数，可完整套用预设</string>
+    <string name="pop_hint_l2">部分手动可用，未生效项将提示</string>
+    <string name="pop_hint_l3">相机能力受限，已切换为悬浮窗照着调 + 拍后套色</string>
+    <string name="pop_preview">套色后照片</string>
+    <string name="pop_viewfinder_hint">点击快门拍照 · 或从相册选图套色</string>
+    <string name="pop_applied_params">已套用参数</string>
+    <string name="pop_no_params">该预设无摄影参数，仅套用滤镜风格</string>
+    <string name="pop_pick_from_gallery">从相册选图</string>
+    <string name="pop_shutter">拍照</string>
+    <string name="pop_save_to_gallery">保存风格照到相册</string>
+    <string name="pop_applied_style">已套用「%1$s」风格</string>
+    <string name="pop_read_failed">照片读取失败</string>
+    <string name="pop_saved">已保存到相册</string>
+    <string name="pop_save_failed">保存失败</string>
+    <string name="pop_need_photo">请先拍照或选图</string>
+    <string name="pop_notice">POP 即拍采用风格模拟：拍照后套用「%1$s」调色参数。参数写入原生相机属系统限制，不可达；本模式通过本地色彩管线实现可交付的风格还原。</string>
+    <string name="pop_preset_missing">预设不存在或已删除</string>
+    <!-- 识别风格目录名称 -->
+    <string name="style_clear">清透</string>
+    <string name="style_amber">琥珀</string>
+    <string name="style_film">胶片</string>
+    <string name="style_bw">黑白</string>
+    <string name="style_vivid">鲜明</string>
+    <string name="style_night">夜景</string>
+    <string name="style_soft">柔光</string>
+    <string name="style_original">原图</string>
+
 </resources>

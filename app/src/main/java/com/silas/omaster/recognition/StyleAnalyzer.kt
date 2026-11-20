@@ -21,7 +21,8 @@ object StyleAnalyzer {
     data class Match(
         val preset: StylePreset,
         val confidence: Float,
-        val reason: String
+        /** 结构化依据标签（文案本地化交由 UI 层） */
+        val reasonTags: List<FeatureTag>
     )
 
     /** 分析结果 */
@@ -91,29 +92,28 @@ object StyleAnalyzer {
         return StyleVector(avgLum, contrast, avgSat, avgWarm, dynamicRange, colorfulness)
     }
 
-    /** 与风格目录匹配，返回置信度 Top-N，附可解释依据 */
+    /** 与风格目录匹配，返回置信度 Top-N，附可解释依据标签 */
     fun matchCatalog(vector: StyleVector, topN: Int = 3): List<Match> {
         return StyleCatalog.PRESETS
             .map { preset ->
                 val conf = vector.confidenceAgainst(preset.target)
-                Match(preset, conf, buildReason(vector, preset))
+                Match(preset, conf, buildReasonTags(vector))
             }
             .sortedByDescending { it.confidence }
             .take(topN)
     }
 
-    /** 生成可解释依据（人类可读），对应 PRD 8.3 证据形式 */
-    private fun buildReason(v: StyleVector, p: StylePreset): String {
-        val parts = mutableListOf<String>()
-        if (v.brightness > 0.65f) parts.add("画面偏明亮")
-        else if (v.brightness < 0.35f) parts.add("画面偏暗")
-        if (v.saturation < 0.35f) parts.add("饱和度偏低")
-        else if (v.saturation > 0.65f) parts.add("色彩鲜艳")
-        if (v.warmth > 0.6f) parts.add("色调偏暖")
-        else if (v.warmth < 0.4f) parts.add("色调偏冷")
-        if (v.dynamicRange > 0.7f) parts.add("动态范围大")
-        if (parts.isEmpty()) parts.add("色彩分布接近${p.displayName}")
-        return parts.joinToString(" + ") + " → 匹配「${p.displayName}」"
+    /** 生成可解释依据标签（结构化，文案本地化交由 UI 层） */
+    fun buildReasonTags(v: StyleVector): List<FeatureTag> {
+        val tags = mutableListOf<FeatureTag>()
+        if (v.brightness > 0.65f) tags.add(FeatureTag.BRIGHT)
+        else if (v.brightness < 0.35f) tags.add(FeatureTag.DARK)
+        if (v.saturation < 0.35f) tags.add(FeatureTag.LOW_SAT)
+        else if (v.saturation > 0.65f) tags.add(FeatureTag.VIVID)
+        if (v.warmth > 0.6f) tags.add(FeatureTag.WARM)
+        else if (v.warmth < 0.4f) tags.add(FeatureTag.COOL)
+        if (v.dynamicRange > 0.7f) tags.add(FeatureTag.WIDE_DR)
+        return tags
     }
 
     /** 均匀网格采样 Bitmap，控制样本数上限 */

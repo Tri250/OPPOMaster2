@@ -149,18 +149,21 @@ class MainActivity : ComponentActivity() {
         com.silas.omaster.util.CrashReporter.mark(this, "M4_ACTIVITY_ONCREATE")
 
         // FD-01c：接收系统分享的预设 JSON 文本
-        if (intent?.action == android.content.Intent.ACTION_SEND) {
-            pendingSharedText = intent.getStringExtra(android.content.Intent.EXTRA_TEXT)
-            // P1-PHOTO-RECOGNITION：接收系统分享的图片 → 照片识别
-            val sharedUri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM)
+        // P1-PHOTO-RECOGNITION：接收系统分享的图片 → 照片识别（单图与多图均可达）
+        when (intent?.action) {
+            android.content.Intent.ACTION_SEND -> {
+                pendingSharedText = intent.getStringExtra(android.content.Intent.EXTRA_TEXT)
+                val sharedUri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM)
+                }
+                sharedUri?.let { pendingSharedImageUri = it.toString() }
             }
-            sharedUri?.let { pendingSharedImageUri = it.toString() }
             // 多重分享（ACTION_SEND_MULTIPLE）取第一张
-            if (sharedUri == null && intent.action == android.content.Intent.ACTION_SEND_MULTIPLE) {
+            // 历史缺陷：该分支曾嵌在 ACTION_SEND 条件内，永远不可达，多图分享无响应
+            android.content.Intent.ACTION_SEND_MULTIPLE -> {
                 val uris = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                     intent.getParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
                 } else {
@@ -872,20 +875,20 @@ fun MainApp(
             PillNavBar(
                 visible = isHomeScrollingUp,
                 currentRoute = when {
-                    currentRoute?.contains("Home") == true -> "home"
-                    currentRoute?.contains("Discover") == true -> "discover"
-                    currentRoute?.contains("About") == true -> "about"
+                    currentRoute.contains("Home") -> "home"
+                    currentRoute.contains("Discover") -> "discover"
+                    currentRoute.contains("About") -> "about"
                     else -> "home"
                 },
                 onNavigate = { route ->
                     when (route) {
                         "home" -> {
-                            if (currentRoute?.contains("Home") != true) {
+                            if (!currentRoute.contains("Home")) {
                                 navController.popBackStack(Screen.Home, false)
                             }
                         }
                         "discover" -> {
-                            if (currentRoute?.contains("Discover") != true) {
+                            if (!currentRoute.contains("Discover")) {
                                 navController.navigate(Screen.Discover) {
                                     popUpTo(Screen.Home) {
                                         saveState = true
@@ -896,7 +899,7 @@ fun MainApp(
                             }
                         }
                         "about" -> {
-                            if (currentRoute?.contains("About") != true) {
+                            if (!currentRoute.contains("About")) {
                                 navController.navigate(Screen.About) {
                                     popUpTo(Screen.Home) {
                                         saveState = true

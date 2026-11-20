@@ -119,12 +119,15 @@ object ExifReader {
     // ═══════════════════════════════════════════════════════════
 
     private fun readAperture(exif: ExifInterface): String? {
-        // TAG_APERTURE 在 androidx.exifinterface < 1.5.0 中不存在（我们用的 1.4.1），
-        // 直接用 EXIF 标准标签字符串 "ApertureValue"（所有 ExifInterface 版本都支持字符串）
-        val raw = exif.getAttribute("ApertureValue")
-        return runCatching {
-            raw?.toFloatOrNull()?.let { "f/${String.format(Locale.getDefault(), "%.1f", it)}" }
-        }.getOrNull()
+        // 优先标准 FNumber 标签（相机直接写入的 f 值，如 "1.8"）；
+        // 用字符串字面量而非 ExifInterface.TAG_F_NUMBER，兼容各 exifinterface 版本的常量差异。
+        val fNumber = exif.getAttribute("FNumber")?.toFloatOrNull()
+        if (fNumber != null && fNumber in 0.7f..64f) {
+            return "f/${String.format(Locale.getDefault(), "%.1f", fNumber)}"
+        }
+        // 回退：APEX ApertureValue（EV 制）按 N = 2^(EV/2) 换算为 f 值。
+        // 历史缺陷：曾把 APEX 原始值（f/1.6 ≈ EV 1.36）直接当 f 值展示为 "f/1.4"。
+        return PhotoParamParser.apexToAperture(exif.getAttribute("ApertureValue"))
     }
 
     private fun readFocalLength(exif: ExifInterface): String? {

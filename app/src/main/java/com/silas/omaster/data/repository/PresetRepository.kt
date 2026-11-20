@@ -256,8 +256,8 @@ class PresetRepository(
      * 数据会保存到 CustomPresetManager（SharedPreferences）
      * App 更新时这些数据会保留
      */
-    fun addCustomPreset(preset: MasterPreset) {
-        customPresetManager.addCustomPreset(preset)
+    fun addCustomPreset(preset: MasterPreset): String {
+        return customPresetManager.addCustomPreset(preset)
     }
 
     /**

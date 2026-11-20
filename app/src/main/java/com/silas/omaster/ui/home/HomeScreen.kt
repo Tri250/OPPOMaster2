@@ -483,7 +483,7 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = "从照片识别参数 / POP 即拍",
+                                text = stringResource(R.string.recog_home_entry),
                                 color = themedTextPrimary(),
                                 modifier = Modifier.fillMaxWidth()
                             )

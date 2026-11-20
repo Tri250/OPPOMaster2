@@ -36,7 +36,6 @@ class ScreenRouteSerializationTest {
         assertRoundTrip(serializer<Screen.Home>(), Screen.Home)
         assertRoundTrip(serializer<Screen.PresetSelection>(), Screen.PresetSelection)
         assertRoundTrip(serializer<Screen.Settings>(), Screen.Settings)
-        assertRoundTrip(serializer<Screen.Profile>(), Screen.Profile)
         assertRoundTrip(serializer<Screen.About>(), Screen.About)
         assertRoundTrip(serializer<Screen.Discover>(), Screen.Discover)
         assertRoundTrip(serializer<Screen.ColorWalk>(), Screen.ColorWalk)
@@ -51,6 +50,14 @@ class ScreenRouteSerializationTest {
         assertRoundTrip(serializer<Screen.Detail>(), Screen.Detail("preset-1"))
         assertRoundTrip(serializer<Screen.EditPreset>(), Screen.EditPreset("preset-2"))
         assertRoundTrip(serializer<Screen.CreatePreset>(), Screen.CreatePreset("template-1"))
+        // v1.7.1 识别 → POP 即拍链路路由
+        assertRoundTrip(serializer<Screen.PopCapture>(), Screen.PopCapture("preset-3"))
+        assertRoundTrip(serializer<Screen.PhotoRecognition>(), Screen.PhotoRecognition("content://media/1"))
+    }
+
+    @Test
+    fun `PhotoRecognition 的可空图片 Uri 参数可缺省`() {
+        assertRoundTrip(serializer<Screen.PhotoRecognition>(), Screen.PhotoRecognition(null))
     }
 
     @Test

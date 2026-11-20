@@ -6,8 +6,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import com.silas.omaster.R
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.model.MasterPreset
 
@@ -35,9 +37,9 @@ fun PopCaptureHost(presetId: String, onBack: () -> Unit) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("预设不存在或已删除")
+                    Text(stringResource(R.string.pop_preset_missing))
                     Spacer(Modifier.height(16.dp))
-                    Button(onClick = onBack) { Text("返回") }
+                    Button(onClick = onBack) { Text(stringResource(R.string.pop_back)) }
                 }
             }
         }

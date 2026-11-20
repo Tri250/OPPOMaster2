@@ -817,4 +817,98 @@
     <string name="about_device_spec_ois">手ぶれ補正</string>
     <string name="colorwalk_apply_theme">アプリテーマに適用</string>
     <string name="colorwalk_theme_applied">テーマを適用しました：%1$s</string>
+
+    <!-- ═══════════════ 写真認識 / POP 即撮（v1.7.1） ═══════════════ -->
+    <!-- ホーム入口 -->
+    <string name="recog_home_entry">写真からパラメータ認識 / POP 即撮</string>
+    <!-- 認識ページ -->
+    <string name="recog_idle_title">お気に入りの写真を読み込む</string>
+    <string name="recog_idle_desc">Find ハッセルブラッドのサンプルや任意の風景・人物写真を選んでください。OMaster が写真の撮影パラメータを読み取り、画面のスタイルを分析して、使えるプリセットを生成します。すべての処理は端末内で行われます。</string>
+    <string name="recog_pick_photo">ギャラリーから写真を選択</string>
+    <string name="recog_analyzing">写真のパラメータとスタイルを分析中…</string>
+    <string name="recog_result_title">写真認識結果</string>
+    <string name="recog_name_label">プリセット名</string>
+    <string name="recog_confirm">確認してカスタムプリセットに保存</string>
+    <string name="recog_disclaimer">このプリセットはスタイルシミュレーションであり、ハッセルブラッド純正アルゴリズムではありません。すべての処理は端末内で行われ、写真がアップロードされることはありません。</string>
+    <string name="recog_back">戻る</string>
+    <string name="recog_ref_photo">参考写真</string>
+    <!-- 撮影パラメータカード -->
+    <string name="recog_exif_card">撮影パラメータ</string>
+    <string name="recog_no_exif_params">写真に EXIF 撮影パラメータがありません。スタイルのみのプリセットを生成しました。パラメータは後で手動入力できます。</string>
+    <string name="recog_label_iso">ISO</string>
+    <string name="recog_label_shutter">シャッター</string>
+    <string name="recog_label_aperture">絞り</string>
+    <string name="recog_label_focal">焦点距離</string>
+    <string name="recog_label_temp">色温度</string>
+    <string name="recog_label_wb">ホワイトバランス</string>
+    <string name="recog_label_ev">露出補正</string>
+    <!-- 画面スタイル特徴カード -->
+    <string name="recog_style_card">画面スタイル特徴</string>
+    <string name="recog_vec_brightness">明度</string>
+    <string name="recog_vec_contrast">コントラスト</string>
+    <string name="recog_vec_saturation">彩度</string>
+    <string name="recog_vec_warmth">冷暖</string>
+    <string name="recog_vec_dr">ダイナミック</string>
+    <string name="recog_vec_colorfulness">色彩</string>
+    <!-- 候補スタイル -->
+    <string name="recog_candidates_card">マッチしたスタイル（Top 3）</string>
+    <!-- 確信度と出典 -->
+    <string name="recog_confidence_strong">そのまま採用可</string>
+    <string name="recog_confidence_medium">微調整推奨</string>
+    <string name="recog_confidence_low">参考程度</string>
+    <string name="recog_source_exif">写真 EXIF + スタイル</string>
+    <string name="recog_source_style">ピクセルスタイル</string>
+    <string name="recog_source_line">出典：%1$s · エンジン v%2$s</string>
+    <!-- 説明可能な根拠 -->
+    <string name="recog_explanation_features">スタイル根拠：%1$s</string>
+    <string name="recog_explanation_source_exif">撮影パラメータは写真 EXIF 由来（出典：%1$s）</string>
+    <string name="recog_explanation_source_style">EXIF 撮影パラメータがなく、ピクセル特徴からスタイルをマッチング</string>
+    <string name="recog_explanation_confidence">総合確信度 %1$d%%</string>
+    <string name="recog_tag_none">色彩分布は均衡</string>
+    <string name="recog_tag_bright">明るい</string>
+    <string name="recog_tag_dark">暗め</string>
+    <string name="recog_tag_low_sat">彩度低め</string>
+    <string name="recog_tag_vivid">色彩鮮やか</string>
+    <string name="recog_tag_warm">暖色傾向</string>
+    <string name="recog_tag_cool">寒色傾向</string>
+    <string name="recog_tag_wide_dr">ダイナミックレンジ広い</string>
+    <!-- 構造化警告 -->
+    <string name="recog_warn_compressed">画像が大きいため、ダウンサンプリングして分析しました</string>
+    <string name="recog_warn_no_exif">写真に EXIF 撮影パラメータがありません。パラメータは手動で補完してください</string>
+    <string name="recog_warn_temp_conflict">EXIF 色温度（%1$dK）が画面の冷暖傾向と不一致。画面スタイルを優先し、色温度は参考値とします</string>
+    <string name="recog_warn_samples">サンプル特徴が不十分なため、ニュートラルスタイルを採用</string>
+    <!-- エラー -->
+    <string name="recog_error_decode_failed">画像を読み取れません。別の写真をお試しください</string>
+    <string name="recog_error_too_small">画像が小さすぎます（100px 超過必要）</string>
+    <string name="recog_error_too_large">画像が大きすぎて処理できません</string>
+    <!-- POP 即撮ページ -->
+    <string name="pop_title">POP 即撮</string>
+    <string name="pop_back">戻る</string>
+    <string name="pop_capability">カメラ性能：%1$s · %2$s</string>
+    <string name="pop_hint_l1">マニュアル対応。プリセットを完全適用できます</string>
+    <string name="pop_hint_l2">一部マニュアル対応。未対応項目は提示します</string>
+    <string name="pop_hint_l3">カメラ性能が制限済み。フローティング照合 + 撮影後套色に切替</string>
+    <string name="pop_preview">スタイル適用後の写真</string>
+    <string name="pop_viewfinder_hint">シャッターで撮影 · ギャラリーから選んで套色</string>
+    <string name="pop_applied_params">適用パラメータ</string>
+    <string name="pop_no_params">このプリセットに撮影パラメータはなく、フィルタースタイルのみ適用します</string>
+    <string name="pop_pick_from_gallery">ギャラリーから選択</string>
+    <string name="pop_shutter">撮影</string>
+    <string name="pop_save_to_gallery">スタイル写真をギャラリーに保存</string>
+    <string name="pop_applied_style">「%1$s」スタイルを適用しました</string>
+    <string name="pop_read_failed">写真の読み取りに失敗しました</string>
+    <string name="pop_saved">ギャラリーに保存しました</string>
+    <string name="pop_save_failed">保存に失敗しました</string>
+    <string name="pop_need_photo">先に撮影または選択してください</string>
+    <string name="pop_notice">POP 即撮はスタイルシミュレーションです：撮影後に「%1$s」の調色パラメータを適用します。ネイティブカメラへのパラメータ書き込みはシステム制限で不可のため、ローカルカラーパイプラインでスタイルを再現します。</string>
+    <string name="pop_preset_missing">プリセットが存在しないか削除されました</string>
+    <!-- 認識スタイルカタログ名 -->
+    <string name="style_clear">クリア</string>
+    <string name="style_amber">アンバー</string>
+    <string name="style_film">フィルム</string>
+    <string name="style_bw">白黒</string>
+    <string name="style_vivid">ビビッド</string>
+    <string name="style_night">夜景</string>
+    <string name="style_soft">ソフト光</string>
+    <string name="style_original">原図</string>
 </resources>

@@ -105,10 +105,12 @@ class ColorWalkManager(context: Context) {
     /**
      * 清除今日色卡
      * 用户可以重置，但不恢复抽取次数
+     *
+     * 注意：保留 KEY_TODAY_DATE，否则 getDrawCount() 的跨天判断会把当日次数清零，
+     * 用户可通过反复"清除→抽取"无限刷次数（与"不恢复抽取次数"的约定相悖）。
      */
     fun clearTodayCard() {
         prefs.edit()
-            .remove(KEY_TODAY_DATE)
             .remove(KEY_TODAY_CARD_ID)
             .apply()
 

@@ -58,8 +58,9 @@ class CustomPresetManager(context: Context) {
      * 【用户数据写入操作】
      * 添加新的自定义预设
      * 数据会立即写入 SharedPreferences 持久化保存
+     * @return 新预设的 id（调用方可直接用于后续跳转/定位，避免按名称反查在重名时取错）
      */
-    fun addCustomPreset(preset: MasterPreset) {
+    fun addCustomPreset(preset: MasterPreset): String {
         val presets = getCustomPresets().toMutableList()
         val newPreset = preset.copy(
             id = preset.id ?: UUID.randomUUID().toString(),
@@ -67,6 +68,7 @@ class CustomPresetManager(context: Context) {
         )
         presets.add(0, newPreset) // 添加到开头（最新的在前面）
         saveCustomPresets(presets)
+        return newPreset.id!!
     }
 
     /**

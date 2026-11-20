@@ -116,8 +116,8 @@ class PhotoRecognitionTest {
         val input = RecognitionInput(hasExif = false, styleAnalysis = analysis)
         val result = PhotoRecognitionEngine.recognize(input)
         assertEquals(RecognitionSource.PHOTO_STYLE, result.source)
-        assertTrue(result.warnings.any { it.contains("无 EXIF") })
-        assertTrue(result.warnings.any { it.contains("降采样") })
+        assertTrue(result.warnings.any { it.type == WarningType.NO_EXIF })
+        assertTrue(result.warnings.any { it.type == WarningType.COMPRESSED })
     }
 
     @Test
@@ -131,7 +131,55 @@ class PhotoRecognitionTest {
             hasExif = true, colorTemperature = 7500, styleAnalysis = analysis
         )
         val result = PhotoRecognitionEngine.recognize(input)
-        assertTrue(result.warnings.any { it.contains("不一致") })
+        val conflict = result.warnings.firstOrNull { it.type == WarningType.TEMP_CONFLICT }
+        assertNotNull(conflict)
+        assertEquals(7500, conflict!!.value)   // 附带色温 K，供 UI 本地化展示
+    }
+
+    @Test
+    fun recognize_exposesApertureAndFocalLengthForDisplay() {
+        // 手机大师模式无光圈参数项：光圈/焦距仅作为识别依据透传给 UI 展示，不落入预设草稿
+        val analysis = StyleAnalyzer.Analysis(
+            vector = StyleCatalog.byKey("clear")!!.target, sampleCount = 1024, compressed = false,
+            matches = StyleAnalyzer.matchCatalog(StyleCatalog.byKey("clear")!!.target, 3)
+        )
+        val input = RecognitionInput(
+            hasExif = true, aperture = "f/1.8", focusMm = "23mm",
+            sourceLabel = "Find X7 哈苏", styleAnalysis = analysis
+        )
+        val result = PhotoRecognitionEngine.recognize(input)
+        assertEquals("f/1.8", result.aperture)
+        assertEquals("23mm", result.focalLength)
+        assertEquals("Find X7 哈苏", result.sourceLabel)
+    }
+
+    @Test
+    fun recognize_featuresAndConfidenceLevel() {
+        val analysis = StyleAnalyzer.Analysis(
+            vector = StyleCatalog.byKey("clear")!!.target, sampleCount = 1024, compressed = false,
+            matches = StyleAnalyzer.matchCatalog(StyleCatalog.byKey("clear")!!.target, 3)
+        )
+        val input = RecognitionInput(hasExif = true, styleAnalysis = analysis)
+        val result = PhotoRecognitionEngine.recognize(input)
+        // 特征标签构成"可解释依据"
+        assertTrue(result.features.isNotEmpty())
+        // 置信度等级分层（0=强 / 1=中 / 2=弱）
+        assertTrue(result.confidenceLevel in 0..2)
+        assertTrue(result.isStrongMatch == (result.confidence >= 0.7f))
+        // 引擎不再输出展示层文案（warnings 为结构化类型）
+        assertTrue(result.warnings.all { it.value == null || it.type == WarningType.TEMP_CONFLICT })
+    }
+
+    @Test
+    fun buildReasonTags_structured() {
+        val tags = StyleAnalyzer.buildReasonTags(
+            StyleVector(0.9f, 0.5f, 0.1f, 0.8f, 0.9f, 0.5f)
+        )
+        assertTrue(tags.contains(FeatureTag.BRIGHT))
+        assertTrue(tags.contains(FeatureTag.LOW_SAT))
+        assertTrue(tags.contains(FeatureTag.WARM))
+        assertTrue(tags.contains(FeatureTag.WIDE_DR))
+        assertFalse(tags.contains(FeatureTag.DARK))
     }
 
     // ---------- PresetColorTransform ----------

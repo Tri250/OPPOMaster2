@@ -4,6 +4,8 @@ import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.os.Build
+import androidx.annotation.StringRes
+import com.silas.omaster.R
 
 /**
  * 相机能力探测（决定 POP 即拍模式的可达等级）。
@@ -27,15 +29,17 @@ object CameraCapabilityProbe {
         val supportsManualShutter: Boolean,
         val supportsExposureCompensation: Boolean,
         val evRange: Pair<Float, Float>?,
-        val cameraCount: Int,
-        val summary: String
+        val cameraCount: Int
     ) {
         val isManualExposure: Boolean get() = supportsManualIso && supportsManualShutter
-        val degradationHint: String
+
+        /** 降级提示文案（经资源 ID 本地化，避免硬编码中文） */
+        @get:StringRes
+        val degradationHintRes: Int
             get() = when (level) {
-                Level.L1 -> "支持手动参数，可完整套用预设"
-                Level.L2 -> "部分手动可用，未生效项将提示"
-                Level.L3 -> "相机能力受限，已切换为悬浮窗照着调 + 拍后套色"
+                Level.L1 -> R.string.pop_hint_l1
+                Level.L2 -> R.string.pop_hint_l2
+                Level.L3 -> R.string.pop_hint_l3
             }
     }
 
@@ -96,8 +100,7 @@ object CameraCapabilityProbe {
             supportsManualShutter = supportsShutter,
             supportsExposureCompensation = supportsEv,
             evRange = evRange,
-            cameraCount = cameraCount,
-            summary = "相机等级 $levelName · 摄像头 $cameraCount"
+            cameraCount = cameraCount
         )
     }
 

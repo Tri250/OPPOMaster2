@@ -11,24 +11,34 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.silas.omaster.R
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.util.PresetI18n
 
 /**
- * 照片识别确认页（PRD 16.2 原型 / FR-01~05）。
- *
- * 流程：展示识别结果 → 用户查看 EXIF + 风格 + Top-3 候选 → 可微调名称/参数 →
+ * 识别结果确认页（PRD 10.1 / 8.3）：
+ * 展示草稿 → 查看 EXIF + 风格 + Top-3 候选 → 可微调名称 / 切换候选风格 →
  * 确认（落库）或取消（丢弃）。遵循 Ask first：识别结果不静默写入。
+ *
+ * 展示层文案全部经字符串资源本地化；引擎仅输出结构化数据（见 RecognitionResult）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,14 +51,15 @@ fun PhotoRecognitionScreen(
     var presetName by remember(result) { mutableStateOf(result.draft.name) }
     var selectedCandidate by remember(result) { mutableIntStateOf(0) }
     val accent = Color(0xFFEC7223)
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("照片识别结果", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.recog_result_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.recog_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors()
@@ -67,7 +78,7 @@ fun PhotoRecognitionScreen(
             bitmap?.let {
                 Image(
                     bitmap = it.asImageBitmap(),
-                    contentDescription = "参考照片",
+                    contentDescription = stringResource(R.string.recog_ref_photo),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(180.dp)
@@ -84,7 +95,7 @@ fun PhotoRecognitionScreen(
             OutlinedTextField(
                 value = presetName,
                 onValueChange = { presetName = it },
-                label = { Text("预设名称") },
+                label = { Text(stringResource(R.string.recog_name_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -92,25 +103,26 @@ fun PhotoRecognitionScreen(
             // EXIF 摄影参数卡
             ExifParamsCard(result, accent)
 
-            // 风格向量可视化
+            // 风格向量可视化（优先展示照片真实分析向量，缺失时回退候选风格目标向量）
             StyleVectorCard(
-                vector = result.candidates.firstOrNull()?.preset?.target
-                    ?: com.silas.omaster.recognition.StyleVector.NEUTRAL,
+                vector = result.styleVector
+                    ?: result.candidates.firstOrNull()?.preset?.target
+                    ?: StyleVector.NEUTRAL,
                 accent = accent
             )
 
-            // Top-3 候选
+            // Top-3 候选（可切换，确认时按所选候选重建调色参数）
             CandidatesCard(result, selectedCandidate, accent) { selectedCandidate = it }
 
-            // 可解释依据 + 警示
+            // 可解释依据（本地化组装）+ 警示
             Text(
-                text = result.explanation,
+                text = buildLocalizedExplanation(result),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
             result.warnings.forEach { w ->
                 Text(
-                    text = "⚠ $w",
+                    text = "⚠ " + PresetI18n.getLocalizedWarning(context, w),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFFFFB300)
                 )
@@ -141,10 +153,10 @@ fun PhotoRecognitionScreen(
             ) {
                 Icon(Icons.Default.Check, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("确认并保存到自定义预设库", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.recog_confirm), fontWeight = FontWeight.Bold)
             }
             Text(
-                text = "该预设为风格模拟，非哈苏原厂算法。所有处理均在本地完成，不上传照片。",
+                text = stringResource(R.string.recog_disclaimer),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 textAlign = TextAlign.Center,
@@ -154,9 +166,42 @@ fun PhotoRecognitionScreen(
     }
 }
 
+/** 本地化组装"可解释依据"（引擎仅输出结构化特征与数据） */
+@Composable
+private fun buildLocalizedExplanation(result: RecognitionResult): String {
+    val context = LocalContext.current
+    val parts = mutableListOf<String>()
+    if (result.features.isNotEmpty()) {
+        val tags = result.features.joinToString(" + ") { PresetI18n.getLocalizedFeatureTag(context, it) }
+        parts.add(stringResource(R.string.recog_explanation_features, tags))
+    } else {
+        parts.add(stringResource(R.string.recog_tag_none))
+    }
+    parts.add(
+        if (result.source == RecognitionSource.PHOTO_EXIF && result.sourceLabel != null) {
+            stringResource(R.string.recog_explanation_source_exif, result.sourceLabel)
+        } else {
+            stringResource(R.string.recog_explanation_source_style)
+        }
+    )
+    parts.add(stringResource(R.string.recog_explanation_confidence, (result.confidence * 100).toInt()))
+    return parts.joinToString("\n")
+}
+
 @Composable
 private fun ConfidenceBanner(result: RecognitionResult, accent: Color) {
     val color = if (result.isStrongMatch) Color(0xFF4CAF50) else Color(0xFFFFB300)
+    val levelText = stringResource(
+        when (result.confidenceLevel) {
+            0 -> R.string.recog_confidence_strong
+            1 -> R.string.recog_confidence_medium
+            else -> R.string.recog_confidence_low
+        }
+    )
+    val sourceText = stringResource(
+        if (result.source == RecognitionSource.PHOTO_EXIF) R.string.recog_source_exif
+        else R.string.recog_source_style
+    )
     Card(
         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f)),
         shape = RoundedCornerShape(12.dp),
@@ -172,9 +217,9 @@ private fun ConfidenceBanner(result: RecognitionResult, accent: Color) {
             )
             Spacer(Modifier.width(12.dp))
             Column {
-                Text(result.confidenceLabel, color = color, fontWeight = FontWeight.Bold)
+                Text(levelText, color = color, fontWeight = FontWeight.Bold)
                 Text(
-                    "来源：${if (result.source == RecognitionSource.PHOTO_EXIF) "照片 EXIF + 风格" else "像素风格"} · 引擎 v${result.engineVersion}",
+                    stringResource(R.string.recog_source_line, sourceText, result.engineVersion),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
@@ -187,22 +232,27 @@ private fun ConfidenceBanner(result: RecognitionResult, accent: Color) {
 private fun ExifParamsCard(result: RecognitionResult, accent: Color) {
     val d = result.draft
     val params = buildList {
-        d.iso?.let { add("ISO" to it) }
-        d.shutterSpeed?.let { add("快门" to it) }
-        d.apertureValue()?.let { add("光圈" to it) }
-        d.colorTemperature?.let { add("色温" to "${it}K") } ?: d.whiteBalance?.let { add("白平衡" to it) }
-        d.exposureCompensation?.let { add("曝光补偿" to it) }
+        d.iso?.let { add(stringResource(R.string.recog_label_iso) to it) }
+        d.shutterSpeed?.let { add(stringResource(R.string.recog_label_shutter) to it) }
+        // 光圈：EXIF 识别依据（MasterPreset 无光圈字段，不落入预设参数）
+        result.aperture?.let { add(stringResource(R.string.recog_label_aperture) to it) }
+        result.focalLength?.let { add(stringResource(R.string.recog_label_focal) to it) }
+        d.colorTemperature?.let { add(stringResource(R.string.recog_label_temp) to "${it}K") }
+            ?: d.whiteBalance?.let { add(stringResource(R.string.recog_label_wb) to it) }
+        d.exposureCompensation?.let { add(stringResource(R.string.recog_label_ev) to it) }
     }
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text("摄影参数", fontWeight = FontWeight.Bold, color = accent)
+            Text(stringResource(R.string.recog_exif_card), fontWeight = FontWeight.Bold, color = accent)
             Spacer(Modifier.height(10.dp))
             if (params.isEmpty()) {
-                Text("照片无 EXIF 摄影参数，已生成纯风格预设，参数项可稍后手动补充。",
-                    style = MaterialTheme.typography.bodySmall)
+                Text(
+                    stringResource(R.string.recog_no_exif_params),
+                    style = MaterialTheme.typography.bodySmall
+                )
             } else {
                 params.chunked(2).forEach { row ->
                     Row(Modifier.fillMaxWidth()) {
@@ -224,15 +274,19 @@ private fun ExifParamsCard(result: RecognitionResult, accent: Color) {
 @Composable
 private fun StyleVectorCard(vector: StyleVector, accent: Color) {
     val bars = listOf(
-        "亮度" to vector.brightness, "对比" to vector.contrast, "饱和" to vector.saturation,
-        "冷暖" to vector.warmth, "动态" to vector.dynamicRange, "色彩" to vector.colorfulness
+        stringResource(R.string.recog_vec_brightness) to vector.brightness,
+        stringResource(R.string.recog_vec_contrast) to vector.contrast,
+        stringResource(R.string.recog_vec_saturation) to vector.saturation,
+        stringResource(R.string.recog_vec_warmth) to vector.warmth,
+        stringResource(R.string.recog_vec_dr) to vector.dynamicRange,
+        stringResource(R.string.recog_vec_colorfulness) to vector.colorfulness
     )
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text("画面风格特征", fontWeight = FontWeight.Bold, color = accent)
+            Text(stringResource(R.string.recog_style_card), fontWeight = FontWeight.Bold, color = accent)
             Spacer(Modifier.height(10.dp))
             bars.forEach { (label, value) ->
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 3.dp)) {
@@ -259,12 +313,13 @@ private fun CandidatesCard(
     accent: Color,
     onSelect: (Int) -> Unit
 ) {
+    val context = LocalContext.current
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
         shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text("匹配风格（Top 3）", fontWeight = FontWeight.Bold, color = accent)
+            Text(stringResource(R.string.recog_candidates_card), fontWeight = FontWeight.Bold, color = accent)
             Spacer(Modifier.height(10.dp))
             result.candidates.forEachIndexed { idx, m ->
                 val isSel = idx == selected
@@ -279,19 +334,28 @@ private fun CandidatesCard(
                 ) {
                     Column(Modifier.padding(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(m.preset.displayName, fontWeight = FontWeight.Bold,
-                                color = if (isSel) accent else MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                PresetI18n.getLocalizedStyleKey(context, m.preset.key),
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSel) accent else MaterialTheme.colorScheme.onSurface
+                            )
                             Spacer(Modifier.weight(1f))
-                            Text("${(m.confidence * 100).toInt()}%", color = if (isSel) accent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                            Text(
+                                "${(m.confidence * 100).toInt()}%",
+                                color = if (isSel) accent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
                         }
-                        Text(m.reason, style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                        // 结构化依据标签（本地化）
+                        if (m.reasonTags.isNotEmpty()) {
+                            Text(
+                                m.reasonTags.joinToString(" + ") { PresetI18n.getLocalizedFeatureTag(context, it) },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
-
-/** 从 draft 的 whiteBalance 提取光圈展示（MasterPreset 无独立 aperture 字段，用 tag 中无；此处留空占位） */
-private fun MasterPreset.apertureValue(): String? = null

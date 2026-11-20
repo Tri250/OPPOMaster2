@@ -3,6 +3,9 @@ package com.silas.omaster.util
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.silas.omaster.R
+import com.silas.omaster.recognition.FeatureTag
+import com.silas.omaster.recognition.RecognitionWarning
+import com.silas.omaster.recognition.WarningType
 
 /**
  * 预设数据本地化工具
@@ -307,6 +310,58 @@ object PresetI18n {
     fun getLocalizedShootingTips(context: android.content.Context, presetName: String, defaultTips: String?): String {
         val resId = getShootingTipsResId(presetName)
         return if (resId != null) context.getString(resId) else (defaultTips ?: "")
+    }
+
+    /**
+     * 获取照片识别风格目录名称的资源 ID（对应 strings style_*）
+     * 识别引擎输出的 key 为：clear/amber/film/bw/vivid/night/soft/original
+     */
+    fun getStyleKeyResId(key: String): Int {
+        return when (key) {
+            "clear" -> R.string.style_clear
+            "amber" -> R.string.style_amber
+            "film" -> R.string.style_film
+            "bw" -> R.string.style_bw
+            "vivid" -> R.string.style_vivid
+            "night" -> R.string.style_night
+            "soft" -> R.string.style_soft
+            "original" -> R.string.style_original
+            else -> R.string.floating_original
+        }
+    }
+
+    /** 本地化风格目录名（Context 版本） */
+    fun getLocalizedStyleKey(context: android.content.Context, key: String): String {
+        return context.getString(getStyleKeyResId(key))
+    }
+
+    /** 本地化画面特征标签（对应 strings recog_tag_*） */
+    fun getFeatureTagResId(tag: FeatureTag): Int {
+        return when (tag) {
+            FeatureTag.BRIGHT -> R.string.recog_tag_bright
+            FeatureTag.DARK -> R.string.recog_tag_dark
+            FeatureTag.LOW_SAT -> R.string.recog_tag_low_sat
+            FeatureTag.VIVID -> R.string.recog_tag_vivid
+            FeatureTag.WARM -> R.string.recog_tag_warm
+            FeatureTag.COOL -> R.string.recog_tag_cool
+            FeatureTag.WIDE_DR -> R.string.recog_tag_wide_dr
+        }
+    }
+
+    /** 本地化特征标签（Context 版本） */
+    fun getLocalizedFeatureTag(context: android.content.Context, tag: FeatureTag): String {
+        return context.getString(getFeatureTagResId(tag))
+    }
+
+    /** 本地化结构化警告（Context 版本；TEMP_CONFLICT 附带色温 K 参数） */
+    fun getLocalizedWarning(context: android.content.Context, warning: RecognitionWarning): String {
+        return when (warning.type) {
+            WarningType.COMPRESSED -> context.getString(R.string.recog_warn_compressed)
+            WarningType.NO_EXIF -> context.getString(R.string.recog_warn_no_exif)
+            WarningType.TEMP_CONFLICT ->
+                context.getString(R.string.recog_warn_temp_conflict, warning.value ?: 0)
+            WarningType.INSUFFICIENT_SAMPLES -> context.getString(R.string.recog_warn_samples)
+        }
     }
 
     /**

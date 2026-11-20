@@ -3,7 +3,6 @@ package com.silas.omaster.recognition
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.model.PresetDescription
 import com.silas.omaster.util.PhotoParamParser
-import java.util.Locale
 
 /**
  * 照片参数识别引擎（核心为纯 JVM 逻辑，可单测）。
@@ -27,12 +26,12 @@ object PhotoRecognitionEngine {
             ?: StyleAnalyzer.Match(
                 StyleCatalog.byKey("original")!!,
                 0.5f,
-                "样本特征不足，采用中性风格"
+                emptyList()
             )
 
-        val warnings = mutableListOf<String>()
-        if (input.styleAnalysis.compressed) warnings.add("图片较大，已降采样分析")
-        if (!input.hasExif) warnings.add("照片无 EXIF 摄影参数，参数项需手动补充")
+        val warnings = mutableListOf<RecognitionWarning>()
+        if (input.styleAnalysis.compressed) warnings.add(RecognitionWarning(WarningType.COMPRESSED))
+        if (!input.hasExif) warnings.add(RecognitionWarning(WarningType.NO_EXIF))
         detectConflict(input, top.preset)?.let { warnings.add(it) }
 
         // 综合置信度：风格匹配为主（0.85），EXIF 完整度加权（0.15）
@@ -44,16 +43,6 @@ object PhotoRecognitionEngine {
         val presetName = buildPresetName(input, top.preset)
         val draft = buildDraft(input, top.preset, presetName, source)
 
-        val explanation = buildString {
-            append("风格依据：").append(top.reason).append("。")
-            if (input.hasExif) {
-                append("摄影参数来自照片 EXIF")
-                input.sourceLabel?.let { append("（来源：").append(it).append("）") }
-                append("。")
-            }
-            append("综合置信度 ").append(String.format(Locale.getDefault(), "%.0f%%", confidence * 100))
-        }
-
         return RecognitionResult(
             draft = draft,
             candidates = candidates,
@@ -62,7 +51,11 @@ object PhotoRecognitionEngine {
             source = source,
             engineVersion = ENGINE_VERSION,
             catalogVersion = StyleCatalog.CATALOG_VERSION,
-            explanation = explanation
+            features = StyleAnalyzer.buildReasonTags(input.styleAnalysis.vector),
+            styleVector = input.styleAnalysis.vector,
+            sourceLabel = input.sourceLabel,
+            aperture = input.aperture,
+            focalLength = input.focusMm
         )
     }
 
@@ -112,14 +105,14 @@ object PhotoRecognitionEngine {
         return filled.toFloat() / fields.size
     }
 
-    /** EXIF 色温(冷暖)与像素冷暖矛盾检测（口径冲突） */
-    private fun detectConflict(input: RecognitionInput, top: StylePreset): String? {
+    /** EXIF 色温(冷暖)与像素冷暖矛盾检测（口径冲突），返回结构化警告 */
+    private fun detectConflict(input: RecognitionInput, top: StylePreset): RecognitionWarning? {
         val exifTemp = input.colorTemperature ?: return null
         // 色温越高越暖（K 大偏暖是拍摄常见的"高色温补偿"语义，这里用相对中性 5500K 判断）
         val exifWarm = exifTemp > 6000
         val styleWarm = top.target.warmth > 0.55f
         return if (exifWarm != styleWarm) {
-            "EXIF 色温(${exifTemp}K)与画面冷暖倾向不一致，已以画面风格为准，色温仅作参考"
+            RecognitionWarning(WarningType.TEMP_CONFLICT, exifTemp)
         } else null
     }
 

@@ -1018,4 +1018,98 @@
     <string name="about_device_spec_ois">Stabilization</string>
     <string name="colorwalk_apply_theme">Apply to app theme</string>
     <string name="colorwalk_theme_applied">Theme applied: %1$s</string>
+
+    <!-- ═══════════════ Photo recognition / POP instant capture (v1.7.1) ═══════════════ -->
+    <!-- Home entry -->
+    <string name="recog_home_entry">Identify params from photo / POP capture</string>
+    <!-- Recognition page -->
+    <string name="recog_idle_title">Import a photo you like</string>
+    <string name="recog_idle_desc">Pick a Find Hasselblad sample or any landscape/portrait photo. OMaster reads its camera parameters and analyzes the visual style to generate a reusable preset. All processing happens on-device.</string>
+    <string name="recog_pick_photo">Choose photo from gallery</string>
+    <string name="recog_analyzing">Analyzing photo parameters and style…</string>
+    <string name="recog_result_title">Recognition result</string>
+    <string name="recog_name_label">Preset name</string>
+    <string name="recog_confirm">Confirm and save to custom presets</string>
+    <string name="recog_disclaimer">This preset is a style simulation, not the original Hasselblad algorithm. All processing is on-device; photos are never uploaded.</string>
+    <string name="recog_back">Back</string>
+    <string name="recog_ref_photo">Reference photo</string>
+    <!-- Camera parameters card -->
+    <string name="recog_exif_card">Camera parameters</string>
+    <string name="recog_no_exif_params">No EXIF camera parameters found. A style-only preset was generated; you can fill in parameters manually later.</string>
+    <string name="recog_label_iso">ISO</string>
+    <string name="recog_label_shutter">Shutter</string>
+    <string name="recog_label_aperture">Aperture</string>
+    <string name="recog_label_focal">Focal length</string>
+    <string name="recog_label_temp">Color temp</string>
+    <string name="recog_label_wb">White balance</string>
+    <string name="recog_label_ev">Exposure comp.</string>
+    <!-- Visual style features card -->
+    <string name="recog_style_card">Visual style features</string>
+    <string name="recog_vec_brightness">Brightness</string>
+    <string name="recog_vec_contrast">Contrast</string>
+    <string name="recog_vec_saturation">Saturation</string>
+    <string name="recog_vec_warmth">Warmth</string>
+    <string name="recog_vec_dr">Range</string>
+    <string name="recog_vec_colorfulness">Color</string>
+    <!-- Candidates -->
+    <string name="recog_candidates_card">Matched styles (Top 3)</string>
+    <!-- Confidence and source -->
+    <string name="recog_confidence_strong">Ready to use</string>
+    <string name="recog_confidence_medium">Fine-tuning suggested</string>
+    <string name="recog_confidence_low">For reference only</string>
+    <string name="recog_source_exif">Photo EXIF + style</string>
+    <string name="recog_source_style">Pixel style</string>
+    <string name="recog_source_line">Source: %1$s · Engine v%2$s</string>
+    <!-- Explainable basis -->
+    <string name="recog_explanation_features">Style basis: %1$s</string>
+    <string name="recog_explanation_source_exif">Camera parameters from photo EXIF (source: %1$s)</string>
+    <string name="recog_explanation_source_style">No EXIF camera parameters found; matched by pixel style</string>
+    <string name="recog_explanation_confidence">Overall confidence %1$d%%</string>
+    <string name="recog_tag_none">Balanced colors</string>
+    <string name="recog_tag_bright">Bright</string>
+    <string name="recog_tag_dark">Dark</string>
+    <string name="recog_tag_low_sat">Low saturation</string>
+    <string name="recog_tag_vivid">Vivid colors</string>
+    <string name="recog_tag_warm">Warm tone</string>
+    <string name="recog_tag_cool">Cool tone</string>
+    <string name="recog_tag_wide_dr">Wide dynamic range</string>
+    <!-- Structured warnings -->
+    <string name="recog_warn_compressed">Large image; analyzed at reduced resolution</string>
+    <string name="recog_warn_no_exif">No EXIF camera parameters; please fill in parameters manually</string>
+    <string name="recog_warn_temp_conflict">EXIF color temp (%1$dK) conflicts with the image tone; pixel style takes precedence and color temp is for reference only</string>
+    <string name="recog_warn_samples">Insufficient sample features; neutral style applied</string>
+    <!-- Errors -->
+    <string name="recog_error_decode_failed">Cannot read this image. Please try another photo.</string>
+    <string name="recog_error_too_small">Image too small (must be larger than 100px) to analyze</string>
+    <string name="recog_error_too_large">Image too large to process</string>
+    <!-- POP instant capture -->
+    <string name="pop_title">POP Capture</string>
+    <string name="pop_back">Back</string>
+    <string name="pop_capability">Camera capability: %1$s · %2$s</string>
+    <string name="pop_hint_l1">Manual parameters supported; the preset can be fully applied</string>
+    <string name="pop_hint_l2">Some manual controls available; unsupported items will be flagged</string>
+    <string name="pop_hint_l3">Camera capability limited; switched to floating-window guidance + post-capture styling</string>
+    <string name="pop_preview">Styled photo</string>
+    <string name="pop_viewfinder_hint">Tap the shutter to shoot, or pick a photo from gallery to restyle</string>
+    <string name="pop_applied_params">Applied parameters</string>
+    <string name="pop_no_params">This preset has no camera parameters; only the filter style is applied</string>
+    <string name="pop_pick_from_gallery">Pick from gallery</string>
+    <string name="pop_shutter">Shutter</string>
+    <string name="pop_save_to_gallery">Save styled photo to gallery</string>
+    <string name="pop_applied_style">Applied style: %1$s</string>
+    <string name="pop_read_failed">Failed to read photo</string>
+    <string name="pop_saved">Saved to gallery</string>
+    <string name="pop_save_failed">Save failed</string>
+    <string name="pop_need_photo">Take or pick a photo first</string>
+    <string name="pop_notice">POP Capture uses style simulation: the \"%1$s\" color parameters are applied after shooting. Writing parameters into the native camera is blocked by system limits; this mode delivers style restoration through a local color pipeline.</string>
+    <string name="pop_preset_missing">Preset not found or deleted</string>
+    <!-- Recognition style catalog names -->
+    <string name="style_clear">Clear</string>
+    <string name="style_amber">Amber</string>
+    <string name="style_film">Film</string>
+    <string name="style_bw">B&amp;W</string>
+    <string name="style_vivid">Vivid</string>
+    <string name="style_night">Night</string>
+    <string name="style_soft">Soft light</string>
+    <string name="style_original">Original</string>
 </resources>
