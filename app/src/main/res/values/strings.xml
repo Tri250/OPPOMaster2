@@ -966,9 +966,7 @@
     <string name="update_action_later">稍后</string>
     <!-- 关于页 · 项目与社群 -->
     <string name="about_project_title">项目地址</string>
-    <string name="about_qq_title">加入QQ群</string>
-    <string name="about_qq_group_number">群号: %1$s</string>
-    <string name="about_qq_open_failed">无法打开QQ群，请检查是否安装QQ</string>
+    <string name="about_recommend_title">推荐</string>
     <!-- ═══════════════ 发现 2.0 · 订阅更新雷达 ═══════════════ -->
     <string name="radar_card_title">订阅更新雷达</string>
     <string name="radar_card_summary">%1$d 个订阅源有更新，共 %2$d 条新预设</string>

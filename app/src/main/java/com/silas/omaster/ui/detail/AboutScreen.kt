@@ -229,7 +229,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            QQGroupCard(context)
+            RecommendCard()
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -1106,14 +1106,14 @@ private fun ProjectCard(context: android.content.Context) {
     }
 }
 
+/**
+ * 【v1.7.9】推荐卡片（原 QQ 群入口）：群号内容已取消，改为静态展示，无跳转行为。
+ */
 @Composable
-private fun QQGroupCard(context: android.content.Context) {
-    // 【v1.6.13】ColorOS 17 液态按压反馈
-    val interactionSource = remember { MutableInteractionSource() }
+private fun RecommendCard() {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .fluidPressScale(interactionSource)
             .border(
                 width = 1.dp,
                 color = CardBorderLight,
@@ -1122,98 +1122,36 @@ private fun QQGroupCard(context: android.content.Context) {
         colors = CardDefaults.cardColors(
             containerColor = themedCardBackground()
         ),
-        shape = RoundedCornerShape(16.dp),
-        onClick = {
-            // 群号
-            val groupId = "1083543279"
-
-            // 尝试使用URL Scheme打开QQ群
-            val schemes = listOf(
-                // 方式1：使用腾讯官方API（推荐）
-                "mqqapi://card/show_pslcard?src_type=internal&version=1&uin=$groupId&card_type=group&source=qrcode",
-                // 方式2：使用QQ群加群链接（兼容旧版）
-                "mqqopensdkapi://bizAgent/qm/qr?url=http%3A%2F%2Fqm.qq.com%2Fc%2Fcgi-bin%2Fqm%2Fqr%3Fk%3D$groupId",
-                // 方式3：使用简化版scheme
-                "mqq://card/show_pslcard?src_type=internal&version=1&uin=$groupId&card_type=group"
-            )
-
-            var opened = false
-            for (scheme in schemes) {
-                if (!opened) {
-                    try {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(scheme))
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        // 检查是否有应用可以处理这个intent
-                        if (intent.resolveActivity(context.packageManager) != null) {
-                            context.startActivity(intent)
-                            opened = true
-                            break
-                        }
-                    } catch (e: Exception) {
-                        // 尝试下一个方式
-                    }
-                }
-            }
-
-            // 如果所有scheme都失败，使用网页版链接（浏览器会提示打开QQ）
-            if (!opened) {
-                try {
-                    val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://qm.qq.com/cgi-bin/qm/qr?k=$groupId&jump_from=webapi"))
-                    webIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    context.startActivity(webIntent)
-                } catch (e: Exception) {
-                    // 如果浏览器也打不开，提示用户
-                    android.widget.Toast.makeText(
-                        context,
-                        context.getString(R.string.about_qq_open_failed),
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        },
-        interactionSource = interactionSource
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(10.dp)
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(10.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "推荐",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Column {
-                    Text(
-                        text = stringResource(R.string.about_qq_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = themedTextPrimary()
-                    )
-                }
+                Text(
+                    text = "推荐",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
             }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                modifier = Modifier.size(20.dp)
+            Text(
+                text = stringResource(R.string.about_recommend_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = themedTextPrimary()
             )
         }
     }

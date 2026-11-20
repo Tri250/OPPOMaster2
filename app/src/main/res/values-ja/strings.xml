@@ -723,9 +723,7 @@
     <string name="update_action_later">後で</string>
     <!-- について · プロジェクトとコミュニティ -->
     <string name="about_project_title">プロジェクト</string>
-    <string name="about_qq_title">QQグループに参加</string>
-    <string name="about_qq_group_number">グループ番号: %1$s</string>
-    <string name="about_qq_open_failed">QQグループを開けませんでした。QQがインストールされているか確認してください</string>
+    <string name="about_recommend_title">おすすめ</string>
     <!-- ═══════════════ 発見 2.0 · サブスク更新レーダー ═══════════════ -->
     <string name="radar_card_title">サブスク更新レーダー</string>
     <string name="radar_card_summary">%1$d 件のソースが更新、新規プリセット %2$d 件</string>
