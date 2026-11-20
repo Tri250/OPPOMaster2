@@ -269,3 +269,37 @@ bash /tmp/harness/build.sh → OK (66 tests)
 
 - 日语资源缺失 255 键（历史改名/新增未同步，运行时回退中文）——量大，建议单独一轮补齐。
 - ja 存在 78 个陈旧键（旧命名）待清理。
+
+## 5. 发布链路 CI 失败与修复记录（v1.7.7）
+
+v1.7.7 代码与本地验收全部完成后，tag `v1.7.7` 首轮触发 Release 工作流连续两次失败，定位修复后第三次全绿并完成发布。两轮失败根因均属"本地校验覆盖不到"的类型，记录如下：
+
+**失败 1（运行 44727068085 / 44727062751，quality 门禁）**
+- 现象：`:app:compileDebugKotlin FAILED`，`TodayWidget.kt:103:26 Unresolved reference 'clickable'`。
+- 根因：Glance 的 `clickable` 是 `androidx.glance.action` 包内 `GlanceModifier` 扩展函数（`fun GlanceModifier.clickable(onClick: Action): GlanceModifier`），与 Compose foundation 同名但不同包，v1.7.7 接小组件行点击时遗漏 import。本地 kotlinc 单文件校验只识别硬语法错误、不校验跨类引用解析，故漏网。
+- 修复：补 `import androidx.glance.action.clickable`；并对照 androidx 官方源码（googlesource androidx-main）逐一核对 `clickable` / `actionStartActivity`（`inline fun <reified T : Activity> actionStartActivity(parameters): Action`）/ `ActionParameters.Key` / `actionParametersOf` 四个签名，确认调用形式全部匹配（commit `3a8b7ce`）。
+
+**失败 2（运行 44728828275 / 44728823124，quality 门禁）**
+- 现象：编译与单测通过，`:app:lintDebug FAILED`——Lint found 8 errors，全部为 `LocalContextGetResourceValueCall`（SubscriptionScreen.kt 102/104/106/108/158/160/162/164 行）。
+- 根因：v1.7.7 将订阅刷新 4 条硬编码中文 Toast 改为 `context.getString(...)`，而该 context 来自 `LocalContext.current`，在组合作用域内经 LocalContext 查资源值被 Compose lint 判 error（abortOnError 阻断构建）。
+- 修复：改为组合作用域 `stringResource` 预取 4 条原始占位符模板（无参调用返回未格式化串），回调内 `String.format(Locale.getDefault(), tpl, …)` 格式化——与文件内既有 FD-02② 预取模式一致（commit `5924349`）。
+
+**终验（运行 44729887495，tag v1.7.7 → 5924349）**
+```
+quality（testDebugUnitTest + lint）  → success
+build（assembleRelease 签名 + R8 冒烟门禁 + 5 ABI APK）→ success
+release（git-cliff 说明 + 草稿 Release，5 APK ~46–47MB）→ success
+```
+- 草稿 Release（id 452636232）经 API 发布，`/releases/latest` 校验为 **v1.7.7**（非草稿、5 资产）。
+- 同步触发的 main 调试构建运行 44729883359 亦 success。
+
+## 6. 最终验收结论
+
+| 验收项 | 结果 |
+|---|---|
+| 关于-制作信息-开发者增加「带娃的小陈工」 | ✅ CreditsCard 开发者区 + 详情 chips（空 url 不可点击） |
+| 「加入QQ群」→「抖音/小红书:带娃的小陈工」 | ✅ 三语资源替换（zh/en/ja） |
+| Reno17 主题 + 玻璃动效 + 字体字号 + 无溢出 | ✅ 极光背景/扫光/半透明玻璃卡片 + 11–34sp 字阶 + 18 处溢出修复 |
+| 全模块自检修复 | ✅ P0×1 / P1×4 / P2×8 全部修复并复验 |
+| 本地验收（语法/XML/66 单测/空实现） | ✅ 全绿 |
+| CI 三阶段门禁 + Release 发布 + Latest 校验 | ✅ 运行 44729887495 全绿，Latest = v1.7.7 |
