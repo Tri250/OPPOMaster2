@@ -30,6 +30,7 @@ class CameraCapabilityProbeTest {
         )
         assertEquals(CameraCapabilityProbe.Level.L2, withManual.level)
         assertTrue(withManual.supportsManualIso)
+        // 未暴露曝光时间范围（ManualRanges.NONE）时不宣称支持手动快门
         assertFalse(withManual.supportsManualShutter)
         assertTrue(withManual.supportsExposureCompensation)
         assertEquals(R.string.pop_hint_l2, withManual.degradationHintRes)
@@ -40,6 +41,25 @@ class CameraCapabilityProbeTest {
         )
         assertFalse(withoutManual.supportsManualIso)
         assertFalse(withoutManual.isManualExposure)
+    }
+
+    @Test
+    fun limitedLevel_manualShutterFollowsExposureTimeRange() {
+        // OPPO Reno 等主摄为 LIMITED 但支持 AE_OFF + 曝光时间范围：手动快门可用，
+        // 不再因 LIMITED 级别被硬编码降级（避免 ISO/快门被误标"无法套用"）
+        val renoRanges = ManualRanges(
+            isoRange = 50..3200,
+            exposureTimeRange = 100_000L..32_000_000_000L,
+            aeModeOffSupported = true
+        )
+        val cap = CameraCapabilityProbe.capabilityFromLevel(
+            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED, 3, null,
+            manualIsoOverride = true, manualRanges = renoRanges
+        )
+        assertEquals(CameraCapabilityProbe.Level.L2, cap.level)
+        assertTrue(cap.supportsManualIso)
+        assertTrue(cap.supportsManualShutter)
+        assertTrue(cap.isManualExposure)
     }
 
     @Test

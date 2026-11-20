@@ -1107,12 +1107,12 @@
     <string name="pop_title">POP 即拍</string>
     <string name="pop_back">返回</string>
     <string name="pop_capability">设备相机能力：%1$s · %2$s</string>
-    <string name="pop_hint_l1">支持手动参数，可完整套用预设</string>
-    <string name="pop_hint_l2">部分手动可用，未生效项将提示</string>
-    <string name="pop_hint_l3">相机能力受限，已切换为悬浮窗照着调 + 拍后套色</string>
+    <string name="pop_hint_l1">手动参数完整写入拍摄 · 滤镜实时取景</string>
+    <string name="pop_hint_l2">部分手动参数写入拍摄 · 滤镜实时取景</string>
+    <string name="pop_hint_l3">手动参数不可用（自动曝光） · 滤镜仍实时取景、拍后完整套色</string>
     <string name="pop_preview">套色后照片</string>
     <string name="pop_viewfinder_hint">点击快门拍照 · 或从相册选图套色</string>
-    <string name="pop_applied_params">已套用参数</string>
+    <string name="pop_applied_params">参数应用状态</string>
     <string name="pop_no_params">该预设无摄影参数，仅套用滤镜风格</string>
     <string name="pop_pick_from_gallery">从相册选图</string>
     <string name="pop_shutter">拍照</string>
@@ -1122,14 +1122,14 @@
     <string name="pop_saved">已保存到相册</string>
     <string name="pop_save_failed">保存失败</string>
     <string name="pop_need_photo">请先拍照或选图</string>
-    <string name="pop_notice">POP 即拍：ISO/快门/曝光补偿在设备支持时随拍摄直接写入；「%1$s」的滤镜与调色参数拍后套用。参数写入原生相机属系统限制，不可达。</string>
+    <string name="pop_notice">POP 即拍：取景器实时套用「%1$s」的滤镜与调色参数；ISO/快门/曝光补偿在设备支持时直接写入自研拍摄管线，随成片生效。向 OPPO 原生相机回写参数属系统限制，本页为自研拍摄管线。</string>
     <string name="pop_preset_missing">预设不存在或已删除</string>
     <!-- v1.7.4 自研相机管线：参数应用状态分级 -->
-    <string name="pop_params_written">已写入拍摄</string>
-    <string name="pop_params_post">拍后已套用</string>
+    <string name="pop_params_written">已写入拍摄（传感器生效）</string>
+    <string name="pop_params_post">已应用（实时取景 + 成片）</string>
     <string name="pop_params_unsupported">无法套用</string>
     <string name="pop_unsupported_reasons">无法套用原因：设备不支持关闭自动曝光 / 手动曝光需 ISO 与快门成对提供 / 设备不支持曝光补偿 / 取值无法解析。</string>
-    <string name="pop_camera_permission_rationale">POP 即拍需要相机权限：授权后可将预设的 ISO / 快门 / 曝光补偿直接写入拍摄，拍后套用滤镜与调色参数。</string>
+    <string name="pop_camera_permission_rationale">POP 即拍需要相机权限：授权后取景器将实时套用预设滤镜与调色参数，ISO/快门/曝光补偿在设备支持时写入拍摄。</string>
     <string name="pop_camera_permission_button">授予相机权限</string>
     <string name="pop_camera_permission_denied">未获得相机权限：可用系统相机拍照或相册选图，拍后仍会完整套用调色参数。</string>
     <string name="pop_capture_failed">拍摄失败，请重试</string>

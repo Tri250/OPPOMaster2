@@ -15,12 +15,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.camera2.interop.Camera2Interop
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
-import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -49,7 +48,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
@@ -62,16 +60,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.Executors
 
 /**
  * POP 预设即拍页（PRD FR-10~14 / 16.2）。
  *
- * 链路：加载预设 → 能力探测分级 → 生成拍摄计划（[PresetCapturePlan]）→
- * 自研相机管线（CameraX + Camera2 Interop）把 ISO/快门/曝光补偿真实写入拍摄请求 →
- * 成片经拍后套色管线（色彩矩阵 + 锐化 + 暗角）→ 保存相册。
+ * 链路：加载预设 → 能力探测分级（后置主摄）→ 生成拍摄计划（[PresetCapturePlan]）→
+ * 自研相机管线（CameraX + Camera2 Interop）：
+ * ① ImageAnalysis 逐帧套用预设色彩矩阵 → 取景器实时滤镜（所见即所得）；
+ * ② ImageCapture 按 [CapturePlan] 把 ISO/快门/曝光补偿真实写入拍摄请求（AE off + MANUAL 意图）；
+ * ③ 成片经拍后套色管线（同源色彩矩阵 + 锐化 + 暗角）→ 保存相册。
  *
  * 降级路径：无相机权限或设备不支持手动曝光时，可用系统相机拍照 / 相册选图，
- * 拍后仍完整套用调色参数。参数卡按"已写入拍摄 / 拍后套用 / 无法套用（含原因）"
+ * 拍后仍完整套用调色参数。参数卡按"已写入拍摄 / 取景与成片已套用 / 无法套用（含原因）"
  * 如实分级，不做"假装已套用"。
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -116,13 +117,41 @@ fun PopCaptureScreen(
         cameraGranted = granted
     }
 
-    // ── 自研相机管线：按拍摄计划配置 ImageCapture（Camera2 Interop 写入请求键） ──
-    val previewView = remember { PreviewView(context) }
-    val preview = remember { Preview.Builder().build() }
+    // ── 自研相机管线：ImageAnalysis 实时滤镜取景 + 按拍摄计划配置 ImageCapture ──
     val imageCapture = remember(plan) { buildImageCapture(plan) }
     val providerFuture = remember { ProcessCameraProvider.getInstance(context) }
     var boundProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var cameraBound by remember { mutableStateOf(false) }
+
+    // 实时滤镜取景：与拍后套色同源的色彩矩阵，取景即成片观感
+    val colorMatrix = remember(preset) { PresetColorTransform.buildColorMatrix(preset) }
+    val vignetteStrength = remember(preset) { PresetColorTransform.vignetteStrength(preset) }
+    val filteredFrame = remember { mutableStateOf<Bitmap?>(null) }
+    // 守护线程执行器：页面退出时 shutdown，异常场景也不阻塞进程退出
+    val analyzerExecutor = remember {
+        Executors.newSingleThreadExecutor { r ->
+            Thread(r, "pop-filter-preview").apply { isDaemon = true }
+        }
+    }
+    val analyzer = remember(colorMatrix, vignetteStrength) {
+        FilteredPreviewAnalyzer(colorMatrix, vignetteStrength) { bmp ->
+            filteredFrame.value = bmp
+        }
+    }
+    val imageAnalysis = remember {
+        ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+    }
+    // 成片展示时暂停实时分析，重新取景自动恢复
+    LaunchedEffect(appliedBitmap) { analyzer.enabled = appliedBitmap == null }
+    DisposableEffect(Unit) {
+        onDispose {
+            analyzer.enabled = false
+            imageAnalysis.clearAnalyzer()
+            analyzerExecutor.shutdown()
+        }
+    }
 
     DisposableEffect(cameraGranted, imageCapture) {
         if (cameraGranted) {
@@ -130,13 +159,13 @@ fun PopCaptureScreen(
                 try {
                     val provider = providerFuture.get()
                     provider.unbindAll()
+                    imageAnalysis.setAnalyzer(analyzerExecutor, analyzer)
                     provider.bindToLifecycle(
                         lifecycleOwner,
                         CameraSelector.DEFAULT_BACK_CAMERA,
-                        preview,
+                        imageAnalysis,
                         imageCapture
                     )
-                    preview.setSurfaceProvider(previewView.surfaceProvider)
                     boundProvider = provider
                     cameraBound = true
                 } catch (e: Exception) {
@@ -145,6 +174,7 @@ fun PopCaptureScreen(
             }
             providerFuture.addListener(listener, ContextCompat.getMainExecutor(context))
             onDispose {
+                runCatching { imageAnalysis.clearAnalyzer() }
                 runCatching { boundProvider?.unbindAll() }
                 boundProvider = null
                 cameraBound = false
@@ -297,13 +327,24 @@ fun PopCaptureScreen(
                         }
                     }
                     cameraGranted && cameraBound -> {
-                        AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
+                        // 实时滤镜取景：ImageAnalysis 逐帧套色后的画面（所见即所得）
+                        val frame = filteredFrame.value
+                        if (frame != null) {
+                            Image(
+                                frame.asImageBitmap(),
+                                contentDescription = stringResource(R.string.pop_preview),
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            ViewfinderPlaceholder(accent)
+                        }
                     }
                     else -> ViewfinderPlaceholder(accent)
                 }
             }
 
-            // 参数应用状态卡（已写入拍摄 / 拍后套用 / 无法套用+原因）
+            // 参数应用状态卡（已写入拍摄 / 取景与成片已套用 / 无法套用+原因）
             ParamStatusCard(plan, accent)
 
             // 相机权限引导（未授权时提供授权入口，同时保留降级路径说明）
@@ -425,6 +466,11 @@ private fun buildImageCapture(plan: CapturePlan): ImageCapture {
         val extender = Camera2Interop.Extender(builder)
         extender.setCaptureRequestOption(
             CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF
+        )
+        // MANUAL 拍摄意图：提示 HAL 本帧为手动曝光（部分 ColorOS/半 LIMITED 设备
+        // 缺省 STILL_CAPTURE 意图会回写 AE，导致手动参数看似"未生效"）
+        extender.setCaptureRequestOption(
+            CaptureRequest.CONTROL_CAPTURE_INTENT, CameraMetadata.CONTROL_CAPTURE_INTENT_MANUAL
         )
         plan.iso?.let {
             extender.setCaptureRequestOption(CaptureRequest.SENSOR_SENSITIVITY, it)

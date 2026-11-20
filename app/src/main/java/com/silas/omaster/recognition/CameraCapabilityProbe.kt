@@ -53,9 +53,8 @@ object CameraCapabilityProbe {
         return try {
             val manager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
                 ?: return capabilityFromLevel(-1, 0, null)
-            val ids = manager.cameraIdList
-            if (ids.isEmpty()) return capabilityFromLevel(-1, 0, null)
-            val chars = manager.getCameraCharacteristics(ids.first())
+            val chars = pickBackCameraCharacteristics(manager)
+                ?: return capabilityFromLevel(-1, 0, null)
             val level = chars.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) ?: -1
             val aeModes = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)
             val manualIso = aeModes?.contains(CameraCharacteristics.CONTROL_AE_MODE_OFF) == true
@@ -75,10 +74,28 @@ object CameraCapabilityProbe {
                 evStepEv = stepEv,
                 aeModeOffSupported = manualIso
             )
-            capabilityFromLevel(level, ids.size, evRange, manualIso, manualRanges)
+            val cameraCount = runCatching { manager.cameraIdList.size }.getOrDefault(0)
+            capabilityFromLevel(level, cameraCount, evRange, manualIso, manualRanges)
         } catch (e: Exception) {
             capabilityFromLevel(-1, 0, null)
         }
+    }
+
+    /**
+     * 选取后置主摄特性（OPPO Reno 等多摄设备 cameraIdList 顺序不保证后摄在前，
+     * 直接取 first 可能拿到前摄导致手动能力被误判）。
+     */
+    private fun pickBackCameraCharacteristics(manager: CameraManager): CameraCharacteristics? = try {
+        val ids = manager.cameraIdList
+        val backId = ids.firstOrNull { id ->
+            runCatching {
+                manager.getCameraCharacteristics(id).get(CameraCharacteristics.LENS_FACING) ==
+                    CameraCharacteristics.LENS_FACING_BACK
+            }.getOrDefault(false)
+        } ?: ids.firstOrNull()
+        backId?.let { manager.getCameraCharacteristics(it) }
+    } catch (e: Exception) {
+        null
     }
 
     /** 纯逻辑：由硬件级别常量构造 Capability（可 JVM 单测） */
@@ -95,7 +112,10 @@ object CameraCapabilityProbe {
                 Quad(Level.L1, true, true, true)
             }
             CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED -> {
-                Quad(Level.L2, manualIsoOverride ?: false, false, true)
+                // OPPO Reno 等多数主摄为 LIMITED：支持 AE_OFF 且暴露曝光时间范围时，
+                // 手动快门同样可用（按实际探测，不再硬编码 false 导致误判"无法套用"）
+                val manual = manualIsoOverride == true
+                Quad(Level.L2, manual, manual && manualRanges.exposureTimeRange != null, true)
             }
             else -> Quad(Level.L3, false, false, false)
         }
