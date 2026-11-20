@@ -901,7 +901,18 @@
     <string name="pop_saved">ギャラリーに保存しました</string>
     <string name="pop_save_failed">保存に失敗しました</string>
     <string name="pop_need_photo">先に撮影または選択してください</string>
-    <string name="pop_notice">POP 即撮はスタイルシミュレーションです：撮影後に「%1$s」の調色パラメータを適用します。ネイティブカメラへのパラメータ書き込みはシステム制限で不可のため、ローカルカラーパイプラインでスタイルを再現します。</string>
+    <string name="pop_notice">POP 即撮：機器が対応する場合、ISO・シャッター・露出补偿は撮影リクエストに直接書き込みます。「%1$s」のフィルターと調色パラメータは撮影後に適用します。ネイティブカメラへのパラメータ書き込みはシステム制限で不可です。</string>
+    <!-- v1.7.4 自社撮影パイプライン：パラメータ適用状態 -->
+    <string name="pop_params_written">撮影時に書き込み済み</string>
+    <string name="pop_params_post">撮影後に適用済み</string>
+    <string name="pop_params_unsupported">適用不可</string>
+    <string name="pop_unsupported_reasons">理由：自動露出OFF非対応 / マニュアル露出にはISOとシャッターの組が必要 / 露出补偿非対応 / 値が解析不能。</string>
+    <string name="pop_camera_permission_rationale">POP 即撮にはカメラ権限が必要です：許可するとプリセットの ISO・シャッター・露出补偿を撮影に直接書き込み、フィルターと調色パラメータは撮影後に適用します。</string>
+    <string name="pop_camera_permission_button">カメラ権限を許可</string>
+    <string name="pop_camera_permission_denied">カメラ権限なし：システムカメラまたは写真選択が利用できます。撮影後も調色パラメータは完全に適用されます。</string>
+    <string name="pop_capture_failed">撮影に失敗しました。再試行してください</string>
+    <string name="pop_retake">撮り直す</string>
+    <string name="pop_system_camera">システムカメラ</string>
     <string name="pop_preset_missing">プリセットが存在しないか削除されました</string>
     <!-- 認識スタイルカタログ名 -->
     <string name="style_clear">クリア</string>

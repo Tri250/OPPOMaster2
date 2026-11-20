@@ -27,6 +27,15 @@
     -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!--
+        v1.7.4 POP 即拍自研拍摄管线：把预设的 ISO/快门/曝光补偿真实写入拍摄请求
+        （Camera2 Interop）。仅在使用 POP 即拍时运行时申请，不强制安装。
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
+
     <!-- 声明QQ包可见性，用于检测QQ是否安装 -->
     <queries>
         <package android:name="com.tencent.mobileqq" />

@@ -27,7 +27,7 @@ android {
         // versionCode 由 CI 在发布构建时通过 -PciVersionCode 注入（基于提交数单调递增，ED-02）；
         // 本地开发缺省 13，禁止手填递增
         versionCode = (project.findProperty("ciVersionCode") as String?)?.toInt() ?: 13
-        versionName = "1.7.3"
+        versionName = "1.7.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -156,6 +156,13 @@ dependencies {
 
     // 图片边框 - EXIF信息读取
     implementation(libs.androidx.exifinterface)
+
+    // CameraX：POP 即拍自研拍摄管线（手动参数写入拍摄请求，见 PresetCapturePlan）
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
     // 测试依赖（已使用 catalog）
     testImplementation(libs.junit)

@@ -1122,8 +1122,19 @@
     <string name="pop_saved">已保存到相册</string>
     <string name="pop_save_failed">保存失败</string>
     <string name="pop_need_photo">请先拍照或选图</string>
-    <string name="pop_notice">POP 即拍采用风格模拟：拍照后套用「%1$s」调色参数。参数写入原生相机属系统限制，不可达；本模式通过本地色彩管线实现可交付的风格还原。</string>
+    <string name="pop_notice">POP 即拍：ISO/快门/曝光补偿在设备支持时随拍摄直接写入；「%1$s」的滤镜与调色参数拍后套用。参数写入原生相机属系统限制，不可达。</string>
     <string name="pop_preset_missing">预设不存在或已删除</string>
+    <!-- v1.7.4 自研相机管线：参数应用状态分级 -->
+    <string name="pop_params_written">已写入拍摄</string>
+    <string name="pop_params_post">拍后已套用</string>
+    <string name="pop_params_unsupported">无法套用</string>
+    <string name="pop_unsupported_reasons">无法套用原因：设备不支持关闭自动曝光 / 手动曝光需 ISO 与快门成对提供 / 设备不支持曝光补偿 / 取值无法解析。</string>
+    <string name="pop_camera_permission_rationale">POP 即拍需要相机权限：授权后可将预设的 ISO / 快门 / 曝光补偿直接写入拍摄，拍后套用滤镜与调色参数。</string>
+    <string name="pop_camera_permission_button">授予相机权限</string>
+    <string name="pop_camera_permission_denied">未获得相机权限：可用系统相机拍照或相册选图，拍后仍会完整套用调色参数。</string>
+    <string name="pop_capture_failed">拍摄失败，请重试</string>
+    <string name="pop_retake">重新拍摄</string>
+    <string name="pop_system_camera">系统相机</string>
     <!-- 识别风格目录名称 -->
     <string name="style_clear">清透</string>
     <string name="style_amber">琥珀</string>

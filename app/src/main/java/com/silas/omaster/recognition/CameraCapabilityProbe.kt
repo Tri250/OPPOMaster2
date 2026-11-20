@@ -29,7 +29,9 @@ object CameraCapabilityProbe {
         val supportsManualShutter: Boolean,
         val supportsExposureCompensation: Boolean,
         val evRange: Pair<Float, Float>?,
-        val cameraCount: Int
+        val cameraCount: Int,
+        /** 设备手动范围（POP 即拍写入拍摄参数的裁剪依据） */
+        val manualRanges: ManualRanges = ManualRanges.NONE
     ) {
         val isManualExposure: Boolean get() = supportsManualIso && supportsManualShutter
 
@@ -55,15 +57,25 @@ object CameraCapabilityProbe {
             if (ids.isEmpty()) return capabilityFromLevel(-1, 0, null)
             val chars = manager.getCameraCharacteristics(ids.first())
             val level = chars.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) ?: -1
-            val manualIso = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)
-                ?.contains(CameraCharacteristics.CONTROL_AE_MODE_OFF) == true
+            val aeModes = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)
+            val manualIso = aeModes?.contains(CameraCharacteristics.CONTROL_AE_MODE_OFF) == true
             val evRangeObj = chars.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE)
             val evStep = chars.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP)
+            val isoRangeObj = chars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+            val exposureRangeObj = chars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
             val evRange = if (evRangeObj != null) {
                 val step = evStep?.toFloat() ?: 1f
                 evRangeObj.lower.toFloat() * step to evRangeObj.upper.toFloat() * step
             } else null
-            capabilityFromLevel(level, ids.size, evRange, manualIso)
+            val stepEv = evStep?.toFloat()?.takeIf { it > 0f }
+            val manualRanges = ManualRanges(
+                isoRange = isoRangeObj?.let { it.lower..it.upper },
+                exposureTimeRange = exposureRangeObj?.let { it.lower..it.upper },
+                evStepRange = evRangeObj?.let { it.lower..it.upper },
+                evStepEv = stepEv,
+                aeModeOffSupported = manualIso
+            )
+            capabilityFromLevel(level, ids.size, evRange, manualIso, manualRanges)
         } catch (e: Exception) {
             capabilityFromLevel(-1, 0, null)
         }
@@ -74,7 +86,8 @@ object CameraCapabilityProbe {
         hardwareLevel: Int,
         cameraCount: Int,
         evRange: Pair<Float, Float>?,
-        manualIsoOverride: Boolean? = null
+        manualIsoOverride: Boolean? = null,
+        manualRanges: ManualRanges = ManualRanges.NONE
     ): Capability {
         val (level, supportsIso, supportsShutter, supportsEv) = when (hardwareLevel) {
             CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
@@ -100,7 +113,8 @@ object CameraCapabilityProbe {
             supportsManualShutter = supportsShutter,
             supportsExposureCompensation = supportsEv,
             evRange = evRange,
-            cameraCount = cameraCount
+            cameraCount = cameraCount,
+            manualRanges = manualRanges
         )
     }
 

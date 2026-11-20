@@ -1102,7 +1102,18 @@
     <string name="pop_saved">Saved to gallery</string>
     <string name="pop_save_failed">Save failed</string>
     <string name="pop_need_photo">Take or pick a photo first</string>
-    <string name="pop_notice">POP Capture uses style simulation: the \"%1$s\" color parameters are applied after shooting. Writing parameters into the native camera is blocked by system limits; this mode delivers style restoration through a local color pipeline.</string>
+    <string name="pop_notice">POP Capture: ISO / shutter / exposure compensation are written directly into the capture request when the device supports it; the \"%1$s\" filter and color parameters are applied after shooting. Writing parameters into the native camera is blocked by system limits.</string>
+    <!-- v1.7.4 in-app camera pipeline: parameter application status -->
+    <string name="pop_params_written">Written into capture</string>
+    <string name="pop_params_post">Applied after capture</string>
+    <string name="pop_params_unsupported">Cannot apply</string>
+    <string name="pop_unsupported_reasons">Reasons: device cannot disable auto exposure / manual exposure needs ISO and shutter paired / device does not support exposure compensation / value unparseable.</string>
+    <string name="pop_camera_permission_rationale">POP Capture needs camera permission: once granted, the preset\'s ISO / shutter / exposure compensation are written directly into the capture, with filter and color parameters applied after shooting.</string>
+    <string name="pop_camera_permission_button">Grant camera permission</string>
+    <string name="pop_camera_permission_denied">No camera permission: use the system camera or pick a photo; color parameters are still fully applied after shooting.</string>
+    <string name="pop_capture_failed">Capture failed, please retry</string>
+    <string name="pop_retake">Retake</string>
+    <string name="pop_system_camera">System camera</string>
     <string name="pop_preset_missing">Preset not found or deleted</string>
     <!-- Recognition style catalog names -->
     <string name="style_clear">Clear</string>
