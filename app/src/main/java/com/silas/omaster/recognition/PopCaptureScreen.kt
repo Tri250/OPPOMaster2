@@ -352,6 +352,8 @@ private suspend fun applyStyle(bitmap: Bitmap, preset: MasterPreset): Bitmap = w
             colorFilter = android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix(matrix))
         }
         canvas.drawBitmap(bitmap, 0f, 0f, paint)
-        result
+        // 矩阵无法表达的预设参数：锐度（unsharp）与暗角（径向渐变）像素级套用
+        val sharpened = PresetPixelEffects.applySharpen(result, PresetColorTransform.sharpnessAmount(preset))
+        PresetPixelEffects.applyVignette(sharpened, PresetColorTransform.vignetteStrength(preset))
     } catch (e: Exception) { bitmap }
 }

@@ -1,27 +1,122 @@
 package com.silas.omaster.recognition
 
 import com.silas.omaster.model.MasterPreset
+import kotlin.math.pow
+
+/**
+ * 滤镜名 → 色彩调整量（与数值参数同单位：-1..1 增量；lift 为 0..255 亮度偏移）。
+ */
+data class FilterAdjust(
+    val saturation: Float = 0f,
+    val warmCool: Float = 0f,
+    val cyanMagenta: Float = 0f,
+    val tone: Float = 0f,
+    val contrastDelta: Float = 0f,
+    val lift: Float = 0f,
+    val ev: Float = 0f,
+    val grayscale: Boolean = false
+)
 
 /**
  * 预设 → 色彩变换矩阵（拍后套色核心，纯 JVM 计算，可单测）。
  *
- * 把 MasterPreset 的调色参数（饱和度/冷暖/青品/影调/对比）转换为 4x5 ColorMatrix，
- * 用于拍后套色与实时预览。这是"风格模拟"的实现，非哈苏原厂算法（PRD 边界声明）。
+ * 消费 MasterPreset 全部"拍后可套用"参数：
+ * - 数值调色：saturation/warmCool/cyanMagenta/tone；
+ * - 相机滤镜 filter（黑白/胶片/复古/鲜明/夜景/柔光/琥珀…）→ [filterAdjustment]；
+ * - 详情参数：colorTemperature（色温→冷暖偏移）、colorHue（色调→青品偏移）、
+ *   exposureCompensation（EV→亮度增益 2^ev）、softLight（柔光→提亮降对比）；
+ * - vignette/sharpness 无法用 ColorMatrix 表达，由 [PresetPixelEffects] 像素级套用。
+ *
+ * 这是"风格模拟"的实现，非哈苏原厂算法（PRD 边界声明）。
  */
 object PresetColorTransform {
 
+    val NEUTRAL = FilterAdjust()
+
+    /** 滤镜名 → 调整量。前缀匹配（兼容"黑白 高对比"带后缀写法），未知/原图/标准 → 中性 */
+    fun filterAdjustment(filter: String?): FilterAdjust {
+        val key = filter?.trim()?.split(Regex("\\s+"))?.firstOrNull() ?: return NEUTRAL
+        return when (key) {
+            "黑白", "单色" -> NEUTRAL.copy(grayscale = true, contrastDelta = 0.06f)
+            "胶片" -> NEUTRAL.copy(saturation = -0.14f, lift = 10f, contrastDelta = -0.08f, warmCool = 0.10f, cyanMagenta = 0.04f)
+            "复古" -> NEUTRAL.copy(saturation = -0.12f, lift = 8f, contrastDelta = -0.06f, warmCool = 0.08f)
+            "高级灰" -> NEUTRAL.copy(saturation = -0.22f, lift = 6f, contrastDelta = -0.04f)
+            "鲜明", "明艳" -> NEUTRAL.copy(saturation = 0.18f, contrastDelta = 0.10f)
+            "浓郁" -> NEUTRAL.copy(saturation = 0.20f, contrastDelta = 0.08f, tone = -0.05f)
+            "夜景" -> NEUTRAL.copy(tone = -0.10f, contrastDelta = 0.10f, warmCool = -0.05f, ev = -0.2f)
+            "柔光" -> NEUTRAL.copy(contrastDelta = -0.10f, lift = 8f, saturation = -0.04f)
+            "童话" -> NEUTRAL.copy(contrastDelta = -0.10f, lift = 10f, saturation = -0.02f, warmCool = 0.02f)
+            "暖调" -> NEUTRAL.copy(warmCool = 0.12f)
+            "冷调" -> NEUTRAL.copy(warmCool = -0.12f)
+            "琥珀" -> NEUTRAL.copy(warmCool = 0.12f, saturation = 0.06f)
+            "清新" -> NEUTRAL.copy(saturation = -0.08f, lift = 5f, warmCool = -0.06f)
+            "通透" -> NEUTRAL.copy(contrastDelta = 0.08f, lift = 4f, saturation = 0.04f)
+            "人文" -> NEUTRAL.copy(saturation = -0.06f, warmCool = 0.04f, contrastDelta = 0.05f)
+            "美味" -> NEUTRAL.copy(saturation = 0.10f, warmCool = 0.06f)
+            "霓虹" -> NEUTRAL.copy(saturation = 0.14f, cyanMagenta = 0.10f, contrastDelta = 0.08f)
+            "赛博朋克" -> NEUTRAL.copy(saturation = 0.14f, cyanMagenta = 0.12f, contrastDelta = 0.10f, warmCool = -0.06f)
+            else -> NEUTRAL
+        }
+    }
+
+    /** "+0.7"/"-1.0"/"1"/null → EV，限幅 ±3；不可解析 → 0 */
+    fun parseExposureEv(value: String?): Float {
+        val num = value?.trim()?.replace("+", "")?.toFloatOrNull() ?: return 0f
+        return num.coerceIn(-3f, 3f)
+    }
+
+    /** softLight：弱/中/强/梦幻 或数字 0-100 → 0..1 强度 */
+    fun parseSoftLight(value: String?): Float = when (val v = value?.trim()) {
+        null, "" -> 0f
+        "弱" -> 0.3f
+        "中" -> 0.5f
+        "强", "梦幻" -> 0.8f
+        else -> (v.toFloatOrNull() ?: 0f).coerceIn(0f, 100f) / 100f
+    }
+
+    /** vignette：开/弱/中/强 或数字 → 0..1 强度；关/null → 0 */
+    fun parseVignette(value: String?): Float = when (val v = value?.trim()) {
+        null, "", "关" -> 0f
+        "开", "中" -> 0.5f
+        "弱" -> 0.3f
+        "强" -> 0.8f
+        else -> (v.toFloatOrNull() ?: 0f).coerceIn(0f, 100f) / 100f
+    }
+
+    fun sharpnessAmount(preset: MasterPreset): Float =
+        (preset.sharpness ?: 0).coerceIn(0, 100) / 100f
+
+    fun vignetteStrength(preset: MasterPreset): Float = parseVignette(preset.vignette)
+
+    /** 色温（2000-8000K）→ 冷暖增量：低色温偏暖、高色温偏冷 */
+    fun colorTempWarmDelta(kelvin: Int?): Float =
+        if (kelvin == null) 0f else ((5500f - kelvin) / 3500f * 0.35f).coerceIn(-0.45f, 0.45f)
+
+    /** colorHue（-150..150）→ 青品增量 */
+    fun colorHueCyanMagentaDelta(hue: Int?): Float =
+        if (hue == null) 0f else (hue / 150f * 0.3f).coerceIn(-0.3f, 0.3f)
+
     /** 20 项 4x5 颜色矩阵（行主序），null 参数按中性处理 */
     fun buildColorMatrix(preset: MasterPreset): FloatArray {
-        val saturation = (preset.saturation ?: 0).coerceIn(-100, 100) / 100f
-        val warmCool = (preset.warmCool ?: 0).coerceIn(-100, 100) / 100f
-        val cyanMagenta = (preset.cyanMagenta ?: 0).coerceIn(-100, 100) / 100f
-        val tone = (preset.tone ?: 0).coerceIn(-100, 100) / 100f
-        val contrast = 1f + tone * 0.5f
+        val adj = filterAdjustment(preset.filter)
+        val fade = parseSoftLight(preset.softLight)
+        val ev = (parseExposureEv(preset.exposureCompensation) + adj.ev).coerceIn(-3f, 3f)
 
-        // 基础：对比度 * (1 + 饱和度影响)
-        val satFactor = 1f + saturation * 0.8f
-        // 亮度偏移（tone 正 → 略提亮）
-        val lift = tone * 18f
+        val saturation = ((preset.saturation ?: 0).coerceIn(-100, 100) / 100f + adj.saturation)
+            .coerceIn(-1f, 1f)
+        var warmCool = ((preset.warmCool ?: 0).coerceIn(-100, 100) / 100f +
+            adj.warmCool + colorTempWarmDelta(preset.colorTemperature)).coerceIn(-1f, 1f)
+        var cyanMagenta = ((preset.cyanMagenta ?: 0).coerceIn(-100, 100) / 100f +
+            adj.cyanMagenta + colorHueCyanMagentaDelta(preset.colorHue)).coerceIn(-1f, 1f)
+        val tone = ((preset.tone ?: 0).coerceIn(-100, 100) / 100f + adj.tone).coerceIn(-1f, 1f)
+
+        // 黑白/单色滤镜：完全去色且不受冷暖/青品影响
+        val satFactor = if (adj.grayscale) 0f else 1f + saturation * 0.8f
+        if (adj.grayscale) { warmCool = 0f; cyanMagenta = 0f }
+
+        var contrast = 1f + tone * 0.5f + adj.contrastDelta - fade * 0.15f
+        contrast = (contrast * 2f.pow(ev)).coerceAtLeast(0.05f)
+        val lift = tone * 18f + adj.lift + fade * 12f
 
         val m = FloatArray(20)
         // 灰度亮度权重（Rec.709）
@@ -50,9 +145,15 @@ object PresetColorTransform {
         return m
     }
 
-    /** 该预设是否会产生可见的色彩变化（用于提示"滤镜已套用"） */
+    /** 该预设是否会产生可见效果（色彩矩阵、像素效果任一非中性） */
     fun hasVisibleEffect(preset: MasterPreset): Boolean {
-        return listOf(preset.saturation, preset.warmCool, preset.cyanMagenta, preset.tone)
-            .any { it != null && it != 0 }
+        if (listOf(preset.saturation, preset.warmCool, preset.cyanMagenta, preset.tone)
+                .any { it != null && it != 0 }) return true
+        if (filterAdjustment(preset.filter) != NEUTRAL) return true
+        if (preset.colorTemperature != null || preset.colorHue != null) return true
+        if (parseExposureEv(preset.exposureCompensation) != 0f) return true
+        if (parseSoftLight(preset.softLight) > 0f) return true
+        if (vignetteStrength(preset) > 0f || sharpnessAmount(preset) > 0f) return true
+        return false
     }
 }
