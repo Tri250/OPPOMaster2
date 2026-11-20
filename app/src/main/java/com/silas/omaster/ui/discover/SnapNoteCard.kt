@@ -185,7 +185,8 @@ fun SnapNoteCard(
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = themedTextSecondary(),
-                    maxLines = 1
+                    maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                 )
                 // 最近笔记主色点行（最多 5 个）
                 if (notes.isNotEmpty()) {

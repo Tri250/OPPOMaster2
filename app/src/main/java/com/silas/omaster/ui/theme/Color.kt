@@ -25,6 +25,21 @@ val SonyOrange = Color(0xFFF15A24)
 val PhaseOneGrey = Color(0xFF5A5A5A)
 
 /**
+ * 【v1.7.7】OPPO Reno17 系列风格色系（整体默认主题）
+ *
+ * Reno17 的设计语言：星光蓝主色 + 极光蓝紫渐变 + 高透玻璃背板。
+ * 主题色取 Reno17「星光蓝」，渐变 partner 取「极光紫」，
+ * 玻璃面取蓝调半透明（在深色底上呈现 Reno17 玻璃后盖的通透感）。
+ */
+val Reno17Blue = Color(0xFF3D6DF0)          // 星光蓝（主色）
+val Reno17BlueDeep = Color(0xFF2A4FC4)      // 星光蓝·深（按压/渐变起点）
+val Reno17Violet = Color(0xFF8A5CF6)        // 极光紫（渐变终点）
+val Reno17Aqua = Color(0xFF39C6E8)          // 极光青（高光/点缀）
+val Reno17GradientStart = Reno17Blue
+val Reno17GradientMid = Color(0xFF6A6BF2)
+val Reno17GradientEnd = Reno17Violet
+
+/**
  * 纯黑背景系列
  * 用于深色模式的主背景
  */
@@ -102,8 +117,8 @@ val GlassSurface = GlassColors.Surface
  */
 
 /**
- * 获取主题感知的背景色
- * 深色模式: PureBlack
+ * 【v1.7.7 Reno17 玻璃化】主题感知的背景色
+ * 深色模式: PureBlack（Reno17 深空底，极光渐变绘制其上）
  * 浅色模式: OffWhite
  */
 @Composable
@@ -111,13 +126,17 @@ fun themedBackground(): Color =
     if (MaterialTheme.colorScheme.background == PureBlack) PureBlack else OffWhite
 
 /**
- * 获取主题感知的卡片背景色
- * 深色模式: DarkGray
- * 浅色模式: Color.White
+ * 【v1.7.7 Reno17 玻璃化】主题感知的卡片背景色
+ * 深色模式: Reno17 蓝调玻璃面（半透明，透出底部极光渐变）
+ * 浅色模式: 白色磨砂（半透明）
  */
 @Composable
 fun themedCardBackground(): Color =
-    if (MaterialTheme.colorScheme.surfaceVariant == DarkGray) DarkGray else Color.White
+    if (MaterialTheme.colorScheme.surfaceVariant == DarkGray) {
+        Color(0xFF141A2E).copy(alpha = 0.72f)   // Reno17 深空玻璃
+    } else {
+        Color.White.copy(alpha = 0.82f)          // 浅色磨砂
+    }
 
 /**
  * 获取主题感知的主文字颜色
@@ -138,13 +157,17 @@ fun themedTextSecondary(): Color =
     if (MaterialTheme.colorScheme.onSurfaceVariant == LightGray) SecondaryText else MediumGray
 
 /**
- * 获取主题感知的边框颜色
- * 深色模式: CardBorderLight
- * 浅色模式: LightGray.copy(alpha = 0.3f)
+ * 【v1.7.7 Reno17 玻璃化】主题感知的边框颜色
+ * 深色模式: Reno17 星光蓝玻璃棱边（蓝调描边）
+ * 浅色模式: 深蓝灰磨砂描边
  */
 @Composable
 fun themedBorderLight(): Color =
-    if (MaterialTheme.colorScheme.outline == MediumGray) CardBorderLight else LightGray.copy(alpha = 0.3f)
+    if (MaterialTheme.colorScheme.outline == MediumGray) {
+        Reno17Blue.copy(alpha = 0.22f)
+    } else {
+        Color(0xFF1A1A2E).copy(alpha = 0.10f)
+    }
 
 /**
  * 主题感知的自定义颜色

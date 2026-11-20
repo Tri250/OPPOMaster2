@@ -95,11 +95,17 @@ fun SubscriptionScreen(
                 }
                 if (enabledSubs.isNotEmpty()) {
                     PresetRepository.getInstance(context).reloadDefaultPresets()
+                    // 【v1.7.7 P2 修复】i18n 泄漏：4 条结果文案硬编码中文 →
+                    // 复用已有资源（与首页下拉刷新同源，三语一致）
                     val message = when {
-                        successCount > 0 && upToDateCount > 0 -> "成功更新 ${successCount} 个，${upToDateCount} 个已是最新"
-                        successCount > 0 -> "成功更新 ${successCount} 个订阅"
-                        upToDateCount > 0 -> "所有订阅均已是最新"
-                        else -> "更新失败，请检查网络"
+                        successCount > 0 && upToDateCount > 0 ->
+                            context.getString(R.string.refresh_partial, successCount, upToDateCount)
+                        successCount > 0 ->
+                            context.getString(R.string.refresh_success, successCount)
+                        upToDateCount > 0 ->
+                            context.getString(R.string.refresh_up_to_date)
+                        else ->
+                            context.getString(R.string.refresh_failed)
                     }
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
@@ -146,11 +152,16 @@ fun SubscriptionScreen(
                                 }
                                 if (enabledSubs.isNotEmpty()) {
                                     PresetRepository.getInstance(context).reloadDefaultPresets()
+                                    // 【v1.7.7 P2 修复】同上：结果文案多语言化
                                     val message = when {
-                                        successCount > 0 && upToDateCount > 0 -> "成功更新 ${successCount} 个，${upToDateCount} 个已是最新"
-                                        successCount > 0 -> "成功更新 ${successCount} 个订阅"
-                                        upToDateCount > 0 -> "所有订阅均已是最新"
-                                        else -> "更新失败，请检查网络"
+                                        successCount > 0 && upToDateCount > 0 ->
+                                            context.getString(R.string.refresh_partial, successCount, upToDateCount)
+                                        successCount > 0 ->
+                                            context.getString(R.string.refresh_success, successCount)
+                                        upToDateCount > 0 ->
+                                            context.getString(R.string.refresh_up_to_date)
+                                        else ->
+                                            context.getString(R.string.refresh_failed)
                                     }
                                     Logger.i("SubscriptionScreen", "刷新完成: 成功=$successCount, 最新=$upToDateCount, 失败=$failCount")
                                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()

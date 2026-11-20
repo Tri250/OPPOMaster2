@@ -1,8 +1,12 @@
 package com.silas.omaster.data.local
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.widget.TodayWidgetReceiver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.encodeToString
@@ -36,6 +40,9 @@ class CustomPresetManager(context: Context) {
         PREFS_NAME,
         Context.MODE_PRIVATE
     )
+
+    /** 【v1.7.7】applicationContext，用于小组件刷新广播（避免泄漏） */
+    private val appContext: Context = context.applicationContext
     // ED-04：Gson → kotlinx.serialization 统一（显式 null 宽容解码，兼容 Gson 时期写入的数据）
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 
@@ -55,6 +62,23 @@ class CustomPresetManager(context: Context) {
     }
 
     /**
+     * 【v1.7.7】桌面小组件刷新：预设数据变更后立即通知（此前仅靠系统 30 分钟周期，
+     * 新建/编辑预设后小组件长时间不更新）。发送带 ComponentName 的
+     * ACTION_APPWIDGET_UPDATE，由 GlanceAppWidgetReceiver 自动重绘。
+     */
+    private fun notifyWidgetChanged() {
+        try {
+            val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).apply {
+                component = ComponentName(appContext, TodayWidgetReceiver::class.java)
+            }
+            appContext.sendBroadcast(intent)
+        } catch (e: Exception) {
+            // 小组件被移除/系统裁剪广播时忽略，不影响主流程
+            android.util.Log.w("CustomPresetManager", "notify widget failed", e)
+        }
+    }
+
+    /**
      * 【用户数据写入操作】
      * 添加新的自定义预设
      * 数据会立即写入 SharedPreferences 持久化保存
@@ -68,6 +92,7 @@ class CustomPresetManager(context: Context) {
         )
         presets.add(0, newPreset) // 添加到开头（最新的在前面）
         saveCustomPresets(presets)
+        notifyWidgetChanged()   // 【v1.7.7】同步刷新桌面小组件
         return newPreset.id!!
     }
 
@@ -75,14 +100,19 @@ class CustomPresetManager(context: Context) {
      * 【用户数据写入操作】
      * 更新已有自定义预设
      * 通过 preset.id 匹配，保留原有 ID 确保数据连续性
+     * @return 是否命中并更新（false = 该 id 不存在；此前静默跳过无任何反馈）
      */
-    fun updateCustomPreset(preset: MasterPreset) {
+    fun updateCustomPreset(preset: MasterPreset): Boolean {
         val presets = getCustomPresets().toMutableList()
         val index = presets.indexOfFirst { it.id == preset.id }
-        if (index != -1) {
-            presets[index] = preset.copy(isCustom = true)
-            saveCustomPresets(presets)
+        if (index == -1) {
+            android.util.Log.w("CustomPresetManager", "updateCustomPreset: id not found: ${preset.id}")
+            return false
         }
+        presets[index] = preset.copy(isCustom = true)
+        saveCustomPresets(presets)
+        notifyWidgetChanged()   // 【v1.7.7】同步刷新桌面小组件
+        return true
     }
 
     /**
@@ -97,6 +127,7 @@ class CustomPresetManager(context: Context) {
         // 从列表中移除
         val presets = getCustomPresets().filter { it.id != presetId }
         saveCustomPresets(presets)
+        notifyWidgetChanged()   // 【v1.7.7】同步刷新桌面小组件
         
         // 删除关联的图片文件（内部存储中的文件）
         presetToDelete?.let { preset ->

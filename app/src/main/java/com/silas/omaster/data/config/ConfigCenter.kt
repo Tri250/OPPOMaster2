@@ -77,8 +77,9 @@ class ConfigCenter private constructor(context: Context) {
         }
 
     private fun loadTheme(): BrandTheme {
-        val themeId = prefs.getString(KEY_THEME_ID, BrandTheme.Hasselblad.id)
-        return BrandTheme.fromId(themeId ?: BrandTheme.Hasselblad.id)
+        // v1.7.7：默认主题改为 OPPO Reno17 系列风格（星光蓝玻璃质感）
+        val themeId = prefs.getString(KEY_THEME_ID, BrandTheme.OPPOReno17.id)
+        return BrandTheme.fromId(themeId ?: BrandTheme.OPPOReno17.id)
     }
 
     // ═══════════════════════════════════════════════════════════

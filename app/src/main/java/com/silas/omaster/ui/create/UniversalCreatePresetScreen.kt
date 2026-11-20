@@ -70,6 +70,9 @@ fun UniversalCreatePresetScreen(
     var sectionToDelete by remember { mutableIntStateOf(-1) }
     var itemToDelete by remember { mutableStateOf<Pair<Int, Int>?>(null) }
 
+    // 【v1.7.7 P2 修复】保存失败此前仅有震动拒绝，无文字反馈（用户不知道发生了什么）
+    var saveFailedHint by remember { mutableStateOf(false) }
+
     // Check for unsaved changes
     fun hasUnsavedChanges(): Boolean {
         return uiState.name.isNotBlank() || 
@@ -106,11 +109,25 @@ fun UniversalCreatePresetScreen(
                     // Show validation hint when save is disabled
                     if (!isSaveEnabled && uiState.name.isNotBlank() && !uiState.isSaving) {
                         Text(
-                            text = "请上传封面图片",
+                            text = stringResource(R.string.upload_cover_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(end = 8.dp)
                         )
+                    }
+
+                    // 【v1.7.7】保存失败文字反馈（1.5s 后自动收起）
+                    if (saveFailedHint) {
+                        Text(
+                            text = stringResource(R.string.save_failed),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        LaunchedEffect(Unit) {
+                            kotlinx.coroutines.delay(1500)
+                            saveFailedHint = false
+                        }
                     }
 
                     TextButton(
@@ -123,6 +140,7 @@ fun UniversalCreatePresetScreen(
                                     onSave()
                                 } else {
                                     com.silas.omaster.util.OsHaptics.reject(view)
+                                    saveFailedHint = true
                                 }
                             }
                         },

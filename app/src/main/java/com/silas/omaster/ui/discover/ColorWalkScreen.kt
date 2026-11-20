@@ -175,8 +175,8 @@ fun ColorWalkScreen(
                             remainingDraws = colorWalkManager.getRemainingDraws(),
                             onCompleteChallenge = { viewModel.completeChallenge() },
                             onRedraw = {
-                                val card = state.todayCard
-                                if (card != null) viewModel.redrawCard(resources.getString(card.themeResId))
+                                // 【v1.7.7 P2 修复】以"新抽出的卡"主题记账（此前传旧卡主题）
+                                viewModel.redrawCard { resId -> resources.getString(resId) }
                             },
                             onClear = { viewModel.clearTodayCard() }
                         ),
@@ -184,7 +184,8 @@ fun ColorWalkScreen(
                     )
                 } else {
                     ColorWalkEmptyCard(
-                        onDrawClick = { viewModel.drawCard("") },
+                        // 【v1.7.7 P2 修复】首抽此前传空串，打卡详情主题为空
+                        onDrawClick = { viewModel.drawCard { resId -> resources.getString(resId) } },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -330,13 +331,13 @@ fun ColorWalkScreen(
  *
  * App 主题体系基于 [BrandTheme] 枚举（哈苏 / 蔡司 / 徕卡 … 共 9 种品牌色），
  * 因此"把色卡配色应用到主题"落地为：按 RGB 欧氏距离找出色卡主色最接近的品牌色。
- * 解析失败一律回退哈苏（品牌默认），保证任何异常都不影响主题可用性。
+ * 解析失败一律回退 Reno17（品牌默认），保证任何异常都不影响主题可用性。
  */
 private fun nearestBrandTheme(hex: String?): BrandTheme {
-    if (hex.isNullOrBlank()) return BrandTheme.Hasselblad
+    if (hex.isNullOrBlank()) return BrandTheme.OPPOReno17
     val target = runCatching {
         Color(android.graphics.Color.parseColor("#${hex.removePrefix("#")}"))
-    }.getOrNull() ?: return BrandTheme.Hasselblad
+    }.getOrNull() ?: return BrandTheme.OPPOReno17
 
     return BrandTheme.entries.minByOrNull { theme ->
         val c = theme.primaryColor
@@ -344,5 +345,5 @@ private fun nearestBrandTheme(hex: String?): BrandTheme {
         val dg = c.green - target.green
         val db = c.blue - target.blue
         dr * dr + dg * dg + db * db
-    } ?: BrandTheme.Hasselblad
+    } ?: BrandTheme.OPPOReno17
 }

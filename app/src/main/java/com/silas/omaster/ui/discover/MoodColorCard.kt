@@ -52,6 +52,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.silas.omaster.R
@@ -151,7 +152,8 @@ fun MoodColorCard(
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = themedTextSecondary(),
-                    maxLines = 1
+                    maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -468,7 +470,8 @@ private fun MoodCell(mood: Mood, onClick: () -> Unit, modifier: Modifier = Modif
             style = MaterialTheme.typography.labelMedium,
             color = themedTextPrimary(),
             textAlign = TextAlign.Center,
-            maxLines = 1
+            maxLines = 1,
+                overflow = TextOverflow.Ellipsis
         )
     }
 }
@@ -675,6 +678,7 @@ private fun MoodInspirationSheet(
                             style = MaterialTheme.typography.labelSmall,
                             color = themedTextPrimary(),
                             maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp)
                         )
                     }

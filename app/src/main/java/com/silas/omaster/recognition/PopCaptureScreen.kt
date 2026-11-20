@@ -27,6 +27,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -593,17 +594,24 @@ private fun ParamChipRow(params: List<ParamStatus>) {
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         params.forEach { p ->
-            AssistChip(
-                onClick = {},
-                label = { Text("${paramLabel(p.key)} ${p.value}", fontSize = 11.sp) },
-                colors = AssistChipDefaults.assistChipColors(
-                    labelColor = when (p.status) {
-                        ApplyStatus.WRITTEN -> Color(0xFF2E7D32)
-                        ApplyStatus.POST -> MaterialTheme.colorScheme.onSurface
-                        ApplyStatus.UNSUPPORTED -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                    }
+            // 【v1.7.7 P2 修复】参数卡是只读信息，AssistChip 强制 onClick={} 构成
+            // "可点击假象"（点击无任何反应）。改用 Surface 非交互展示，视觉等价。
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                contentColor = when (p.status) {
+                    ApplyStatus.WRITTEN -> Color(0xFF2E7D32)
+                    ApplyStatus.POST -> MaterialTheme.colorScheme.onSurface
+                    ApplyStatus.UNSUPPORTED -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                },
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+            ) {
+                Text(
+                    text = "${paramLabel(p.key)} ${p.value}",
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
-            )
+            }
         }
     }
 }

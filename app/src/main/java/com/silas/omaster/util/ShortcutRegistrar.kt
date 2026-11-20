@@ -100,4 +100,10 @@ object ShortcutRegistrar {
     const val EXTRA_SHORTCUT_ACTION = "shortcut_action"
     const val ACTION_CREATE = "create"
     const val ACTION_DISCOVER = "discover"
+
+    /**
+     * 【v1.7.7】桌面小组件（Glance actionStartActivity 参数）目标预设 id。
+     * 参数名即 intent extra 键名；MainActivity 读取后直达预设详情页。
+     */
+    const val EXTRA_PRESET_ID = "preset_id"
 }
