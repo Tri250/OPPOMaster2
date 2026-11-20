@@ -9,6 +9,7 @@ import android.graphics.Matrix
 import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
 import android.net.Uri
+import android.os.Build
 import android.annotation.SuppressLint
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -112,11 +113,21 @@ fun PopCaptureScreen(
     // 无可套用参数时的如实提示（不宣称"已套用"）
     val msgNoEffect = stringResource(R.string.pop_no_effect, localizedPresetName)
 
+    // 申请清单：CAMERA 必需；API 23-28 补 WRITE_EXTERNAL_STORAGE（写公共相册 Pictures/OMaster），
+    // 拒绝时保存自动回退应用专属目录 + MediaScanner 索引（ImageExporter），不影响功能
+    val requestPermissions = remember {
+        buildList {
+            add(Manifest.permission.CAMERA)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            }
+        }.toTypedArray()
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
+        ActivityResultContracts.RequestMultiplePermissions()
     ) { granted ->
         permissionRequested = true
-        cameraGranted = granted
+        cameraGranted = granted[Manifest.permission.CAMERA] == true
     }
 
     // ── 自研相机管线：ImageAnalysis 实时滤镜取景 + 按拍摄计划配置 ImageCapture ──
@@ -374,7 +385,7 @@ fun PopCaptureScreen(
                         Text(stringResource(R.string.pop_camera_permission_rationale),
                             style = MaterialTheme.typography.bodySmall)
                         Spacer(Modifier.height(8.dp))
-                        OutlinedButton(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
+                        OutlinedButton(onClick = { permissionLauncher.launch(requestPermissions) }) {
                             Text(stringResource(R.string.pop_camera_permission_button))
                         }
                         if (permissionRequested) {

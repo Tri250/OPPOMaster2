@@ -36,6 +36,15 @@
         android:name="android.hardware.camera.any"
         android:required="false" />
 
+    <!--
+        P1-POP 保存相册（API 23-28）：legacy 分支写公共 Pictures/OMaster 需要存储权限。
+        仅 maxSdkVersion=28（Q+ 走 MediaStore 插入，无需该权限）；
+        运行时在 POP 即拍页与相机权限一并申请，拒绝时自动回退应用专属目录 + MediaScanner 索引。
+    -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
     <!-- 声明QQ包可见性，用于检测QQ是否安装 -->
     <queries>
         <package android:name="com.tencent.mobileqq" />

@@ -178,3 +178,42 @@ ALL IN-PLACE CHECKS PASSED
 1. 沙箱无 Android SDK，未执行 Gradle  assembleDebug / connectedAndroidTest；上述证据来自对**同一份真实源码**的独立编译运行（kotlinc 2.3.21 + 框架桩）。建议合入后在 CI 跑 `./gradlew test` 复核。
 2. PopCaptureScreen.kt 依赖完整 Compose/CameraX 栈，无法在桩环境编译；该文件的 `stylePhoto` 所有权与回收逻辑、`downscaleForStyle`、`release()` 接线均经逐段代码复核，其余改动已由证据 3 的行为等价检查覆盖（分析器本体同文件编译通过）。
 3. 真机视觉效果（取景器滤镜观感）需设备验证；数据层与像素层已可确定生效。
+
+---
+
+# 九、全量自检与发布前修复（2026-11-20，v1.7.6）
+
+## 1. 100% 覆盖自检（逐文件核验 cb7bf3f 全部 17 文件 diff）
+
+- **无空实现**：SectionParamsParser（164 行完整映射：资源名/中/英/日 label 全覆盖，仅填补空值）；PresetRepository 两处读取路径均接入 enrich；ImageExporter legacy 分支三级回退 + compress 失败如实返回 false；PresetPixelEffects 原地锐化/暗角 + 纯函数抽离；FilteredPreviewAnalyzer 延迟回收 + release；PresetCapturePlan FILTER_UNRECOGNIZED 如实分级；PopCaptureScreen stylePhoto 所有权管理（中间位图回收）+ downscaleForStyle（2048px）；五测试文件 402 行真实断言。
+- **数据一致性**：MasterPreset 全部 typed 字段（filter/whiteBalance/shutterSpeed/softLight/tone/saturation/warmCool/cyanMagenta/sharpness/vignette/iso/colorTemperature/colorHue/exposureCompensation）与解析器写入一一对应，无错漏。
+- **真实数据覆盖**：presets.json 25 预设全部滤镜名（人文/复古/明艳/标准/浓郁/清新/童话/美味/通透/黑白）均在引擎滤镜表内，无 FILTER_UNRECOGNIZED 误报。
+
+## 2. 深度自检发现并修复（3 项）
+
+| 项 | 问题 | 修复 |
+|---|---|---|
+| 权限管理 | ImageExporter legacy 分支检查 `WRITE_EXTERNAL_STORAGE` 但 manifest 未声明 → API 23-28 永远走应用专属目录回退 | manifest 补 `<uses-permission WRITE_EXTERNAL_STORAGE maxSdkVersion="28">`（Q+ 无需）；PopCaptureScreen 权限申请改 `RequestMultiplePermissions`，API<29 时与 CAMERA 一并运行时申请；拒绝仍安全回退 |
+| 兼容性/本地化 | values-ja pop 区段 3 处中文残留（套色/原图/滤镜表） | 套色→カラー適用、原图→元画像、滤镜表→フィルターテーブル |
+| 版本 | versionName 仍 1.7.5 | 升至 **1.7.6**（与发布 tag 一致，G-3 门禁） |
+
+## 3. 安装卸载 / 稳定性 / 性能自检结论
+
+- **安装卸载**：allowBackup 双规则文件齐备（诊断文件已排除）；FileProvider `pop_capture/` 声明完整；`REQUEST_INSTALL_PACKAGES` 为自更新既有设计；新增存储权限仅 maxSdk=28 生效，Android 10+ 安装权限面不变。
+- **稳定性**：预览缓冲延迟回收 + release() 接线完备；ImageExporter 逐级回退（Pictures→null→cacheDir）保证不崩；compress 失败路径如实 false；downscale/锐化异常兜底。
+- **性能**：12MP 成片套色峰值 ~300MB→~75MB（降采样+原地像素运算）；预览 30fps 节流、守护线程退出 shutdown 不阻塞进程。
+- **兼容性**：minSdk 23 / targetSdk 36 / compileSdk 37 不变；存储权限仅作用于 API 23-28；XML 三语文件 well-formed 校验通过。
+
+## 4. 验证回归（修复后全绿）
+
+```
+bash /tmp/harness/build.sh → OK (66 tests)
+AndroidFixesCheckKt        → ALL ANDROID-FIX CHECKS PASSED（30 项）
+PixelEffectsInPlaceCheckKt → ALL IN-PLACE CHECKS PASSED（11 项）
+PopChainBeforeAfterKt      → ACCEPTANCE: PASS（BEFORE 失效 25 → AFTER 失效 0）
+```
+
+## 5. Release 工作流自检结论
+
+- 触发链（push main/tag v*）、质量门禁（testDebugUnitTest + lint）、签名密钥校验（4 个 Secrets 已配置）、G-3 版本一致性、apksigner 签名校验、R8 冒烟门禁（Screen$PopCapture$$serializer 在册）、git-cliff 更新日志、草稿 Release + 5 APK 上传——全部经 v1.7.3/v1.7.4/v1.7.5 三次真实成功运行验证，**无需修复**。
+- 已知流程：工作流产出 draft Release，需 API/维护者发布（与 v1.7.5 既有流程一致）。
