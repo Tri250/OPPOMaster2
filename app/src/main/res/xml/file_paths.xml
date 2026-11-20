@@ -24,4 +24,9 @@
     <cache-path
         name="snap_tmp"
         path="snap/" />
+
+    <!-- P1-POP即拍：POP 模式系统相机拍照临时文件 -->
+    <cache-path
+        name="pop_capture_tmp"
+        path="pop_capture/" />
 </paths>

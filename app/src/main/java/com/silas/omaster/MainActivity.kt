@@ -62,6 +62,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.silas.omaster.model.MasterPreset
 import com.silas.omaster.navigation.Screen
+import com.silas.omaster.recognition.PhotoRecognitionHost
+import com.silas.omaster.recognition.PopCaptureHost
 import com.silas.omaster.ui.components.PillNavBar
 import com.silas.omaster.ui.components.WelcomeDialog
 import com.silas.omaster.ui.create.PresetSelectionScreen
@@ -122,6 +124,9 @@ class MainActivity : ComponentActivity() {
     // FD-01c：系统分享接入 —— 外部分享的预设文本，导入完成后置空
     private var pendingSharedText by androidx.compose.runtime.mutableStateOf<String?>(null)
 
+    // P1-PHOTO-RECOGNITION：系统分享的图片（image/*）→ 照片识别入口
+    private var pendingSharedImageUri by androidx.compose.runtime.mutableStateOf<String?>(null)
+
     // 【v1.6.12】ColorOS 17 侧边键快捷方式路由 —— 导航完成后置空（消费一次）
     internal var pendingShortcutAction by androidx.compose.runtime.mutableStateOf<String?>(null)
 
@@ -146,6 +151,24 @@ class MainActivity : ComponentActivity() {
         // FD-01c：接收系统分享的预设 JSON 文本
         if (intent?.action == android.content.Intent.ACTION_SEND) {
             pendingSharedText = intent.getStringExtra(android.content.Intent.EXTRA_TEXT)
+            // P1-PHOTO-RECOGNITION：接收系统分享的图片 → 照片识别
+            val sharedUri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(android.content.Intent.EXTRA_STREAM)
+            }
+            sharedUri?.let { pendingSharedImageUri = it.toString() }
+            // 多重分享（ACTION_SEND_MULTIPLE）取第一张
+            if (sharedUri == null && intent.action == android.content.Intent.ACTION_SEND_MULTIPLE) {
+                val uris = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM)
+                }
+                uris?.firstOrNull()?.let { pendingSharedImageUri = it.toString() }
+            }
         }
 
         // 【v1.6.12】接收侧边键快捷方式路由（Find X10 长按图标：新建预设 / 发现广场）
@@ -229,6 +252,14 @@ class MainActivity : ComponentActivity() {
                                     initialText = shared,
                                     onDismiss = { pendingSharedText = null }
                                 )
+                            }
+
+                            // P1-PHOTO-RECOGNITION：外部分享的图片 → 照片识别页
+                            pendingSharedImageUri?.let { uri ->
+                                LaunchedEffect(uri) {
+                                    navController.navigate(Screen.PhotoRecognition(uri))
+                                    pendingSharedImageUri = null
+                                }
                             }
                         }
                     }
@@ -630,7 +661,10 @@ fun MainApp(
                         isHomeScrollingUp = isScrollingUp
                     },
                     refreshTrigger = refreshTrigger,
-                    usePremiumGlass = usePremiumGlass
+                    usePremiumGlass = usePremiumGlass,
+                    onNavigateToPhotoRecognition = {
+                        navController.navigate(Screen.PhotoRecognition(null))
+                    }
                 )
             }
 
@@ -781,6 +815,28 @@ fun MainApp(
                     onBack = {
                         navController.popBackStack()
                     }
+                )
+            }
+
+            // ═══════════════════════════════════════════════════════
+            // P1-PHOTO-RECOGNITION：照片识别 → POP 即拍
+            // ═══════════════════════════════════════════════════════
+            composable<Screen.PhotoRecognition> { backStackEntry ->
+                val recog = backStackEntry.toRoute<Screen.PhotoRecognition>()
+                PhotoRecognitionHost(
+                    initialImageUri = recog.imageUri,
+                    onBack = { navController.popBackStack() },
+                    onSavedToPop = { presetId ->
+                        navController.navigate(Screen.PopCapture(presetId))
+                    }
+                )
+            }
+
+            composable<Screen.PopCapture> { backStackEntry ->
+                val pop = backStackEntry.toRoute<Screen.PopCapture>()
+                PopCaptureHost(
+                    presetId = pop.presetId,
+                    onBack = { navController.popBackStack() }
                 )
             }
 

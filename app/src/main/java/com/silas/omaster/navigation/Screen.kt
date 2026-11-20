@@ -54,4 +54,16 @@ sealed class Screen {
 
     @Serializable
     data object PhotoFrame : Screen()
+
+    // ═══════════════════════════════════════════════════════════
+    // P1-PHOTO-RECOGNITION：照片识别 → POP 即拍链路
+    // ═══════════════════════════════════════════════════════════
+
+    /** 照片识别页（可带分享进来的图片 Uri 字符串；null 则页内选图） */
+    @Serializable
+    data class PhotoRecognition(val imageUri: String? = null) : Screen()
+
+    /** POP 预设即拍页（按预设 id 加载；新建草稿预设先落库再进入） */
+    @Serializable
+    data class PopCapture(val presetId: String) : Screen()
 }

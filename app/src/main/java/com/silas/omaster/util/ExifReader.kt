@@ -27,7 +27,18 @@ data class ExifInfo(
     val imageWidth: Int = 0,
     val imageHeight: Int = 0,
     val hasHasselblad: Boolean = false,     // 是否 Hasselblad 系统
-    val is200Mp: Boolean = false           // 是否 2 亿像素
+    val is200Mp: Boolean = false,           // 是否 2 亿像素
+
+    // ═══════════════════════════════════════════════════════════
+    // P1-PHOTO-RECOGNITION：照片参数识别新增字段（FR-01）
+    // ═══════════════════════════════════════════════════════════
+    val shutterSpeed: String? = null,       // 快门，如 "1/250"
+    val whiteBalance: String? = null,       // 白平衡文字，如 "日光"/"自动"
+    val exposureBias: String? = null,       // 曝光补偿，如 "+0.7EV"
+    val colorTemperature: Int? = null,      // 色温 K（由白平衡或像素估算）
+    val flash: String? = null,              // 闪光灯，如 "开"/"关"
+    /** 是否含 EXIF 摄影参数（至少一项摄影字段非空） */
+    val hasPhotoParams: Boolean = false
 )
 
 object ExifReader {
@@ -69,6 +80,15 @@ object ExifReader {
             val hasHasselblad = detectHasselblad(make, model)
             val is200Mp = sensorTotalPixels >= 200
 
+            // P1-PHOTO-RECOGNITION：新增摄影参数读取
+            val shutterSpeed = readShutterSpeed(exif)
+            val whiteBalance = readWhiteBalance(exif)
+            val exposureBias = readExposureBias(exif)
+            val colorTemperature = readColorTemperature(exif)
+            val flash = readFlash(exif)
+            val hasPhotoParams = listOf(aperture, focalLength, iso, shutterSpeed,
+                whiteBalance, exposureBias, colorTemperature?.toString()).any { !it.isNullOrBlank() }
+
             ExifInfo(
                 dateTime = dateTime,
                 make = make,
@@ -80,7 +100,13 @@ object ExifReader {
                 imageWidth = width,
                 imageHeight = height,
                 hasHasselblad = hasHasselblad,
-                is200Mp = is200Mp
+                is200Mp = is200Mp,
+                shutterSpeed = shutterSpeed,
+                whiteBalance = whiteBalance,
+                exposureBias = exposureBias,
+                colorTemperature = colorTemperature,
+                flash = flash,
+                hasPhotoParams = hasPhotoParams
             )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to read EXIF", e)
@@ -109,6 +135,50 @@ object ExifReader {
     private fun readIso(exif: ExifInterface): String? {
         return exif.getAttribute(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY)
             ?: exif.getAttribute(ExifInterface.TAG_ISO_SPEED_RATINGS)
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // P1-PHOTO-RECOGNITION：新增摄影参数辅助方法
+    // 注意：只读取摄影相关 tag，绝不读取 TAG_GPS_* / TAG_SERIAL_NUMBER 等 PII。
+    // ═══════════════════════════════════════════════════════════
+
+    private fun readShutterSpeed(exif: ExifInterface): String? {
+        // 优先标准曝光时间，缺失时用 APEX 快门值反推
+        val direct = exif.getAttribute(ExifInterface.TAG_EXPOSURE_TIME)
+        val formatted = PhotoParamParser.formatShutter(direct)
+        if (formatted != null) return formatted
+        val apex = exif.getAttribute(ExifInterface.TAG_SHUTTER_SPEED_VALUE)
+        return PhotoParamParser.apexToShutterSeconds(apex)
+    }
+
+    private fun readWhiteBalance(exif: ExifInterface): String? {
+        val raw = exif.getAttribute(ExifInterface.TAG_WHITE_BALANCE)
+            ?: exif.getAttribute(ExifInterface.TAG_LIGHT_SOURCE)
+        return PhotoParamParser.normalizeWhiteBalance(raw)
+    }
+
+    private fun readExposureBias(exif: ExifInterface): String? {
+        return PhotoParamParser.formatExposureBias(exif.getAttribute(ExifInterface.TAG_EXPOSURE_BIAS_VALUE))
+    }
+
+    private fun readColorTemperature(exif: ExifInterface): Int? {
+        // OPPO/哈苏样片常把色温写在 Make/Model 之外；尝试 APEX 无直接色温 tag，
+        // 这里读部分厂商写入的自定义字段（大小写兼容），缺失返回 null（后续由像素风格引擎估算）。
+        val candidates = listOf(
+            exif.getAttribute("ColorTemperature"),
+            exif.getAttribute("WhiteBalanceTemperature")
+        )
+        return candidates.firstNotNullOfOrNull { PhotoParamParser.parseColorTemp(it) }
+    }
+
+    private fun readFlash(exif: ExifInterface): String? {
+        val raw = exif.getAttributeInt(ExifInterface.TAG_FLASH, -1)
+        return when (raw) {
+            0x0 -> "关"
+            0x1, 0x5, 0x7, 0x9, 0xD, 0xF -> "开"
+            -1 -> null
+            else -> null
+        }
     }
 
     private fun readImageDimensions(exif: ExifInterface): Pair<Int, Int> {
