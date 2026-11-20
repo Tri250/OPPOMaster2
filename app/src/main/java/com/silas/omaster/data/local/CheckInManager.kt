@@ -135,9 +135,22 @@ class CheckInManager(context: Context) {
 
     /**
      * 获取当前连续打卡天数
+     *
+     * 【v1.7.7 P1 修复】此前原样返回缓存值：用户昨天打卡后今天未打卡，
+     * 这里仍返回旧连续天数 → 发现页"连续 N 天"与实际记录不符（虚假数据）。
+     * 改为读取时按 lastCheckInDate 实时重算：断签（距今天 >1 天）归零并落盘。
      */
     fun getCurrentStreak(): Int {
-        return prefs.getInt(KEY_CURRENT_STREAK, 0)
+        val today = LocalDate.now()
+        val lastDateStr = prefs.getString(KEY_LAST_CHECK_IN_DATE, null) ?: return 0
+        val lastDate = runCatching { LocalDate.parse(lastDateStr, DATE_FORMATTER) }.getOrNull() ?: return 0
+        val daysBetween = java.time.temporal.ChronoUnit.DAYS.between(lastDate, today)
+        if (daysBetween <= 1L) {
+            return prefs.getInt(KEY_CURRENT_STREAK, 0)
+        }
+        // 断签：连续天数清零并持久化，避免下次进入仍显示旧值
+        prefs.edit().putInt(KEY_CURRENT_STREAK, 0).apply()
+        return 0
     }
 
     /**

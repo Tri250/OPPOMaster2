@@ -4,7 +4,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
+import android.widget.Toast
+import com.silas.omaster.R
 import com.silas.omaster.data.config.ConfigCenter
 import com.silas.omaster.data.local.FloatingWindowMode
 import com.silas.omaster.model.MasterPreset
@@ -91,6 +95,37 @@ class FloatingWindowController private constructor(private val context: Context)
      *   ③ 否则 → ConfigCenter.floatingWindowMode（用户偏好）
      */
     fun showFloatingWindow(preset: MasterPreset, presets: List<MasterPreset> = emptyList()) {
+        // 【v1.7.7 P2 修复】此前不预检悬浮窗权限：无权限时 Service addView 失败后
+        // 静默 stopSelf，侧边键/卡片唤起零反馈（用户以为点了没反应）。
+        // 现预检并给用户明确出口：Toast 提示 + 跳转悬浮窗权限设置页。
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(context)) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.preset_apply_float_failed),
+                Toast.LENGTH_LONG
+            ).show()
+            try {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:${context.packageName}")
+                ).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                // 部分 ROM 无该 Action，退回应用详情页由用户手动开启
+                try {
+                    context.startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+                            .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                    )
+                } catch (e2: Exception) {
+                    e2.printStackTrace()
+                }
+            }
+            return
+        }
+
         // 如果传入了新的列表，则更新保存的列表
         if (presets.isNotEmpty()) {
             presetList = presets

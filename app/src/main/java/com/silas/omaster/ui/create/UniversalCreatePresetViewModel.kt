@@ -40,6 +40,14 @@ class UniversalCreatePresetViewModel(
     private var editingPresetId: String? = null
 
     /**
+     * 【v1.7.7 P1 修复】编辑模式下的原始预设对象。
+     * 此前保存时整体新建 MasterPreset，导致 tags/description/galleryImages/
+     * isFavorite/isNew/deviceProfile 等元数据全部丢失（照片识别生成的预设
+     * 一旦编辑即失去标签与描述，场景筛选/标签搜索失效）。
+     */
+    private var editingPreset: MasterPreset? = null
+
+    /**
      * 解析 PresetSection 中的资源 ID 为实际文字
      * 将 @string/xxx 转换为对应的中文显示
      */
@@ -106,6 +114,7 @@ class UniversalCreatePresetViewModel(
         viewModelScope.launch {
             val preset = repository.getPresetById(presetId)
             if (preset != null) {
+                editingPreset = preset   // 【v1.7.7】保留原始对象用于保存时合并元数据
                 val sections = if (preset.sections.isNullOrEmpty()) {
                     convertOldPresetToSections(preset)
                 } else {
@@ -225,14 +234,26 @@ class UniversalCreatePresetViewModel(
                     }
                 }
 
-                val preset = MasterPreset(
-                    id = editingPresetId ?: UUID.randomUUID().toString(),
-                    name = state.name,
-                    coverPath = coverPath,
-                    author = "@用户自定义",
-                    sections = state.sections,
-                    isCustom = true
-                )
+                // 【v1.7.7 P1 修复】编辑保存基于原对象 copy()，保留标签/描述/图库/
+                // 收藏/新预设标记/机型适配等元数据；仅更新名称、封面与参数。
+                val original = editingPreset
+                val preset = if (editingPresetId != null && original != null) {
+                    original.copy(
+                        name = state.name,
+                        coverPath = coverPath,
+                        sections = state.sections,
+                        isCustom = true
+                    )
+                } else {
+                    MasterPreset(
+                        id = editingPresetId ?: UUID.randomUUID().toString(),
+                        name = state.name,
+                        coverPath = coverPath,
+                        author = "@用户自定义",
+                        sections = state.sections,
+                        isCustom = true
+                    )
+                }
 
                 if (editingPresetId != null) {
                     repository.updateCustomPreset(preset)

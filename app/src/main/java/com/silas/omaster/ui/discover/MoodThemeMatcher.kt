@@ -21,7 +21,7 @@ internal fun matchBrandThemeForMood(mood: Mood): BrandTheme {
         val themeArgb = theme.primaryColor.toArgb()
         val themeHsv = FloatArray(3).also { Color.colorToHSV(themeArgb, it) }
         hueDistance(moodHsv[0], themeHsv[0]) + abs(moodHsv[1] - themeHsv[1]) * 0.35f
-    } ?: BrandTheme.Hasselblad
+    } ?: BrandTheme.OPPOReno17
 }
 
 /** 环形色相差（0~180） */

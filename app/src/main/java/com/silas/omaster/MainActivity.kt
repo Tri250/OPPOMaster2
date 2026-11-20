@@ -80,6 +80,7 @@ import com.silas.omaster.ui.detail.PrivacyPolicyScreen
 import com.silas.omaster.ui.home.HomeScreen
 import com.silas.omaster.ui.service.FloatingWindowController
 import com.silas.omaster.ui.theme.OMasterTheme
+import com.silas.omaster.ui.theme.Reno17AuroraBackground
 import com.silas.omaster.util.JsonUtil
 import com.silas.omaster.util.LanguageUtil
 import com.silas.omaster.util.VersionInfo
@@ -129,6 +130,9 @@ class MainActivity : ComponentActivity() {
 
     // 【v1.6.12】ColorOS 17 侧边键快捷方式路由 —— 导航完成后置空（消费一次）
     internal var pendingShortcutAction by androidx.compose.runtime.mutableStateOf<String?>(null)
+
+    // 【v1.7.7】桌面小组件行点击的目标预设 id —— 导航完成后置空（消费一次）
+    internal var pendingWidgetPresetId by androidx.compose.runtime.mutableStateOf<String?>(null)
 
     override fun attachBaseContext(newBase: Context?) {
         // 在 Activity 创建前应用语言设置
@@ -181,6 +185,13 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // 【v1.7.7】接收桌面小组件行点击：直达指定预设详情页（Glance 参数 → intent extra）
+        if (pendingWidgetPresetId == null) {
+            intent?.getStringExtra(com.silas.omaster.util.ShortcutRegistrar.EXTRA_PRESET_ID)
+                ?.takeIf { it.isNotBlank() }
+                ?.let { pendingWidgetPresetId = it }
+        }
+
         // 初始化并注册全局悬浮窗控制器
         floatingWindowController = FloatingWindowController.getInstance(this)
         floatingWindowController.register()
@@ -219,49 +230,55 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        val navController = rememberNavController()
-                        var showWelcomeFlow by remember { mutableStateOf(!OMasterApplication.getInstance().hasUserAgreed()) }
+                        // 【v1.7.7 Reno17 玻璃化】极光背景绘制在最底层，
+                        // 全站玻璃卡片（themedCardBackground 半透明）透出极光层次
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            Reno17AuroraBackground()
 
-                        if (showWelcomeFlow) {
-                            WelcomeFlow(
-                                navController = navController,
-                                onAgree = {
-                                    OMasterApplication.getInstance().setUserAgreed(true)
-                                    OMasterApplication.getInstance().initUMeng()
-                                    requestNotificationPermissionIfNeeded()
-                                    showWelcomeFlow = false
-                                },
-                                onDisagree = {
-                                    finish()
-                                }
-                            )
-                        } else {
-                            MainApp(
-                                navController = navController,
-                                config = config
-                            )
+                            val navController = rememberNavController()
+                            var showWelcomeFlow by remember { mutableStateOf(!OMasterApplication.getInstance().hasUserAgreed()) }
 
-                            // v1.6.15 兼容性修复：存量升级用户（已同意过隐私政策）
-                            // 此前从不请求 POST_NOTIFICATIONS → 悬浮窗前台服务常驻通知
-                            // 永久缺失（服务在跑、用户无控制入口）。
-                            // 此处对存量用户补一次请求；系统在两次拒绝后自动不再弹窗，无骚扰。
-                            LaunchedEffect(Unit) {
-                                requestNotificationPermissionIfNeeded()
-                            }
-
-                            // FD-01c：外部分享的预设文本直接进入统一导入对话框
-                            pendingSharedText?.let { shared ->
-                                com.silas.omaster.ui.create.ClipboardImportDialog(
-                                    initialText = shared,
-                                    onDismiss = { pendingSharedText = null }
+                            if (showWelcomeFlow) {
+                                WelcomeFlow(
+                                    navController = navController,
+                                    onAgree = {
+                                        OMasterApplication.getInstance().setUserAgreed(true)
+                                        OMasterApplication.getInstance().initUMeng()
+                                        requestNotificationPermissionIfNeeded()
+                                        showWelcomeFlow = false
+                                    },
+                                    onDisagree = {
+                                        finish()
+                                    }
                                 )
-                            }
+                            } else {
+                                MainApp(
+                                    navController = navController,
+                                    config = config
+                                )
 
-                            // P1-PHOTO-RECOGNITION：外部分享的图片 → 照片识别页
-                            pendingSharedImageUri?.let { uri ->
-                                LaunchedEffect(uri) {
-                                    navController.navigate(Screen.PhotoRecognition(uri))
-                                    pendingSharedImageUri = null
+                                // v1.6.15 兼容性修复：存量升级用户（已同意过隐私政策）
+                                // 此前从不请求 POST_NOTIFICATIONS → 悬浮窗前台服务常驻通知
+                                // 永久缺失（服务在跑、用户无控制入口）。
+                                // 此处对存量用户补一次请求；系统在两次拒绝后自动不再弹窗，无骚扰。
+                                LaunchedEffect(Unit) {
+                                    requestNotificationPermissionIfNeeded()
+                                }
+
+                                // FD-01c：外部分享的预设文本直接进入统一导入对话框
+                                pendingSharedText?.let { shared ->
+                                    com.silas.omaster.ui.create.ClipboardImportDialog(
+                                        initialText = shared,
+                                        onDismiss = { pendingSharedText = null }
+                                    )
+                                }
+
+                                // P1-PHOTO-RECOGNITION：外部分享的图片 → 照片识别页
+                                pendingSharedImageUri?.let { uri ->
+                                    LaunchedEffect(uri) {
+                                        navController.navigate(Screen.PhotoRecognition(uri))
+                                        pendingSharedImageUri = null
+                                    }
                                 }
                             }
                         }
@@ -443,6 +460,19 @@ fun MainApp(
                 mainActivity.pendingShortcutAction = null
             }
         }
+    }
+
+    // 【v1.7.7】消费桌面小组件行点击：直达指定预设详情页（消费一次）
+    LaunchedEffect(Unit) {
+        val mainActivity = activity as? MainActivity ?: return@LaunchedEffect
+        val presetId = mainActivity.pendingWidgetPresetId ?: return@LaunchedEffect
+        val route = navController.currentBackStackEntry?.destination?.route
+        // startDestination 恒为 Home，先回首页再进详情，保证返回栈顺序正确
+        if (route == null || !route.contains("Home")) {
+            navController.popBackStack(Screen.Home, false)
+        }
+        navController.navigate(Screen.Detail(presetId))
+        mainActivity.pendingWidgetPresetId = null
     }
 
     // 检查是否需要数据迁移
@@ -801,6 +831,11 @@ fun MainApp(
                     // 【v1.6.13】今日灵感卡 → 预设参数详情
                     onNavigateToPresetDetail = { presetId ->
                         navController.navigate(Screen.Detail(presetId))
+                    },
+                    // 【v1.7.7 P0 修复】订阅雷达「管理订阅」此前未接线（默认空 lambda），
+                    // 点击无任何反应 → 补真实导航到订阅管理页
+                    onNavigateToSubscription = {
+                        navController.navigate(Screen.Subscription)
                     },
                     onScrollStateChanged = { isScrollingUp ->
                         isHomeScrollingUp = isScrollingUp

@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.R
 import com.silas.omaster.data.config.ConfigCenter
@@ -122,7 +123,8 @@ fun PresetRadarCard(
                     text = stringResource(R.string.radar_card_summary, radarEntries.size, totalUnseen),
                     style = MaterialTheme.typography.bodySmall,
                     color = themedTextSecondary(),
-                    maxLines = 1
+                    maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -210,7 +212,8 @@ private fun RadarDetailSheet(
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         color = themedTextPrimary(),
-                        maxLines = 1
+                        maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = stringResource(R.string.radar_source_total, sub.presetCount),

@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.R
 import com.silas.omaster.data.local.CheckInManager
@@ -167,7 +168,8 @@ private fun StatCard(
                 style = MaterialTheme.typography.titleSmall,
                 color = themedTextPrimary(),
                 fontWeight = FontWeight.Bold,
-                maxLines = 1
+                maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(2.dp))
@@ -177,7 +179,8 @@ private fun StatCard(
                 style = MaterialTheme.typography.labelSmall,
                 color = themedTextSecondary(),
                 textAlign = TextAlign.Center,
-                maxLines = 1
+                maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
             )
         }
     }

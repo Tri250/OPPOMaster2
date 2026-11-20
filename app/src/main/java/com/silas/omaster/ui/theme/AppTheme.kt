@@ -11,6 +11,8 @@ enum class BrandTheme(
     val hexCode: String
 ) {
     Hasselblad("hasselblad", R.string.brand_hasselblad, R.string.color_hasselblad_orange, HasselbladOrange, "#FF6600"),
+    // 【v1.7.7】Reno17 系列风格（整体默认主题）：星光蓝 + 极光蓝紫渐变 + 玻璃背板
+    OPPOReno17("oppo_reno17", R.string.brand_oppo_reno17, R.string.color_reno17_starlight, Reno17Blue, "#3D6DF0"),
     Zeiss("zeiss", R.string.brand_zeiss, R.string.color_zeiss_blue, ZeissBlue, "#005A9C"),
     Leica("leica", R.string.brand_leica, R.string.color_leica_red, LeicaRed, "#CC0000"),
     Ricoh("ricoh", R.string.brand_ricoh, R.string.color_ricoh_green, RicohGreen, "#00A95C"),
@@ -22,7 +24,7 @@ enum class BrandTheme(
 
     companion object {
         fun fromId(id: String): BrandTheme {
-            return entries.find { it.id == id } ?: Hasselblad
+            return entries.find { it.id == id } ?: OPPOReno17
         }
     }
 }

@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.silas.omaster.R
 import com.silas.omaster.model.ColorCard
@@ -148,13 +149,15 @@ private fun CardHeader(card: ColorCard, dateLabel: String, drawCount: Int) {
             Text(
                 stringResource(card.themeResId),
                 style = MaterialTheme.typography.headlineSmall,
-                color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1
+                color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 stringResource(card.descriptionResId),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.85f), maxLines = 1
+                color = Color.White.copy(alpha = 0.85f), maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
             )
         }
 

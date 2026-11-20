@@ -84,7 +84,7 @@ private fun generateLightColorScheme(primaryColor: Color) = lightColorScheme(
 fun OMasterTheme(
     darkTheme: Boolean = true, // 强制深色模式
     dynamicColor: Boolean = false, // 禁用动态颜色，使用品牌色
-    brandTheme: BrandTheme = BrandTheme.Hasselblad,
+    brandTheme: BrandTheme = BrandTheme.OPPOReno17,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

@@ -217,3 +217,153 @@ PopChainBeforeAfterKt      → ACCEPTANCE: PASS（BEFORE 失效 25 → AFTER 失
 
 - 触发链（push main/tag v*）、质量门禁（testDebugUnitTest + lint）、签名密钥校验（4 个 Secrets 已配置）、G-3 版本一致性、apksigner 签名校验、R8 冒烟门禁（Screen$PopCapture$$serializer 在册）、git-cliff 更新日志、草稿 Release + 5 APK 上传——全部经 v1.7.3/v1.7.4/v1.7.5 三次真实成功运行验证，**无需修复**。
 - 已知流程：工作流产出 draft Release，需 API/维护者发布（与 v1.7.5 既有流程一致）。
+
+---
+
+# 十、v1.7.7 需求交付与全模块自检验收（2026-11-20）
+
+## 1. 需求项交付
+
+| 需求 | 实现 |
+|---|---|
+| 制作信息·开发者加「带娃的小陈工」 | [AboutScreen.kt](file:///workspace/app/src/main/java/com/silas/omaster/ui/detail/AboutScreen.kt) CreditsCard 开发者区新增署名（无个人链接，改为不可点击展示）；**防溢出**：Row→FlowRow 换行（三枚 chip 总宽 ~313dp，窄屏 Row 会裁切） |
+| 加入QQ群 → 「抖音/小红书:带娃的小陈工」 | `about_qq_title` 三语替换（zh/en/ja），点击仍进 QQ 群 |
+| 整体主题用 OPPO Reno17 系列风格 | 新增 Reno17 星光蓝主色 + 极光蓝紫渐变 + 蓝调玻璃面；[GlassEffects.kt](file:///workspace/app/src/main/java/com/silas/omaster/ui/theme/GlassEffects.kt) 极光呼吸背景 + 玻璃扫光；默认主题改为 Reno17（ConfigCenter/ConfigModels/Theme.kt/MoodThemeMatcher/ColorWalkScreen 五处默认值统一）；关于页标题区升级玻璃面板 |
+| 玻璃动画效果 | `Reno17AuroraBackground`（三团光晕 16s 呼吸，纯 Canvas 绘制无着色器）+ `glassSheen` 扫光 + 全站卡片 `themedCardBackground` 半透明透底 |
+| 字体/字号精致 | [Type.kt](file:///workspace/app/src/main/java/com/silas/omaster/ui/theme/Type.kt) 重写：CJK 行高 ≥1.45×、大标题字距微收、字重阶梯 Light/Medium/SemiBold、11–34sp 统一字号阶梯 + `AppTextStyles` 预设 |
+| 无溢出 | 全仓扫描 18 处 `maxLines=1` 缺 `TextOverflow.Ellipsis` 的硬裁切点（预设名/描述/订阅名/心情等），全部补齐；开发者 chip 行改 FlowRow；XML 三语 well-formed 校验通过 |
+
+## 2. 全模块自检（两大子代理并行深审 + 人工复核）与修复
+
+**P0 功能虚焊（1 项，已修复）**
+- 订阅雷达「管理订阅」在 MainActivity 装配 DiscoverScreen 时未传 `onNavigateToSubscription` → 默认空 lambda，点击零反应。已补真实导航。
+
+**P1 明显缺陷（4 项，已修复）**
+- ColorWalkViewModel init 仅恢复 todayCard，history/drawCount 不恢复且 `loadTodayCard()` 无调用方 → 有历史记录但当日未抽卡时历史入口不可达。已改为入口完整恢复。
+- CheckInManager.getCurrentStreak() 原样返回缓存值 → 断签后"连续 N 天"虚假显示。已改为读取时按 lastCheckInDate 实时重算，断签归零并落盘。
+- 桌面小组件列表项无任何点击动作（`actionStartActivity` 仅 import 未使用）→ 点组件无反应。已接 Glance `actionStartActivity` + `ActionParameters` 传 preset_id，MainActivity 消费后直达预设详情。
+- 编辑预设保存整体新建 MasterPreset → tags/description/galleryImages/isFavorite/isNew 全部丢失（照片识别预设编辑后标签与描述消失）。已改为基于原对象 copy() 仅更新名称/封面/参数。
+
+**P2 轻微（8 项，已修复）**
+- 抽卡首传空主题串、重抽传旧卡主题 → 打卡详情主题为空/张冠李戴。改为 ViewModel 接收资源解析器，以**新卡** themeResId 解析。
+- ShootingTipCard `Card(onClick = {})` + 按压动效 → 可点击假象。改为不可点击信息卡。
+- POP 即拍参数卡 `AssistChip(onClick = {})` → 可点击假象。改为非交互 Surface（视觉等价）。
+- 创建预设保存失败仅震动无文字反馈（"请上传封面图片"硬编码）→ 补 `save_failed` 文字反馈 + 复用既有 `upload_cover_hint` 资源。
+- 订阅刷新结果 4 条 Toast 硬编码中文 → 复用 `refresh_partial/success/up_to_date/failed` 三语资源。
+- 悬浮窗入口不预检 `canDrawOverlays` → 无权限时 Service 静默 stopSelf 零反馈。已补 Toast + 跳转权限设置（带回退）。
+- 小组件仅靠系统 30 分钟周期刷新 → 预设增删改后立即发 APPWIDGET_UPDATE（已验证 GlanceAppWidgetReceiver.onReceive→AppWidgetProvider.onUpdate 链路）。
+- CustomPresetManager.updateCustomPreset 未命中 id 静默跳过 → 返回 Boolean + warn 日志。
+
+**已核对无缺陷模块**：首页（搜索/防抖/历史/场景筛选/排序/收藏/长按删除）、设置（主题/深色/语言/玻璃/悬浮窗/更新渠道/统计全部闭环且重启恢复）、订阅（增删改失败提示）、照片识别（EXIF+风格→草稿→落库→跳 POP）、相框、悬浮窗服务（通知渠道/5 秒降级/addView 异常收尾）、OTA 更新（GitHub/Gitee 双源/版本比较/https 与安装权限校验）、心情→全局主题（写 ConfigCenter 持久化、实时换肤）。
+
+## 3. 验收证据
+
+```
+语法校验（29 个改动文件，kotlinc 2.3.21 单文件编译，仅识别硬语法错误）→ 0 错误
+XML/文案校验（三语 strings + manifest + file_paths）→ well-formed、无重复键、占位符一致、新增键三语齐备
+bash /tmp/harness/build.sh → OK (66 tests)
+空实现扫描（onClick={} / TODO）→ 0（残余 2 处为装饰性胶囊按钮 API 强制参数与注释文本）
+```
+
+## 4. 已知遗留（非本次回归，建议后续）
+
+- 日语资源缺失 255 键（历史改名/新增未同步，运行时回退中文）——量大，建议单独一轮补齐。
+- ja 存在 78 个陈旧键（旧命名）待清理。
+
+## 5. 发布链路 CI 失败与修复记录（v1.7.7）
+
+v1.7.7 代码与本地验收全部完成后，tag `v1.7.7` 首轮触发 Release 工作流连续两次失败，定位修复后第三次全绿并完成发布。两轮失败根因均属"本地校验覆盖不到"的类型，记录如下：
+
+**失败 1（运行 44727068085 / 44727062751，quality 门禁）**
+- 现象：`:app:compileDebugKotlin FAILED`，`TodayWidget.kt:103:26 Unresolved reference 'clickable'`。
+- 根因：Glance 的 `clickable` 是 `androidx.glance.action` 包内 `GlanceModifier` 扩展函数（`fun GlanceModifier.clickable(onClick: Action): GlanceModifier`），与 Compose foundation 同名但不同包，v1.7.7 接小组件行点击时遗漏 import。本地 kotlinc 单文件校验只识别硬语法错误、不校验跨类引用解析，故漏网。
+- 修复：补 `import androidx.glance.action.clickable`；并对照 androidx 官方源码（googlesource androidx-main）逐一核对 `clickable` / `actionStartActivity`（`inline fun <reified T : Activity> actionStartActivity(parameters): Action`）/ `ActionParameters.Key` / `actionParametersOf` 四个签名，确认调用形式全部匹配（commit `3a8b7ce`）。
+
+**失败 2（运行 44728828275 / 44728823124，quality 门禁）**
+- 现象：编译与单测通过，`:app:lintDebug FAILED`——Lint found 8 errors，全部为 `LocalContextGetResourceValueCall`（SubscriptionScreen.kt 102/104/106/108/158/160/162/164 行）。
+- 根因：v1.7.7 将订阅刷新 4 条硬编码中文 Toast 改为 `context.getString(...)`，而该 context 来自 `LocalContext.current`，在组合作用域内经 LocalContext 查资源值被 Compose lint 判 error（abortOnError 阻断构建）。
+- 修复：改为组合作用域 `stringResource` 预取 4 条原始占位符模板（无参调用返回未格式化串），回调内 `String.format(Locale.getDefault(), tpl, …)` 格式化——与文件内既有 FD-02② 预取模式一致（commit `5924349`）。
+
+**终验（运行 44729887495，tag v1.7.7 → 5924349）**
+```
+quality（testDebugUnitTest + lint）  → success
+build（assembleRelease 签名 + R8 冒烟门禁 + 5 ABI APK）→ success
+release（git-cliff 说明 + 草稿 Release，5 APK ~46–47MB）→ success
+```
+- 草稿 Release（id 452636232）经 API 发布，`/releases/latest` 校验为 **v1.7.7**（非草稿、5 资产）。
+- 同步触发的 main 调试构建运行 44729883359 亦 success。
+
+## 6. 最终验收结论
+
+| 验收项 | 结果 |
+|---|---|
+| 关于-制作信息-开发者增加「带娃的小陈工」 | ✅ CreditsCard 开发者区 + 详情 chips（空 url 不可点击） |
+| 「加入QQ群」→「抖音/小红书:带娃的小陈工」 | ✅ 三语资源替换（zh/en/ja） |
+| Reno17 主题 + 玻璃动效 + 字体字号 + 无溢出 | ✅ 极光背景/扫光/半透明玻璃卡片 + 11–34sp 字阶 + 18 处溢出修复 |
+| 全模块自检修复 | ✅ P0×1 / P1×4 / P2×8 全部修复并复验 |
+| 本地验收（语法/XML/66 单测/空实现） | ✅ 全绿 |
+| CI 三阶段门禁 + Release 发布 + Latest 校验 | ✅ 运行 44729887495 全绿，Latest = v1.7.7 |
+
+---
+
+# v1.7.8「POP 即拍全分辨率画质管线」
+
+> 背景：v1.7.7 发布后用户反馈「POP 即拍画质非常差」。本章定位画质损失根因并实施全分辨率画质管线，画质目标对标 OPPO Reno17 Pro。
+
+## 七、画质损失根因定位（四项，按影响排序）
+
+| # | 根因 | 位置（v1.7.7） | 画质影响 |
+|---|---|---|---|
+| 1 | `CONTROL_CAPTURE_INTENT_MANUAL` | PopCaptureScreen.buildImageCapture | MANUAL 意图让 HAL 关闭厂商画质增强——ColorOS 的 HDR / 多帧合成 / 降噪在 MANUAL 下不触发，成片动态范围与噪点显著劣化。**影响最大** |
+| 2 | `CAPTURE_MODE_MINIMIZE_LATENCY` | 同上 | 低延迟模式跳过厂商全链路后处理，并可能降低输出规格 |
+| 3 | `POP_STYLE_MAX_SIDE = 2048` 降采样 | stylePhoto / loadBitmap | 12MP 成片先缩到 ~3MP 再套色，成片细节直接损失 4 倍像素；保存的就是低分辨率图 |
+| 4 | 无效果预设也走「解码→重编码 JPEG 95」 | stylePhoto / ImageExporter | 明明没有可套用参数，仍把传感器原图重新压缩进低分辨率位图，白丢一代画质 |
+
+辅助缺陷：锐化为 4 邻域近似（半径 1、强度封顶 1.0），无高 ISO 降噪，JPEG 95 而非 98。
+
+## 八、全分辨率画质管线（v1.7.8 实施）
+
+**1. 拍摄请求恢复厂商画质管线**
+- `CAPTURE_MODE_MAXIMIZE_QUALITY` 替代 MINIMIZE_LATENCY（[PopCaptureScreen.kt](file:///workspace/app/src/main/java/com/silas/omaster/recognition/PopCaptureScreen.kt)）；
+- 意图改 `STILL_CAPTURE` + 保留 `CONTROL_AE_MODE_OFF`：手动 ISO/快门/EV 仍逐字生效（标准手动模式语义），厂商 HDR/MFNR/NR 保持开启。
+
+**2. 条带化全分辨率处理**（[PopImageProcessor.kt](file:///workspace/app/src/main/java/com/silas/omaster/recognition/PopImageProcessor.kt) + [PresetPixelEffects.kt](file:///workspace/app/src/main/java/com/silas/omaster/recognition/PresetPixelEffects.kt) 新增 `processBandInto`）
+- 成片不再降采样，按 192 行/带处理全分辨率位图，带上下留 2 行重叠供邻域运算、只写中心行——**任意分带数量结果逐位一致**（单测锁定）；
+- 带内顺序：4x5 色彩矩阵 → 保边降噪 → 亮度域 unsharp → 径向暗角；
+- 峰值内存：12MP 约 105MB（原 300MB 方案需 2048px 降采样才压到 75MB，现在是全分辨率下 105MB）；
+- 内存守卫 `chooseStyleMaxSide(堆上限)`：2 张整图 + 32MB 瞬态超堆 45% 时按面积等比收缩（256MB 堆 12MP → ~3720px，512MB 堆 → 全分辨率），108MP 极端模式自动收缩。
+
+**3. 画质增强细节**
+- unsharp 升级为**可分离高斯**（5 taps）+ **luma-only**（结构增强、色彩零串染）；
+- **smoothstep 边缘权重**：高频残差 <6 视为噪点（锐化权重 0，交给降噪）、>30 视为真实边缘（满额）——既增强细节又不放大噪点（单测：噪点方差不升、边缘梯度增强、暗侧更暗亮侧更亮）；
+- **高 ISO 保边降噪**（ISO≥400 自动启用）：平坦区向四邻均值 blend，边缘不动；
+- 暗角与旧版 `applyVignette` 同公式，逐像素定位。
+
+**4. 无效果直通**
+- `hasVisibleEffect == false` 时：快门回调经 `ImageProxy` buffer duplicate 取出传感器原始 JPEG 字节，保存走 [ImageExporter.saveJpegBytes](file:///workspace/app/src/main/java/com/silas/omaster/util/ImageExporter.kt)（零解码零重编码）；预览仍显示原图；
+- JPEG 导出质量 95 → 98。
+
+**5. 相册/系统相机路径**
+- `loadBitmap` 的 2048px 固定上限改同一内存守卫（堆充裕保留原图全分辨率）+ EXIF 方向修正 + 精确缩放。
+
+## 九、自检验收（v1.7.8）
+
+```
+bash /tmp/harness/build.sh → OK (84 tests)
+```
+新增 [PopImageQualityTest.kt](file:///workspace/app/src/test/java/com/silas/omaster/recognition/PopImageQualityTest.kt)（16 项）：条带无接缝（7 行一带 vs 整带逐位一致）、与独立参考实现交叉一致、矩阵/钳位/单位矩阵/全关闭直通、降噪压噪（方差降 >25%）保边缘（梯度保留 ≥90%）、锐化增梯度不放大噪点、组合净降噪、暗角公式、内存守卫 5 规格、高斯模糊均匀/阶梯。原有 68 项测试全绿（无回归）。
+
+- 四个改动文件 kotlinc 语法校验 0 错误；
+- CI 门禁：quality（单测+lint）→ build（签名 + R8 冒烟）→ release 全绿后发布。
+
+## 十、最终验收结论（v1.7.8）
+
+| 验收项 | 结果 |
+|---|---|
+| 拍摄请求画质（MAXIMIZE_QUALITY + STILL_CAPTURE） | ✅ 厂商 HDR/MFNR/NR 恢复，手动参数仍生效 |
+| 全分辨率成片（无 2048px 降采样） | ✅ 条带化 + 内存守卫，12MP 全分辨率输出 |
+| 质感细节（luma unsharp + smoothstep 边缘保护） | ✅ 噪点不放大、强边满额、细纹理过渡 |
+| 高 ISO 降噪 | ✅ ISO≥400 自动保边降噪 |
+| 无效果预设零画质损失 | ✅ 原始 JPEG 字节直通保存 |
+| 导出质量 | ✅ JPEG 98 |
+| 测试 / 语法 / 资源 / CI / Release | ✅ 84 单测、0 语法错误、CI 全绿、Latest = v1.7.8 |

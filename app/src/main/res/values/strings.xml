@@ -182,6 +182,7 @@
 
     <!-- 品牌名称 -->
     <string name="brand_hasselblad">哈苏</string>
+    <string name="brand_oppo_reno17">OPPO Reno17</string>
     <string name="brand_zeiss">蔡司</string>
     <string name="brand_leica">徕卡</string>
     <string name="brand_ricoh">理光</string>
@@ -193,6 +194,7 @@
 
     <!-- 品牌颜色名称 -->
     <string name="color_hasselblad_orange">哈苏橙</string>
+    <string name="color_reno17_starlight">星光蓝</string>
     <string name="color_zeiss_blue">蔡司蓝</string>
     <string name="color_leica_red">徕卡红</string>
     <string name="color_ricoh_green">理光绿</string>

@@ -3,7 +3,10 @@ package com.silas.omaster.widget
 import android.content.Context
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
+import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.provideContent
@@ -21,7 +24,11 @@ import com.silas.omaster.MainActivity
 import com.silas.omaster.R
 import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.util.DeviceDetector
+import com.silas.omaster.util.ShortcutRegistrar
 import kotlinx.coroutines.flow.first
+
+/** 【v1.7.7】小组件行点击参数：预设 id（写入 Activity intent extra，key 同名） */
+private val PresetIdKey = ActionParameters.Key<String>(ShortcutRegistrar.EXTRA_PRESET_ID)
 
 /**
  * MU-28 / v1.6：OMaster 桌面小组件（AndroidX Glance API）
@@ -91,6 +98,17 @@ private fun WidgetContent(
                     modifier = GlanceModifier
                         .fillMaxWidth()
                         .padding(bottom = if (index == presets.lastIndex) 0.dp else 2.dp)
+                        // 【v1.7.7 P1 修复】此前列表项无任何点击动作（actionStartActivity
+                        // 仅 import 未使用）→ 点组件无反应。现每行带 preset_id 参数
+                        // 直达该预设详情页（Glance 参数会按 key 名写入 Activity intent extra）。
+                        .clickable(
+                            actionStartActivity<MainActivity>(
+                                // MasterPreset.id 可空，空 id 时打开首页（不跳详情）
+                                parameters = actionParametersOf(
+                                    PresetIdKey to (preset.id ?: "")
+                                )
+                            )
+                        )
                 )
             }
         } else {

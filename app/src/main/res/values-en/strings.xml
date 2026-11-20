@@ -129,6 +129,7 @@
 
     <!-- Brand Names -->
     <string name="brand_hasselblad">Hasselblad</string>
+    <string name="brand_oppo_reno17">OPPO Reno17</string>
     <string name="brand_zeiss">ZEISS</string>
     <string name="brand_leica">Leica</string>
     <string name="brand_ricoh">Ricoh</string>
@@ -140,6 +141,7 @@
 
     <!-- Brand Color Names -->
     <string name="color_hasselblad_orange">Hasselblad Orange</string>
+    <string name="color_reno17_starlight">Starlight Blue</string>
     <string name="color_zeiss_blue">ZEISS Blue</string>
     <string name="color_leica_red">Leica Red</string>
     <string name="color_ricoh_green">Ricoh Green</string>

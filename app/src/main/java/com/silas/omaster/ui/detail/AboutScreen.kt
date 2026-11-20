@@ -77,6 +77,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
@@ -91,6 +92,8 @@ import com.silas.omaster.ui.animation.fluidPressScale
 import com.silas.omaster.ui.components.OMasterTopAppBar
 import com.silas.omaster.ui.theme.AppDesign
 import com.silas.omaster.ui.theme.CardBorderLight
+import com.silas.omaster.ui.theme.glassSheen
+import com.silas.omaster.ui.theme.glassSurface
 import com.silas.omaster.ui.theme.themedBackground
 import com.silas.omaster.ui.theme.themedCardBackground
 import com.silas.omaster.ui.theme.themedTextPrimary
@@ -355,7 +358,8 @@ private fun DeviceCard(modifier: Modifier = Modifier) {
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = themedTextPrimary(),
-                        maxLines = 1
+                        maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(6.dp))
 
@@ -648,10 +652,13 @@ private fun AppTitleSection(
     isCheckingUpdate: Boolean = false,
     onCheckUpdate: () -> Unit = {}
 ) {
+    // 【v1.7.7 Reno17 玻璃化】标题区升级为玻璃面板：半透明填充 + 蓝调棱边 + 缓慢扫光
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 32.dp),
+            .glassSurface(shape = RoundedCornerShape(28.dp))
+            .glassSheen(shape = RoundedCornerShape(28.dp))
+            .padding(vertical = 24.dp, horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // 应用名称（O 使用主题色）
@@ -855,6 +862,7 @@ private data class Contributor(
     val url: String
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CreditsCard(context: android.content.Context) {
     val contributors = listOf(
@@ -917,11 +925,16 @@ private fun CreditsCard(context: android.content.Context) {
 
                 val developers = listOf(
                     "Silas" to "https://xhslink.com/m/2gh56F1blnO",
-                    "Luminary" to "https://github.com/fengyec2"
+                    "Luminary" to "https://github.com/fengyec2",
+                    // v1.7.7：运营/内容作者（抖音·小红书同名账号）
+                    "带娃的小陈工" to ""
                 )
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // v1.7.7 防溢出：开发者署名改用 FlowRow 换行（新增"带娃的小陈工"后
+                // 三枚 chip 总宽 ~313dp，窄屏（360dp 可用 ~312dp）Row 会裁切）
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     developers.forEach { (name, url) ->
                         DeveloperChip(name = name, url = url, context = context)
@@ -1001,6 +1014,7 @@ private fun DeveloperChip(name: String, url: String, context: android.content.Co
     // 【v1.6.13】ColorOS 17 液态按压反馈
     val haptic = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
+    val clickable = url.isNotBlank()
     Box(
         modifier = Modifier
             .fluidPressScale(interactionSource, pressedScale = 0.94f)
@@ -1011,13 +1025,20 @@ private fun DeveloperChip(name: String, url: String, context: android.content.Co
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
                 shape = RoundedCornerShape(16.dp)
             )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = {
-                    haptic.perform(HapticFeedbackType.TextHandleMove)
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                    context.startActivity(intent)
+            .then(
+                if (clickable) {
+                    Modifier.clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = {
+                            haptic.perform(HapticFeedbackType.TextHandleMove)
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                            context.startActivity(intent)
+                        }
+                    )
+                } else {
+                    // 无个人链接的作者（如运营账号）：仅作署名展示，不可点击
+                    Modifier
                 }
             )
             .padding(horizontal = 12.dp, vertical = 6.dp)

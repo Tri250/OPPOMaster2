@@ -64,6 +64,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.silas.omaster.R
@@ -503,7 +504,8 @@ private fun CheckInEntryCard(
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = themedTextSecondary(),
-                    maxLines = 1
+                    maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -522,7 +524,8 @@ private fun CheckInEntryCard(
  */
 @Composable
 private fun ShootingTipCard(modifier: Modifier = Modifier) {
-    val interactionSource = remember { MutableInteractionSource() }
+    // 【v1.7.7 P2 修复】此前 Card(onClick = {}) + fluidPressScale：有按压动效却无任何行为，
+    // 构成"可点击假象"。该卡为纯信息展示，改为不可点击卡片，去掉动效误导。
     val tipRes = remember {
         val hour = LocalTime.now().hour
         when (hour) {
@@ -536,12 +539,9 @@ private fun ShootingTipCard(modifier: Modifier = Modifier) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .fluidPressScale(interactionSource)
             .border(1.dp, themedBorderLight(), RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(containerColor = themedCardBackground()),
-        shape = RoundedCornerShape(16.dp),
-        onClick = {},
-        interactionSource = interactionSource
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -874,14 +874,16 @@ private fun InspirationFlowCard(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = themedTextPrimary(),
-                            maxLines = 1
+                            maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = stringResource(R.string.discover_daily_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = themedTextSecondary(),
-                            maxLines = 1
+                            maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                         )
                     }
 
@@ -1040,6 +1042,7 @@ private fun InspirationFavoritesSheet(
                             style = MaterialTheme.typography.labelSmall,
                             color = themedTextPrimary(),
                             maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp)
                         )
                     }

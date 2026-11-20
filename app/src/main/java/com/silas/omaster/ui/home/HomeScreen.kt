@@ -698,6 +698,7 @@ private fun RecommendedPresetChip(
                 text = PresetI18n.getLocalizedPresetName(preset.name),
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface
             )
             preset.filter?.let { filter ->
@@ -761,7 +762,10 @@ private fun PresetGrid(
                     resources.getString(R.string.refresh_up_to_date)
                 is HomeViewModel.RefreshResult.Failed ->
                     resources.getString(R.string.refresh_failed)
-                is HomeViewModel.RefreshResult.NoSubscriptions -> ""
+                // 【v1.7.7 P2 修复】无订阅时此前返回空串 → 下拉刷新完全静默，
+                // 用户得不到任何反馈。改为复用 sub_empty 文案明确告知。
+                is HomeViewModel.RefreshResult.NoSubscriptions ->
+                    resources.getString(R.string.sub_empty)
             }
             if (message.isNotEmpty()) {
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()

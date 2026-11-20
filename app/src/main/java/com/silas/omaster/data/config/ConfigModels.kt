@@ -22,7 +22,7 @@ data class FloatingWindowConfig(
  * UI 配置组合
  */
 data class UiConfig(
-    val theme: BrandTheme = BrandTheme.Hasselblad,
+    val theme: BrandTheme = BrandTheme.OPPOReno17,
     val language: AppLanguage = AppLanguage.SYSTEM,
     val darkMode: Boolean = true
 )

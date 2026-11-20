@@ -72,6 +72,11 @@ fun SubscriptionScreen(
     val updateDoneTemplate = stringResource(R.string.sub_update_done)
     val updateUptodateMsg = stringResource(R.string.sub_update_uptodate)
     val updateFailMsg = stringResource(R.string.sub_update_fail)
+    // 刷新结果文案模板：无参 stringResource 取原始占位符串，回调内 String.format 格式化
+    val refreshPartialTpl = stringResource(R.string.refresh_partial)
+    val refreshSuccessTpl = stringResource(R.string.refresh_success)
+    val refreshUpToDateMsg = stringResource(R.string.refresh_up_to_date)
+    val refreshFailedMsg = stringResource(R.string.refresh_failed)
     val autoUpdateEnabled by config.autoUpdateSubscriptionFlow.collectAsState()
     
     val sheetState = rememberModalBottomSheetState()
@@ -95,11 +100,16 @@ fun SubscriptionScreen(
                 }
                 if (enabledSubs.isNotEmpty()) {
                     PresetRepository.getInstance(context).reloadDefaultPresets()
+                    // 【v1.7.7 P2 修复】i18n 泄漏：4 条结果文案硬编码中文 →
+                    // 复用已有资源（与首页下拉刷新同源，三语一致）；
+                    // 模板组合期预取，回调内格式化（规避 LocalContextGetResourceValueCall）
                     val message = when {
-                        successCount > 0 && upToDateCount > 0 -> "成功更新 ${successCount} 个，${upToDateCount} 个已是最新"
-                        successCount > 0 -> "成功更新 ${successCount} 个订阅"
-                        upToDateCount > 0 -> "所有订阅均已是最新"
-                        else -> "更新失败，请检查网络"
+                        successCount > 0 && upToDateCount > 0 ->
+                            String.format(Locale.getDefault(), refreshPartialTpl, successCount, upToDateCount)
+                        successCount > 0 ->
+                            String.format(Locale.getDefault(), refreshSuccessTpl, successCount)
+                        upToDateCount > 0 -> refreshUpToDateMsg
+                        else -> refreshFailedMsg
                     }
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
@@ -146,11 +156,14 @@ fun SubscriptionScreen(
                                 }
                                 if (enabledSubs.isNotEmpty()) {
                                     PresetRepository.getInstance(context).reloadDefaultPresets()
+                                    // 【v1.7.7 P2 修复】同上：结果文案多语言化（模板组合期预取，回调内格式化）
                                     val message = when {
-                                        successCount > 0 && upToDateCount > 0 -> "成功更新 ${successCount} 个，${upToDateCount} 个已是最新"
-                                        successCount > 0 -> "成功更新 ${successCount} 个订阅"
-                                        upToDateCount > 0 -> "所有订阅均已是最新"
-                                        else -> "更新失败，请检查网络"
+                                        successCount > 0 && upToDateCount > 0 ->
+                                            String.format(Locale.getDefault(), refreshPartialTpl, successCount, upToDateCount)
+                                        successCount > 0 ->
+                                            String.format(Locale.getDefault(), refreshSuccessTpl, successCount)
+                                        upToDateCount > 0 -> refreshUpToDateMsg
+                                        else -> refreshFailedMsg
                                     }
                                     Logger.i("SubscriptionScreen", "刷新完成: 成功=$successCount, 最新=$upToDateCount, 失败=$failCount")
                                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()

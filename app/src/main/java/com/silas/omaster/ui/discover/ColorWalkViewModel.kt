@@ -34,23 +34,31 @@ class ColorWalkViewModel(
     val uiState: StateFlow<ColorWalkUiState> = _uiState.asStateFlow()
 
     init {
-        _state.value = _state.value.copy(
-            todayCard = colorWalkManager.getTodayCard(),
-            isChallengeCompleted = checkInManager.getTodayRecord()?.hasCompletedChallenge == true
-        )
+        // 【v1.7.7 P1 修复】此前仅恢复 todayCard，history/drawCount 停留在初始空值，
+        // 且 loadTodayCard() 全项目无调用方 → 有历史记录但当日未抽卡时，
+        // 历史入口不显示、历史面板不可达。改为入口即完整恢复全部状态。
+        loadTodayCard()
     }
 
-    fun drawCard(themeName: String) {
+    /**
+     * 抽卡（首抽）
+     *
+     * 【v1.7.7 P2 修复】此前由 UI 传入 themeName，首抽传空串 → 打卡详情主题为空；
+     * 重抽传的是"旧卡"主题 → 与 cardId 张冠李戴。改为传入资源解析器，
+     * 由 ViewModel 用**新抽出的卡**的 themeResId 解析本地化主题名，保证数据一致。
+     */
+    fun drawCard(themeResolver: (Int) -> String) {
         if (!colorWalkManager.canDrawMore()) return
         val card = colorWalkManager.drawTodayCard() ?: return
-        checkInManager.checkIn(cardId = card.id, cardTheme = themeName)
+        checkInManager.checkIn(cardId = card.id, cardTheme = themeResolver(card.themeResId))
         applyCardState(card)
     }
 
-    fun redrawCard(themeName: String) {
+    /** 重抽（同样以新卡主题记账） */
+    fun redrawCard(themeResolver: (Int) -> String) {
         if (!colorWalkManager.canDrawMore()) return
         val nextCard = colorWalkManager.drawTodayCard() ?: return
-        checkInManager.checkIn(cardId = nextCard.id, cardTheme = themeName)
+        checkInManager.checkIn(cardId = nextCard.id, cardTheme = themeResolver(nextCard.themeResId))
         applyCardState(nextCard)
     }
 
