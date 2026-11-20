@@ -927,6 +927,7 @@
     <!-- About · Project & community -->
     <string name="about_project_title">Project repository</string>
     <string name="about_recommend_title">Recommended</string>
+    <string name="about_recommend_subtitle">抖音/小红书:带娃的小陈工</string>
     <!-- ═══════════════ Discover 2.0 · Subscription radar ═══════════════ -->
     <string name="radar_card_title">Subscription Radar</string>
     <string name="radar_card_summary">%1$d sources updated, %2$d new presets</string>

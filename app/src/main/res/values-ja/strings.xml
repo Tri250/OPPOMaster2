@@ -726,6 +726,7 @@
     <!-- について · プロジェクトとコミュニティ -->
     <string name="about_project_title">プロジェクト</string>
     <string name="about_recommend_title">おすすめ</string>
+    <string name="about_recommend_subtitle">抖音/小红书:带娃的小陈工</string>
     <!-- ═══════════════ 発見 2.0 · サブスク更新レーダー ═══════════════ -->
     <string name="radar_card_title">サブスク更新レーダー</string>
     <string name="radar_card_summary">%1$d 件のソースが更新、新規プリセット %2$d 件</string>

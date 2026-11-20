@@ -152,6 +152,58 @@ class PopImageQualityTest {
     }
 
     @Test
+    fun `条带写回偏移必须跳过带顶重叠行`() {
+        // 复刻生产 processBitmapBand 的完整调度：抽取带（含重叠）→ processBandInto
+        // → 按 bandWriteSrcOffset 写回中心行。v1.7.9 曾把写回源偏移写成 0，
+        // 导致除首带外每带把 padTop=2 行未完成降噪/锐化/暗角的重叠行写进成片
+        // 并整体错位 → 成片每 192 行出现横向"线条"。
+        val w = 24; val h = 600
+        val rnd = Random(1234)
+        val src = IntArray(w * h) { rgb(rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256)) }
+        val m = satMatrix; val s = 0.5f; val dn = 0.55f; val v = 0.6f
+        val radius = 2
+
+        // 偏移公式钉死：padTop 行重叠必须整体跳过
+        assertEquals(radius * w, PresetPixelEffects.bandWriteSrcOffset(radius, w))
+        assertEquals(0, PresetPixelEffects.bandWriteSrcOffset(0, w))
+
+        // 整带一步
+        val outFull = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            src.copyOf(), outFull, w, h, 0, h, 0, h, m, s, dn, v
+        )
+
+        // 192 行条带（真实 BAND_ROWS）多带调度
+        val outMulti = IntArray(w * h)
+        var y = 0
+        while (y < h) {
+            val y1 = minOf(h, y + 192)
+            val top = (y - radius).coerceAtLeast(0)
+            val bot = (y1 + radius).coerceAtMost(h)
+            val padTop = y - top
+            val bandH = bot - top
+            val band = IntArray(w * bandH) { i ->
+                val bx = i % w; val by = top + i / w
+                src[by * w + bx]
+            }
+            val out = IntArray(w * bandH)
+            PresetPixelEffects.processBandInto(
+                band, out, w, h, top, bandH, padTop, y1 - y, m, s, dn, v
+            )
+            System.arraycopy(
+                out, PresetPixelEffects.bandWriteSrcOffset(padTop, w),
+                outMulti, y * w, (y1 - y) * w
+            )
+            y = y1
+        }
+        assertTrue(
+            "多带写回应与整带一致（无接缝/线条），首个差异 idx=" +
+                outFull.indices.firstOrNull { outFull[it] != outMulti[it] },
+            outFull.contentEquals(outMulti)
+        )
+    }
+
+    @Test
     fun `条带处理与独立参考实现一致`() {
         val w = 24; val h = 17
         val rnd = Random(7)

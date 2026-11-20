@@ -286,8 +286,18 @@ object PresetPixelEffects {
             band, out, w, h, top, bandH, padTop, y1 - y0,
             matrix, sharpenAmount, denoise, vignette, radius
         )
-        dst.setPixels(out, 0, w, 0, y0, w, y1 - y0)
+        // 写回必须跳过带顶 padTop 行重叠：若从 0 开始，除首带外每带都会把
+        // padTop 行未完成降噪/锐化/暗角的重叠行写进成片并整体错位 → 每 192 行
+        // 出现横向"线条"（v1.7.9 真机缺陷根因）。偏移公式由 [bandWriteSrcOffset]
+        // 提供，与单测共用，防止回归。
+        dst.setPixels(out, bandWriteSrcOffset(padTop, w), w, 0, y0, w, y1 - y0)
     }
+
+    /**
+     * 条带写回源偏移：dst 写回 [y0, y1) 时，源数组必须从带顶 padTop 重叠行之后开始。
+     * 单测 `条带写回偏移必须跳过带顶重叠行` 依赖此公式的正确性。
+     */
+    fun bandWriteSrcOffset(padTop: Int, w: Int): Int = padTop * w
 
     /** 4x5 行主序矩阵原地应用（ARGB_8888 像素，结果钳位 0..255） */
     fun applyMatrixInto(px: IntArray, w: Int, h: Int, matrix: FloatArray) {

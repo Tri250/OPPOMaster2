@@ -1168,12 +1168,19 @@ private fun RecommendCard() {
                     fontWeight = FontWeight.Bold
                 )
             }
-            Text(
-                text = stringResource(R.string.about_recommend_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = themedTextPrimary()
-            )
+            Column {
+                Text(
+                    text = stringResource(R.string.about_recommend_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = themedTextPrimary()
+                )
+                Text(
+                    text = stringResource(R.string.about_recommend_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = themedTextSecondary()
+                )
+            }
         }
     }
 }

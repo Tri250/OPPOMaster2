@@ -969,6 +969,7 @@
     <!-- 关于页 · 项目与社群 -->
     <string name="about_project_title">项目地址</string>
     <string name="about_recommend_title">推荐</string>
+    <string name="about_recommend_subtitle">抖音/小红书:带娃的小陈工</string>
     <!-- ═══════════════ 发现 2.0 · 订阅更新雷达 ═══════════════ -->
     <string name="radar_card_title">订阅更新雷达</string>
     <string name="radar_card_summary">%1$d 个订阅源有更新，共 %2$d 条新预设</string>
