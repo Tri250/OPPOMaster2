@@ -47,6 +47,13 @@ class FilteredPreviewAnalyzer(
     private var flip = false
     private var lastEmit = 0L
 
+    /**
+     * 尺寸变化时被替换下来的旧缓冲。延后一帧回收：
+     * Compose 侧可能仍持有上一帧（同一 Bitmap 实例）尚未重绘，
+     * 立即 recycle 会触发 "Canvas: trying to use a recycled bitmap" 崩溃。
+     */
+    private var retired: Bitmap? = null
+
     override fun analyze(image: ImageProxy) {
         val now = SystemClock.elapsedRealtime()
         if (!enabled || now - lastEmit < FRAME_INTERVAL_MS) {
@@ -76,20 +83,36 @@ class FilteredPreviewAnalyzer(
         onFrame(out)
     }
 
-    /** 复用同尺寸缓冲，尺寸变化（首帧/分辨率切换）时重建 */
+    /** 复用同尺寸缓冲，尺寸变化（首帧/分辨率切换）时重建，旧缓冲延后回收 */
     private fun obtainBuffer(front: Boolean, w: Int, h: Int): Bitmap? {
         val slot = if (front) 0 else 1
         val existing = buffers[slot]
         if (existing != null && !existing.isRecycled && existing.width == w && existing.height == h) {
             return existing
         }
-        existing?.recycle()
-        return try {
-            Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { buffers[slot] = it }
+        val created = try {
+            Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         } catch (e: Exception) {
             buffers[slot] = null
             null
+        } ?: return null
+        if (existing != null && !existing.isRecycled) {
+            // 上一轮退役缓冲此时已无人绘制，可安全回收
+            retired?.recycle()
+            retired = existing
         }
+        buffers[slot] = created
+        return created
+    }
+
+    /** 分析器销毁时释放全部缓冲（含延后回收的退役实例） */
+    fun release() {
+        enabled = false
+        buffers.forEach { it?.recycle() }
+        buffers[0] = null
+        buffers[1] = null
+        retired?.recycle()
+        retired = null
     }
 
     /** 径向暗角（与 PresetPixelEffects.applyVignette 同参数），按尺寸缓存着色器 */

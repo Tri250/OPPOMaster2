@@ -1093,11 +1093,12 @@
     <string name="pop_preview">Styled photo</string>
     <string name="pop_viewfinder_hint">Tap the shutter to shoot, or pick a photo from gallery to restyle</string>
     <string name="pop_applied_params">Parameter application status</string>
-    <string name="pop_no_params">This preset has no camera parameters; only the filter style is applied</string>
+    <string name="pop_no_params">This preset has no applicable camera parameters</string>
     <string name="pop_pick_from_gallery">Pick from gallery</string>
     <string name="pop_shutter">Shutter</string>
     <string name="pop_save_to_gallery">Save styled photo to gallery</string>
     <string name="pop_applied_style">Applied style: %1$s</string>
+    <string name="pop_no_effect">%1$s has no machine-applicable parameters; captured as original</string>
     <string name="pop_read_failed">Failed to read photo</string>
     <string name="pop_saved">Saved to gallery</string>
     <string name="pop_save_failed">Save failed</string>
@@ -1107,7 +1108,7 @@
     <string name="pop_params_written">Written to capture (sensor-level)</string>
     <string name="pop_params_post">Applied (live viewfinder + final photo)</string>
     <string name="pop_params_unsupported">Cannot apply</string>
-    <string name="pop_unsupported_reasons">Reasons: device cannot disable auto exposure / manual exposure needs ISO and shutter paired / device does not support exposure compensation / value unparseable.</string>
+    <string name="pop_unsupported_reasons">Reasons: device cannot disable auto exposure / manual exposure needs ISO and shutter paired / device does not support exposure compensation / value unparseable / filter name not in the engine filter table.</string>
     <string name="pop_camera_permission_rationale">POP Capture needs camera permission: once granted, the viewfinder applies the preset filter and color parameters in real time; ISO / shutter / exposure compensation are written to the capture when the device supports it.</string>
     <string name="pop_camera_permission_button">Grant camera permission</string>
     <string name="pop_camera_permission_denied">No camera permission: use the system camera or pick a photo; color parameters are still fully applied after shooting.</string>

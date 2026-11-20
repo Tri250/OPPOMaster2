@@ -19,7 +19,9 @@ enum class UnsupportedReason {
     /** 设备不支持曝光补偿 */
     EV_UNAVAILABLE,
     /** 预设取值无法解析 */
-    VALUE_UNPARSEABLE
+    VALUE_UNPARSEABLE,
+    /** 滤镜名不在引擎滤镜表内（含未录入的新滤镜名），无法套用 */
+    FILTER_UNRECOGNIZED
 }
 
 /** 预设参数标识（UI 层映射为本地化标签） */
@@ -138,7 +140,7 @@ object PresetCapturePlan {
             if (present && value != null) params += ParamStatus(key, value, ApplyStatus.POST)
         }
         post(ParamKey.COLOR_TEMP, preset.colorTemperature?.let { "${it}K" }, preset.colorTemperature != null)
-        post(ParamKey.FILTER, preset.filter, preset.filter != null)
+        post(ParamKey.FILTER, preset.filter, isFilterApplicable(preset.filter))
         post(ParamKey.SATURATION, formatSigned(preset.saturation), preset.saturation != null)
         post(ParamKey.TONE, formatSigned(preset.tone), preset.tone != null)
         post(ParamKey.WARM_COOL, formatSigned(preset.warmCool), preset.warmCool != null)
@@ -148,12 +150,35 @@ object PresetCapturePlan {
         post(ParamKey.VIGNETTE, preset.vignette, preset.vignette != null)
         post(ParamKey.COLOR_HUE, formatSigned(preset.colorHue), preset.colorHue != null)
 
+        // 滤镜名未识别（引擎滤镜表外）：如实标记，绝不"假装 POST"
+        val filterValue = preset.filter
+        if (filterValue != null && !isFilterApplicable(filterValue)) {
+            params += ParamStatus(
+                ParamKey.FILTER, filterValue, ApplyStatus.UNSUPPORTED,
+                reason = UnsupportedReason.FILTER_UNRECOGNIZED
+            )
+        }
+
         return CapturePlan(
             iso = captureIso,
             shutterNs = captureShutter,
             evSteps = captureEv,
             params = params
         )
+    }
+
+    /** 显式中性滤镜名（用户主动选择"不加滤镜"，视为可套用） */
+    private val NEUTRAL_FILTER_NAMES = setOf("原图", "标准", "默认")
+
+    /**
+     * 滤镜是否可套用：引擎滤镜表内的滤镜名、或显式"原图/标准/默认" → true；
+     * 滤镜表外的滤镜名（新机型独占滤镜等） → false，由 UI 如实标记 FILTER_UNRECOGNIZED。
+     */
+    fun isFilterApplicable(filter: String?): Boolean {
+        if (filter.isNullOrBlank()) return false
+        val key = filter.trim().split(Regex("\\s+")).firstOrNull() ?: return false
+        if (key in NEUTRAL_FILTER_NAMES) return true
+        return PresetColorTransform.filterAdjustment(filter) != PresetColorTransform.NEUTRAL
     }
 
     /** "100" / "200-400" / "Auto" / null → ISO；不可解析 → null */

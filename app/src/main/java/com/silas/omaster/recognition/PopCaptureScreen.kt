@@ -109,6 +109,8 @@ fun PopCaptureScreen(
     val msgSaveFailed = stringResource(R.string.pop_save_failed)
     val msgNeedPhoto = stringResource(R.string.pop_need_photo)
     val msgCaptureFailed = stringResource(R.string.pop_capture_failed)
+    // 无可套用参数时的如实提示（不宣称"已套用"）
+    val msgNoEffect = stringResource(R.string.pop_no_effect, localizedPresetName)
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -148,6 +150,7 @@ fun PopCaptureScreen(
     DisposableEffect(Unit) {
         onDispose {
             analyzer.enabled = false
+            analyzer.release()
             imageAnalysis.clearAnalyzer()
             analyzerExecutor.shutdown()
         }
@@ -184,6 +187,26 @@ fun PopCaptureScreen(
         }
     }
 
+    /**
+     * 拍后套色管线（相机成片 / 系统相机 / 相册选图共用）：
+     * 降采样控制内存 → 套色 → 如实提示 → 回收中间位图。
+     *
+     * @param raw 原始位图（调用方交出所有权，内部按需回收）
+     */
+    fun stylePhoto(raw: Bitmap, preset: MasterPreset) {
+        scope.launch {
+            // 降采样同样放后台：12MP 成片缩放约 12.5MB 分配，避免主线程卡顿
+            val downscaled = withContext(Dispatchers.Default) { downscaleForStyle(raw) }
+            val styled = applyStyle(downscaled, preset)
+            appliedBitmap = styled
+            if (downscaled !== raw) raw.recycle()
+            if (styled !== downscaled) downscaled.recycle()
+            // 如实提示：确有机器可套用的参数才宣称"已套用"，否则明示按原图拍摄
+            toast = if (PresetColorTransform.hasVisibleEffect(preset)) msgApplied else msgNoEffect
+            isCapturing = false
+        }
+    }
+
     /** 快门：拍摄 → 拍后套色 → 预览 */
     fun captureWithPreset() {
         if (isCapturing) return
@@ -204,11 +227,7 @@ fun PopCaptureScreen(
                         toast = msgCaptureFailed
                         return
                     }
-                    scope.launch {
-                        appliedBitmap = applyStyle(bmp, preset)
-                        toast = msgApplied
-                        isCapturing = false
-                    }
+                    stylePhoto(bmp, preset)
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -229,12 +248,11 @@ fun PopCaptureScreen(
                 scope.launch {
                     val bmp = loadBitmap(context, uri)
                     if (bmp != null) {
-                        appliedBitmap = applyStyle(bmp, preset)
-                        toast = msgApplied
+                        stylePhoto(bmp, preset)
                     } else {
                         toast = msgReadFailed
+                        isCapturing = false
                     }
-                    isCapturing = false
                 }
             }
         } else {
@@ -251,12 +269,11 @@ fun PopCaptureScreen(
             scope.launch {
                 val bmp = loadBitmap(context, uri)
                 if (bmp != null) {
-                    appliedBitmap = applyStyle(bmp, preset)
-                    toast = msgApplied
+                    stylePhoto(bmp, preset)
                 } else {
                     toast = msgReadFailed
+                    isCapturing = false
                 }
-                isCapturing = false
             }
         }
     }
@@ -640,6 +657,27 @@ private fun rotateBitmap(src: Bitmap, degrees: Float): Bitmap {
     return try {
         Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
     } catch (e: Exception) { src }
+}
+
+/**
+ * POP 套色前的最大边长。相机成片为全传感器分辨率（12MP≈4000px），
+ * 全尺寸 CPU 套色（矩阵 + unsharp + 暗角）峰值内存约 300MB；
+ * 降到 2048px 后峰值约 75MB，中低端机不再 OOM/长时间卡死。
+ */
+private const val POP_STYLE_MAX_SIDE = 2048
+
+/** 超过最大边长的成片按比例降采样（不放大小图）；失败时退回原图 */
+private fun downscaleForStyle(src: Bitmap): Bitmap {
+    val w = src.width
+    val h = src.height
+    val maxSide = maxOf(w, h)
+    if (maxSide <= POP_STYLE_MAX_SIDE) return src
+    val scale = POP_STYLE_MAX_SIDE.toFloat() / maxSide
+    return try {
+        Bitmap.createScaledBitmap(src, (w * scale).toInt().coerceAtLeast(1), (h * scale).toInt().coerceAtLeast(1), true)
+    } catch (e: Exception) {
+        src
+    }
 }
 
 private suspend fun applyStyle(bitmap: Bitmap, preset: MasterPreset): Bitmap = withContext(Dispatchers.Default) {

@@ -892,11 +892,12 @@
     <string name="pop_preview">スタイル適用後の写真</string>
     <string name="pop_viewfinder_hint">シャッターで撮影 · ギャラリーから選んで套色</string>
     <string name="pop_applied_params">パラメータ適用状態</string>
-    <string name="pop_no_params">このプリセットに撮影パラメータはなく、フィルタースタイルのみ適用します</string>
+    <string name="pop_no_params">このプリセットに適用できる撮影パラメータはありません</string>
     <string name="pop_pick_from_gallery">ギャラリーから選択</string>
     <string name="pop_shutter">撮影</string>
     <string name="pop_save_to_gallery">スタイル写真をギャラリーに保存</string>
     <string name="pop_applied_style">「%1$s」スタイルを適用しました</string>
+    <string name="pop_no_effect">「%1$s」には適用可能なパラメータがなく、原图のまま撮影しました</string>
     <string name="pop_read_failed">写真の読み取りに失敗しました</string>
     <string name="pop_saved">ギャラリーに保存しました</string>
     <string name="pop_save_failed">保存に失敗しました</string>
@@ -906,7 +907,7 @@
     <string name="pop_params_written">撮影に書き込み済み（センサー有効）</string>
     <string name="pop_params_post">適用済み（リアルタイム表示 + 成片）</string>
     <string name="pop_params_unsupported">適用不可</string>
-    <string name="pop_unsupported_reasons">理由：自動露出OFF非対応 / マニュアル露出にはISOとシャッターの組が必要 / 露出补偿非対応 / 値が解析不能。</string>
+    <string name="pop_unsupported_reasons">理由：自動露出OFF非対応 / マニュアル露出にはISOとシャッターの組が必要 / 露出補正非対応 / 値が解析不能 / フィルター名がエンジンの滤镜表に未収録。</string>
     <string name="pop_camera_permission_rationale">POP 即撮にはカメラ権限が必要です：許可するとファインダーにプリセットのフィルターと調色パラメータをリアルタイムに適用し、ISO・シャッター・露出補正は機器が対応する場合に撮影へ書き込みます。</string>
     <string name="pop_camera_permission_button">カメラ権限を許可</string>
     <string name="pop_camera_permission_denied">カメラ権限なし：システムカメラまたは写真選択が利用できます。撮影後も調色パラメータは完全に適用されます。</string>

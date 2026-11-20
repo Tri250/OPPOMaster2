@@ -5,6 +5,7 @@ import com.silas.omaster.data.config.ConfigCenter
 import com.silas.omaster.data.local.CustomPresetManager
 import com.silas.omaster.data.local.FavoriteManager
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.recognition.SectionParamsParser
 import com.silas.omaster.util.JsonUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -201,13 +202,14 @@ class PresetRepository(
             .find { it.id == presetId }
         if (defaultPreset != null) {
             return@withContext defaultPreset.id?.let { id ->
-                defaultPreset.copy(isFavorite = favoriteManager.isFavorite(id))
+                // 数据桥接：sections 展示参数 → typed 引擎字段（POP 即拍套色依赖，见 SectionParamsParser）
+                SectionParamsParser.enrich(defaultPreset).copy(isFavorite = favoriteManager.isFavorite(id))
             }
         }
 
-        // 再查找自定义预设
+        // 再查找自定义预设（照片识别草稿/截图导入已自带 typed 字段，enrich 不会覆盖）
         val customPreset = customPresetManager.getPresetById(presetId)
-        customPreset?.copy(
+        customPreset?.let { SectionParamsParser.enrich(it) }?.copy(
             isFavorite = favoriteManager.isFavorite(presetId),
             isCustom = true
         )

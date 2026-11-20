@@ -135,6 +135,50 @@ class PresetCapturePlanTest {
     }
 
     @Test
+    fun `未识别滤镜名如实标记无法套用`() {
+        // 引擎滤镜表外的新机型独占滤镜：不得"假装 POST"
+        val plan = PresetCapturePlan.build(preset(filter = "经典负片", saturation = -14), renoRanges)
+        val filterStatus = plan.statusOf(ParamKey.FILTER)
+        assertEquals(ApplyStatus.UNSUPPORTED, filterStatus?.status)
+        assertEquals(UnsupportedReason.FILTER_UNRECOGNIZED, filterStatus?.reason)
+        // 其余数值参数仍正常 POST
+        assertEquals(ApplyStatus.POST, plan.statusOf(ParamKey.SATURATION)?.status)
+        // 带强度百分比的已识别滤镜仍 POST
+        assertEquals(ApplyStatus.POST,
+            PresetCapturePlan.build(preset(filter = "复古 75%"), renoRanges).statusOf(ParamKey.FILTER)?.status)
+        // 显式"原图/标准"是有意选择，视为可套用
+        assertEquals(ApplyStatus.POST,
+            PresetCapturePlan.build(preset(filter = "标准 0%"), renoRanges).statusOf(ParamKey.FILTER)?.status)
+        // null 滤镜不产生任何参数项
+        assertNull(PresetCapturePlan.build(preset(), renoRanges).statusOf(ParamKey.FILTER))
+    }
+
+    @Test
+    fun `sections 预设经桥接后调色参数全部拍后套用`() {
+        // 模拟内置预设：只有 sections（展示参数），经 SectionParamsParser 桥接后
+        // 引擎应拿到完整的拍后套用参数（P0 修复的端到端契约）
+        val preset = SectionParamsParser.enrich(
+            com.silas.omaster.model.MasterPreset(
+                coverPath = "", name = "胶片感",
+                sections = listOf(
+                    com.silas.omaster.model.PresetSection(
+                        items = listOf(
+                            com.silas.omaster.model.PresetItem(label = "@string/param_filter", value = "复古 75%"),
+                            com.silas.omaster.model.PresetItem(label = "@string/param_saturation", value = "+20"),
+                            com.silas.omaster.model.PresetItem(label = "@string/param_vignette", value = "开")
+                        )
+                    )
+                )
+            )
+        )
+        val plan = PresetCapturePlan.build(preset, renoRanges)
+        assertEquals(ApplyStatus.POST, plan.statusOf(ParamKey.FILTER)?.status)
+        assertEquals("复古 75%", plan.statusOf(ParamKey.FILTER)?.value)
+        assertEquals(ApplyStatus.POST, plan.statusOf(ParamKey.SATURATION)?.status)
+        assertEquals(ApplyStatus.POST, plan.statusOf(ParamKey.VIGNETTE)?.status)
+    }
+
+    @Test
     fun `ISO区间写法取中值`() {
         assertEquals(300, PresetCapturePlan.parseIso("200-400"))
         assertEquals(100, PresetCapturePlan.parseIso("100"))

@@ -94,3 +94,87 @@
 ## 五、审计结论
 
 「预设详情页选预设 → 直接 POP 拍摄」的**导航与拍摄链路完整、代码真实**（v1.7.5 的自研拍摄管线、能力探测、参数分级、降级路径均属实）；但**该链路未实际达到预期效果**：其核心价值"按预设实时取景 + 成片套色"因 sections/typed 数据模型断裂，对全部内置预设与自建预设空转，且 UI 存在虚假成功提示。判定为 **P0 功能虚焊**，需按第四节第 1、2 项修复后方可宣称该特性生效。
+
+---
+
+# 修复实施与自检验收（2026-11-20）
+
+> 本章为对第一节至第五节全部发现的修复记录与可执行验收证据。修复遵循"只填空值、不破坏既有数据"原则，未改动 v1.7.5 任何既有对外行为（除如实化提示外）。
+
+## 六、修复清单（按缺陷编号）
+
+### P0-1 数据桥接：sections → typed（核心）
+- 新建 [SectionParamsParser.kt](file:///workspace/app/src/main/java/com/silas/omaster/recognition/SectionParamsParser.kt)（纯 JVM）：`labelKey()` 识别 `@string/param_*` 资源引用（中/英/日 label 别名表全覆盖），`enrich(preset)` 把 sections 逐项归一化到 typed 字段；**仅填补空值，不覆盖已有 typed 字段**（照片识别/OCR 导入路径不受影响）；无 sections 时返回原对象（零开销）。
+- 接入点收敛在唯一出口 [PresetRepository.getPresetById](file:///workspace/app/src/main/java/com/silas/omaster/data/repository/PresetRepository.kt)（两处重载）：详情页、POP 即拍、创建编辑三条读取路径同时生效，自定义预设同样受益。
+- 引擎侧增强 [PresetColorTransform.kt](file:///workspace/app/src/main/java/com/silas/omaster/recognition/PresetColorTransform.kt)：`filterAdjustment` 支持强度百分比（"复古 75%" → 0.75 倍缩放）；`parseExposureEv` 支持区间取中值（"-0.3~-1.0" → -0.65）；`parseSoftLight` 增加"柔美/无/关"等真实写法；滤镜表补"清透"。
+- 无法识别的滤镜名不再静默中性：参数卡标记 `FILTER_UNRECOGNIZED`（见 P2-2）。
+
+### P0-2 UI 如实化
+- [PopCaptureScreen.kt](file:///workspace/app/src/main/java/com/silas/omaster/recognition/PopCaptureScreen.kt#L196-L207) 拍摄成功提示改为按 `hasVisibleEffect(preset)` 分流：有效果 →「已套用」；无效果 → 新增文案 `pop_no_effect`（"无机器可套用参数，已按原图拍摄"），不再虚假宣称。三语同步（zh/en/ja，XML 合法性与重名已校验）。
+
+### P1-1 API 23-28 保存必败
+- [ImageExporter.kt](file:///workspace/app/src/main/java/com/silas/omaster/util/ImageExporter.kt) legacy 分支重写：有 `WRITE_EXTERNAL_STORAGE` → 写公共 Pictures/OMaster；无权限（或未声明）→ 写应用专属外部目录 + `MediaScannerConnection.scanFile` 索引（相册/Google Photos 可见）；`getExternalFilesDir` 逐级回退（Pictures → null → cacheDir）保证不崩；Q+ 分支补 compress/stream 失败检查，失败如实返回 false。
+
+### P1-2 全分辨率后处理卡顿/OOM
+- 相机成片新增 `downscaleForStyle`（长边上限 2048px，后台线程执行）：12MP 套色峰值内存 ~300MB → ~75MB。
+- [PresetPixelEffects.kt](file:///workspace/app/src/main/java/com/silas/omaster/recognition/PresetPixelEffects.kt) 重写为原地处理：输入可变时同实例写回（零额外整图分配），不可变时才拷贝；抽出纯函数 `sharpenPixelsInto`（src/dst 禁别名）。
+
+### P2-1 预览缓冲回收竞态
+- [FilteredPreviewAnalyzer.kt](file:///workspace/app/src/main/java/com/silas/omaster/recognition/FilteredPreviewAnalyzer.kt)：尺寸变化时旧缓冲进 `retired` 延后一帧回收（Compose 重绘安全窗口）；新增 `release()`，页面 `onDispose` 时连同退役实例一并释放。
+
+### P2-2 滤镜表外滤镜名
+- [PresetCapturePlan.kt](file:///workspace/app/src/main/java/com/silas/omaster/recognition/PresetCapturePlan.kt)：新增 `UnsupportedReason.FILTER_UNRECOGNIZED` 与 `isFilterApplicable()`（表内滤镜 / 显式"原图·标准·默认"可套用；表外滤镜名如实标注，绝不假装 POST）。
+
+### 测试盲区
+- 新增 3 个测试类、扩展 2 个：`SectionParamsParserTest`（8）、`PopDataContractTest`（4，直读真实 presets.json 驱动引擎）、`PresetPixelEffectsTest`（5）；扩展 `PresetColorTransformTest`（百分比/区间 EV/柔美）、`PresetCapturePlanTest`（未识别滤镜/sections 端到端契约）。
+
+## 七、自检验收（可执行证据）
+
+**验证环境**：沙箱无 Android SDK/Gradle，自建独立 JVM 验证环境（官方 kotlin-compiler 2.3.21 + Android 框架桩 + JUnit 4.13.2），**编译真实仓库源码子集**（14 个主源文件，含 ImageExporter / FilteredPreviewAnalyzer 两个 Android 侧修复）并真实运行。桩仅替代框架类，被测代码零修改。
+
+### 证据 1：单元测试全绿（含仓库原有测试）
+```
+bash /tmp/harness/build.sh
+→ OK (66 tests)
+```
+覆盖 7 个测试类：SectionParamsParserTest / PresetColorTransformTest / PresetCapturePlanTest / PresetPixelEffectsTest / PopDataContractTest / CameraCapabilityProbeTest / **PhotoRecognitionTest（仓库原有，17 项，验证行为变更未破坏识别链路）**。
+
+### 证据 2：POP 链路端到端 BEFORE/AFTER（真实 presets.json）
+```
+total=25  BEFORE 失效预设=25   AFTER 失效预设=0
+ACCEPTANCE: PASS（全部真实预设修复后产生可见效果）
+```
+样本[胶片感]修复后：`filter=复古 75% softLight=柔美 tone=-5 sat=20 warmCool=-3 cyan=4 sharp=7 vignette=开`，拍摄计划 8 项全部 POST；全部 25 个预设 `hasVisibleEffect=true`、色彩矩阵非单位、计划 8~13 项非空。
+
+### 证据 3：Android 侧修复功能检查（30 项全过）
+```
+ALL ANDROID-FIX CHECKS PASSED
+```
+- ImageExporter（13 项）：Q+ 走 MediaStore 且压缩数据真实入流；压缩失败/insert 失败如实返回 false；API26 有权限写公共 Pictures；无权限写应用专属目录并触发 MediaScanner 索引；外部存储不可用回退 cacheDir 仍成功。
+- FilteredPreviewAnalyzer（17 项）：30fps 节流、帧 close/源位图回收（无泄漏）、双缓冲同尺寸零分配交替复用、尺寸变化旧缓冲延后回收、暂停/恢复、`release()` 回收全部缓冲含退役实例。
+
+### 证据 4：像素/内存语义检查（11 项全过）
+```
+ALL IN-PLACE CHECKS PASSED
+```
+可变位图锐化/暗角原地同实例、像素确实改变；不可变回退新实例且原图不动；12MP（4000x3000）降采样至 2048x1536。
+
+### 修复过程中新发现并已修复
+- 编译 ImageExporter.kt 时发现 `Manifest.permission.WRITE_EXTERNAL_STORAGE` 缺 `import android.Manifest`（真实 Gradle 构建同样会失败）——已补。此项即"必须编译 Android 侧源码"的价值：纯代码审查遗漏。
+
+## 八、验收结论与边界声明
+
+| 缺陷 | 状态 | 证据 |
+|---|---|---|
+| P0 预设套色空转（25/25） | ✅ 已修复 | 证据 2（25→0）+ 66 单测 |
+| P0 UI 虚假宣称 | ✅ 已修复 | `pop_no_effect` 三语 + 单元断言 |
+| P1 API 23-28 保存必败 | ✅ 已修复 | 证据 3（13 项） |
+| P1 全分辨率后处理 OOM 风险 | ✅ 已修复 | 证据 3 + 证据 4 |
+| P2 预览缓冲回收竞态 | ✅ 已修复 | 证据 3（17 项） |
+| P2 滤镜表外滤镜名静默中性 | ✅ 已修复 | 单测 + UNSUPPORTED 分级 |
+| 测试盲区（合成数据） | ✅ 已补齐 | PopDataContractTest 真实数据驱动 |
+
+**边界声明（诚实披露）**：
+1. 沙箱无 Android SDK，未执行 Gradle  assembleDebug / connectedAndroidTest；上述证据来自对**同一份真实源码**的独立编译运行（kotlinc 2.3.21 + 框架桩）。建议合入后在 CI 跑 `./gradlew test` 复核。
+2. PopCaptureScreen.kt 依赖完整 Compose/CameraX 栈，无法在桩环境编译；该文件的 `stylePhoto` 所有权与回收逻辑、`downscaleForStyle`、`release()` 接线均经逐段代码复核，其余改动已由证据 3 的行为等价检查覆盖（分析器本体同文件编译通过）。
+3. 真机视觉效果（取景器滤镜观感）需设备验证；数据层与像素层已可确定生效。

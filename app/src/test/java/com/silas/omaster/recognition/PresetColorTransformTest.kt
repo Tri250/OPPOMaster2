@@ -72,6 +72,33 @@ class PresetColorTransformTest {
     }
 
     @Test
+    fun `滤镜强度百分比按比例缩放`() {
+        val full = PresetColorTransform.filterAdjustment("复古")
+        val half = PresetColorTransform.filterAdjustment("复古 50%")
+        // 半数强度：各调整量减半（保留方向与极性）
+        assertEquals(full.saturation / 2f, half.saturation, 1e-4f)
+        assertEquals(full.warmCool / 2f, half.warmCool, 1e-4f)
+        assertEquals(full.lift / 2f, half.lift, 1e-4f)
+        assertTrue(half.saturation < 0f)
+        // 100% 与无百分比等价；0% 完全中性
+        assertEquals(full, PresetColorTransform.filterAdjustment("复古 100%"))
+        assertEquals(PresetColorTransform.NEUTRAL, PresetColorTransform.filterAdjustment("标准 0%"))
+        assertEquals(PresetColorTransform.NEUTRAL, PresetColorTransform.filterAdjustment("复古 0%"))
+        // 百分比解析
+        assertEquals(0.75f, PresetColorTransform.parseFilterPercent("复古 75%")!!, 1e-4f)
+        assertEquals(1f, PresetColorTransform.parseFilterPercent("胶片 100%")!!, 1e-4f)
+        assertTrue(PresetColorTransform.parseFilterPercent("胶片") == null)
+    }
+
+    @Test
+    fun `内置预设的真实滤镜值全部可识别`() {
+        // assets/presets.json 实际出现的滤镜写法（含强度百分比）
+        listOf("复古 100%", "清新 100%", "浓郁 100%", "明艳 100%", "复古 75%",
+            "童话 73%", "黑白 100%", "通透 100%", "复古 60%", "人文 100%", "人文 80%", "标准 0%")
+            .forEach { assertTrue("滤镜应可识别: $it", PresetCapturePlan.isFilterApplicable(it)) }
+    }
+
+    @Test
     fun `低色温偏暖高色温偏冷`() {
         val warm = PresetColorTransform.buildColorMatrix(preset(colorTemperature = 3000))
         val cool = PresetColorTransform.buildColorMatrix(preset(colorTemperature = 7500))
@@ -105,9 +132,20 @@ class PresetColorTransformTest {
     }
 
     @Test
+    fun `EV区间取中值`() {
+        // 内置预设真实写法：区间 EV（大师模式）
+        assertEquals(-0.65f, PresetColorTransform.parseExposureEv("-0.3~-1.0"), 1e-4f)
+        assertEquals(-0.5f, PresetColorTransform.parseExposureEv("-1~0"), 1e-4f)
+        assertEquals(-0.35f, PresetColorTransform.parseExposureEv("0~-0.7"), 1e-4f)
+        assertEquals(0f, PresetColorTransform.parseExposureEv("-0.3~0.3"), 1e-4f)
+    }
+
+    @Test
     fun `柔光强度解析支持文字与数字`() {
         assertEquals(0.3f, PresetColorTransform.parseSoftLight("弱"), 1e-4f)
+        assertEquals(0.5f, PresetColorTransform.parseSoftLight("柔美"), 1e-4f) // 内置预设真实写法
         assertEquals(0.8f, PresetColorTransform.parseSoftLight("梦幻"), 1e-4f)
+        assertEquals(0f, PresetColorTransform.parseSoftLight("无"), 1e-4f)
         assertEquals(0.5f, PresetColorTransform.parseSoftLight("50"), 1e-4f)
         assertEquals(0f, PresetColorTransform.parseSoftLight(null), 1e-4f)
     }

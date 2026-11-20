@@ -33,10 +33,14 @@ object PresetColorTransform {
 
     val NEUTRAL = FilterAdjust()
 
-    /** 滤镜名 → 调整量。前缀匹配（兼容"黑白 高对比"带后缀写法），未知/原图/标准 → 中性 */
+    /**
+     * 滤镜名 → 调整量。前缀匹配（兼容"黑白 高对比"带后缀写法），未知/原图/标准 → 中性。
+     * 支持强度百分比缩放："复古 75%" = 复古滤镜的 75% 强度；"标准 0%"/强度 0 → 完全中性。
+     */
     fun filterAdjustment(filter: String?): FilterAdjust {
-        val key = filter?.trim()?.split(Regex("\\s+"))?.firstOrNull() ?: return NEUTRAL
-        return when (key) {
+        val raw = filter?.trim() ?: return NEUTRAL
+        val key = raw.split(Regex("\\s+")).firstOrNull() ?: return NEUTRAL
+        val base = when (key) {
             "黑白", "单色" -> NEUTRAL.copy(grayscale = true, contrastDelta = 0.06f)
             "胶片" -> NEUTRAL.copy(saturation = -0.14f, lift = 10f, contrastDelta = -0.08f, warmCool = 0.10f, cyanMagenta = 0.04f)
             "复古" -> NEUTRAL.copy(saturation = -0.12f, lift = 8f, contrastDelta = -0.06f, warmCool = 0.08f)
@@ -50,27 +54,65 @@ object PresetColorTransform {
             "冷调" -> NEUTRAL.copy(warmCool = -0.12f)
             "琥珀" -> NEUTRAL.copy(warmCool = 0.12f, saturation = 0.06f)
             "清新" -> NEUTRAL.copy(saturation = -0.08f, lift = 5f, warmCool = -0.06f)
-            "通透" -> NEUTRAL.copy(contrastDelta = 0.08f, lift = 4f, saturation = 0.04f)
+            "通透", "清透" -> NEUTRAL.copy(contrastDelta = 0.08f, lift = 4f, saturation = 0.04f)
             "人文" -> NEUTRAL.copy(saturation = -0.06f, warmCool = 0.04f, contrastDelta = 0.05f)
             "美味" -> NEUTRAL.copy(saturation = 0.10f, warmCool = 0.06f)
             "霓虹" -> NEUTRAL.copy(saturation = 0.14f, cyanMagenta = 0.10f, contrastDelta = 0.08f)
             "赛博朋克" -> NEUTRAL.copy(saturation = 0.14f, cyanMagenta = 0.12f, contrastDelta = 0.10f, warmCool = -0.06f)
             else -> NEUTRAL
         }
+        // 强度百分比："名称 NN%" → 按比例缩放；无百分比 → 满强度
+        val percent = parseFilterPercent(raw) ?: return base
+        return when {
+            percent <= 0f -> NEUTRAL
+            percent >= 1f -> base
+            else -> base.scaled(percent)
+        }
     }
 
-    /** "+0.7"/"-1.0"/"1"/null → EV，限幅 ±3；不可解析 → 0 */
+    /** 滤镜值尾部百分比："复古 75%" → 0.75；无百分比 → null */
+    fun parseFilterPercent(filter: String): Float? {
+        val match = Regex("(\\d+(?:\\.\\d+)?)\\s*%\\s*$").find(filter.trim()) ?: return null
+        return (match.groupValues[1].toFloatOrNull() ?: return null) / 100f
+    }
+
+    private fun FilterAdjust.scaled(factor: Float): FilterAdjust = FilterAdjust(
+        saturation = saturation * factor,
+        warmCool = warmCool * factor,
+        cyanMagenta = cyanMagenta * factor,
+        tone = tone * factor,
+        contrastDelta = contrastDelta * factor,
+        lift = lift * factor,
+        ev = ev * factor,
+        // 黑白/单色：强度 > 0 仍去色，强度为 0 已由上层返回 NEUTRAL
+        grayscale = grayscale
+    )
+
+    /**
+     * "+0.7" / "-1.0" / "1" / 区间 "-0.3~-1.0" / "-1~0"（取两端中值）→ EV，限幅 ±3；
+     * 不可解析 → 0
+     */
     fun parseExposureEv(value: String?): Float {
-        val num = value?.trim()?.replace("+", "")?.toFloatOrNull() ?: return 0f
+        val v = value?.trim()?.replace("+", "") ?: return 0f
+        if (v.isEmpty()) return 0f
+        // 区间写法取中值（"-0.3~-1.0" → -0.65）
+        val range = Regex("^(-?\\d+(?:\\.\\d+)?)\\s*[~～–]\\s*(-?\\d+(?:\\.\\d+)?)$").find(v)
+        if (range != null) {
+            val lo = range.groupValues[1].toFloatOrNull() ?: return 0f
+            val hi = range.groupValues[2].toFloatOrNull() ?: return 0f
+            return ((lo + hi) / 2f).coerceIn(-3f, 3f)
+        }
+        val num = v.toFloatOrNull() ?: return 0f
         return num.coerceIn(-3f, 3f)
     }
 
-    /** softLight：弱/中/强/梦幻 或数字 0-100 → 0..1 强度 */
+    /** softLight：弱/柔美/中/强/梦幻/无 或数字 0-100 → 0..1 强度 */
     fun parseSoftLight(value: String?): Float = when (val v = value?.trim()) {
         null, "" -> 0f
-        "弱" -> 0.3f
-        "中" -> 0.5f
+        "弱", "柔" -> 0.3f
+        "柔美", "中" -> 0.5f
         "强", "梦幻" -> 0.8f
+        "无", "关" -> 0f
         else -> (v.toFloatOrNull() ?: 0f).coerceIn(0f, 100f) / 100f
     }
 
