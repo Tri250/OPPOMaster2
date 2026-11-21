@@ -1127,4 +1127,8 @@
     <string name="style_night">Night</string>
     <string name="style_soft">Soft light</string>
     <string name="style_original">Original</string>
+    <string name="new_version_available">New version available</string>
+    <string name="downloading">Downloading</string>
+    <string name="dialog_title_select_floating_mode">Select floating window mode</string>
+    <string name="language_dialog_title">Select language</string>
 </resources>
