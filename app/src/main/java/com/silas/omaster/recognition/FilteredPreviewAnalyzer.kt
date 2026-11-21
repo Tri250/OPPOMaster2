@@ -11,7 +11,6 @@ import android.graphics.Shader
 import android.os.SystemClock
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
-import kotlin.math.hypot
 
 /**
  * 实时滤镜取景分析器（POP 即拍"所见即所得"核心）。
@@ -82,7 +81,7 @@ class FilteredPreviewAnalyzer(
         }
         canvas.setBitmap(out)
         canvas.drawBitmap(src, 0f, 0f, colorPaint)
-        if (vignetteStrength > 0f) drawVignette(out)
+        if (vignetteStrength > 0.02f) drawVignette(out)
         canvas.setBitmap(null)
         src.recycle()
         onFrame(out)
@@ -120,20 +119,24 @@ class FilteredPreviewAnalyzer(
         retired = null
     }
 
-    /** 径向暗角（与 PresetPixelEffects.applyVignette 同参数），按尺寸缓存着色器 */
+    /**
+     * 径向暗角：与 PresetPixelEffects.applyVignette 严格同参数（所见即所得）——
+     * 中心 (w-1)/2、半径 0.75×长边、0.55 处开始线性压暗、边缘 alpha=0.62×强度×255。
+     */
     private fun drawVignette(out: Bitmap) {
         val w = out.width
         val h = out.height
         if (vignetteWidth != w || vignetteHeight != h) {
-            val cx = w / 2f
-            val cy = h / 2f
-            val radius = hypot(cx, cy)
+            val cx = (w - 1) / 2f
+            val cy = (h - 1) / 2f
+            val radius = maxOf(w, h) * 0.75f
+            val darkAlpha = (vignetteStrength * 0.62f * 255f).toInt().coerceIn(0, 158)
+            vignettePaint.alpha = 0xFF
             vignettePaint.shader = RadialGradient(
                 cx, cy, radius,
-                intArrayOf(0x00000000, 0xFF000000.toInt()),
-                floatArrayOf(0.55f, 1f), Shader.TileMode.CLAMP
+                intArrayOf(0x00000000, 0x00000000, darkAlpha shl 24),
+                floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP
             )
-            vignettePaint.alpha = (vignetteStrength * 170f).toInt().coerceIn(1, 255)
             vignetteWidth = w
             vignetteHeight = h
         }

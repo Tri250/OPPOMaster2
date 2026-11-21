@@ -173,10 +173,10 @@ object PresetCapturePlan {
     /** 显式中性滤镜名（用户主动选择"不加滤镜"，视为可套用） */
     private val NEUTRAL_FILTER_NAMES = setOf("原图", "标准", "默认")
 
-    /** 滤镜强度百分比解析："黑白 0%" → 0f；无强度后缀 → null */
+    /** 滤镜强度百分比解析："黑白 0%" → 0f；无强度后缀 → null。
+     *  委托 [PresetColorTransform.parseFilterPercent]（0~1 分数语义，测试锁定），避免双实现分歧 */
     private fun parseFilterPercent(filter: String): Float? =
-        Regex("(\\d+(?:\\.\\d+)?)\\s*%\\s*$").find(filter.trim())
-            ?.groupValues?.get(1)?.toFloatOrNull()
+        PresetColorTransform.parseFilterPercent(filter)
 
     /**
      * 滤镜是否可套用：引擎滤镜表内的滤镜名、或显式"原图/标准/默认" → true；
