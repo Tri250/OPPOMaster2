@@ -44,6 +44,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -414,7 +415,7 @@ fun PopCaptureScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(280.dp)
-                    .clip(AppDesign.LargeRadius)
+                    .clip(RoundedCornerShape(AppDesign.LargeRadius))
                     .background(NearBlack),
                 contentAlignment = Alignment.Center
             ) {
@@ -748,7 +749,7 @@ private fun ParamChipRow(params: List<ParamStatus>) {
                     ApplyStatus.POST -> MaterialTheme.colorScheme.onSurface
                     ApplyStatus.UNSUPPORTED -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 },
-                shape = AppDesign.SmallRadius,
+                shape = RoundedCornerShape(AppDesign.SmallRadius),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
             ) {
                 Text(

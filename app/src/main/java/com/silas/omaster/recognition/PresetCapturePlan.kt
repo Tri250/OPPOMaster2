@@ -173,6 +173,11 @@ object PresetCapturePlan {
     /** 显式中性滤镜名（用户主动选择"不加滤镜"，视为可套用） */
     private val NEUTRAL_FILTER_NAMES = setOf("原图", "标准", "默认")
 
+    /** 滤镜强度百分比解析："黑白 0%" → 0f；无强度后缀 → null */
+    private fun parseFilterPercent(filter: String): Float? =
+        Regex("(\\d+(?:\\.\\d+)?)\\s*%\\s*$").find(filter.trim())
+            ?.groupValues?.get(1)?.toFloatOrNull()
+
     /**
      * 滤镜是否可套用：引擎滤镜表内的滤镜名、或显式"原图/标准/默认" → true；
      * 滤镜表外的滤镜名（新机型独占滤镜等） → false，由 UI 如实标记 FILTER_UNRECOGNIZED。
