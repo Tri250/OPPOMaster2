@@ -24,6 +24,18 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -31,7 +43,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -43,6 +55,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -52,13 +65,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.silas.omaster.R
 import com.silas.omaster.model.MasterPreset
+import com.silas.omaster.ui.theme.AppDesign
+import com.silas.omaster.ui.theme.ErrorRed
+import com.silas.omaster.ui.theme.HasselbladOrange
+import com.silas.omaster.ui.theme.NearBlack
+import com.silas.omaster.ui.theme.SuccessGreen
+import com.silas.omaster.ui.theme.WarningYellow
 import com.silas.omaster.util.ImageExporter
 import com.silas.omaster.util.PresetI18n
 import kotlinx.coroutines.Dispatchers
@@ -90,7 +108,7 @@ fun PopCaptureScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val accent = Color(0xFFEC7223)
+    val accent = HasselbladOrange
     val capability = remember { CameraCapabilityProbe.probe(context) }
     val plan = remember(preset, capability) { PresetCapturePlan.build(preset, capability.manualRanges) }
 
@@ -366,21 +384,21 @@ fun PopCaptureScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(AppDesign.ContentPadding),
+            verticalArrangement = Arrangement.spacedBy(AppDesign.SectionSpacing)
         ) {
             // 设备能力徽章
             Card(
                 colors = CardDefaults.cardColors(
                     containerColor = when (capability.level) {
-                        CameraCapabilityProbe.Level.L1 -> Color(0xFF4CAF50).copy(alpha = 0.12f)
-                        CameraCapabilityProbe.Level.L2 -> Color(0xFFFFB300).copy(alpha = 0.12f)
-                        CameraCapabilityProbe.Level.L3 -> Color(0xFFE53935).copy(alpha = 0.12f)
+                        CameraCapabilityProbe.Level.L1 -> SuccessGreen.copy(alpha = 0.12f)
+                        CameraCapabilityProbe.Level.L2 -> WarningYellow.copy(alpha = 0.12f)
+                        CameraCapabilityProbe.Level.L3 -> ErrorRed.copy(alpha = 0.12f)
                     }
                 ),
-                shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()
+                shape = AppDesign.CardShape, modifier = Modifier.fillMaxWidth()
             ) {
-                Column(Modifier.padding(14.dp)) {
+                Column(Modifier.padding(AppDesign.ContentPadding)) {
                     Text(
                         stringResource(R.string.pop_capability, capability.level.toString(), capability.hardwareLevelString),
                         fontWeight = FontWeight.Bold
@@ -391,57 +409,83 @@ fun PopCaptureScreen(
                 }
             }
 
-            // 取景 / 成片预览区
+            // 取景 / 成片预览区（四态品牌级过渡：淡入 + 微缩放）
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(280.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFF111111)),
+                    .clip(AppDesign.LargeRadius)
+                    .background(NearBlack),
                 contentAlignment = Alignment.Center
             ) {
                 val bmp = appliedBitmap
-                when {
-                    bmp != null -> {
-                        Image(bmp.asImageBitmap(), contentDescription = stringResource(R.string.pop_preview),
-                            modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                        // 重拍：回到取景（有相机权限）或占位
-                        TextButton(
-                            onClick = {
-                                appliedBitmap = null
-                                capturedJpegBytes = null
-                            },
-                            modifier = Modifier.align(Alignment.TopEnd)
-                        ) {
-                            Text(stringResource(R.string.pop_retake), color = Color.White, fontSize = 12.sp)
-                        }
-                    }
-                    cameraGranted && cameraBound -> {
-                        // 实时滤镜取景：ImageAnalysis 逐帧套色后的画面（所见即所得）
-                        val frame = filteredFrame.value
-                        // isRecycled 防御：页面退出竞态下 analyzer.release() 可能刚回收缓冲
-                        if (frame != null && !frame.isRecycled) {
-                            Image(
-                                frame.asImageBitmap(),
-                                contentDescription = stringResource(R.string.pop_preview),
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
+                val mode = when {
+                    bmp != null -> PreviewMode.Result
+                    cameraGranted && cameraBound -> PreviewMode.Live
+                    cameraGranted && cameraError -> PreviewMode.Error
+                    else -> PreviewMode.Placeholder
+                }
+                AnimatedContent(
+                    targetState = mode,
+                    transitionSpec = {
+                        (fadeIn(tween(220, easing = FastOutSlowInEasing)) +
+                            scaleIn(initialScale = 0.96f, animationSpec = tween(220, easing = FastOutSlowInEasing)))
+                            .togetherWith(
+                                fadeOut(tween(180, easing = FastOutSlowInEasing)) +
+                                    scaleOut(targetScale = 0.98f, animationSpec = tween(180))
                             )
-                        } else {
-                            ViewfinderPlaceholder(accent)
+                    },
+                    label = "popPreviewState",
+                    modifier = Modifier.fillMaxSize()
+                ) { m ->
+                    when (m) {
+                        PreviewMode.Result -> {
+                            bmp?.let {
+                                Image(it.asImageBitmap(), contentDescription = stringResource(R.string.pop_preview),
+                                    modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            }
+                            // 重拍：回到取景（有相机权限）或占位
+                            TextButton(
+                                onClick = {
+                                    appliedBitmap = null
+                                    capturedJpegBytes = null
+                                },
+                                modifier = Modifier.align(Alignment.TopEnd)
+                            ) {
+                                Text(
+                                    stringResource(R.string.pop_retake),
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
                         }
+                        PreviewMode.Live -> {
+                            // 实时滤镜取景：ImageAnalysis 逐帧套色后的画面（所见即所得）
+                            val frame = filteredFrame.value
+                            // isRecycled 防御：页面退出竞态下 analyzer.release() 可能刚回收缓冲
+                            if (frame != null && !frame.isRecycled) {
+                                Image(
+                                    frame.asImageBitmap(),
+                                    contentDescription = stringResource(R.string.pop_preview),
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                ViewfinderPlaceholder(accent)
+                            }
+                        }
+                        PreviewMode.Error -> {
+                            // 相机启动失败如实呈现：明示降级路径仍可用
+                            Text(
+                                stringResource(R.string.pop_camera_bind_failed),
+                                color = Color.White.copy(alpha = 0.75f),
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth().padding(AppDesign.ContentPadding)
+                            )
+                        }
+                        PreviewMode.Placeholder -> ViewfinderPlaceholder(accent)
                     }
-                    cameraGranted && cameraError -> {
-                        // 【闭环修复】相机启动失败如实呈现：明示降级路径仍可用
-                        Text(
-                            stringResource(R.string.pop_camera_bind_failed),
-                            color = Color.White.copy(alpha = 0.75f),
-                            style = MaterialTheme.typography.bodySmall,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(20.dp)
-                        )
-                    }
-                    else -> ViewfinderPlaceholder(accent)
                 }
             }
 
@@ -452,9 +496,9 @@ fun PopCaptureScreen(
             if (!cameraGranted) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-                    shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()
+                    shape = AppDesign.CardShape, modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(Modifier.padding(12.dp)) {
+                    Column(Modifier.padding(AppDesign.ContentPadding)) {
                         Text(stringResource(R.string.pop_camera_permission_rationale),
                             style = MaterialTheme.typography.bodySmall)
                         Spacer(Modifier.height(8.dp))
@@ -479,10 +523,16 @@ fun PopCaptureScreen(
             ) {
                 if (cameraGranted) {
                     // 快门按钮（防重复触发；相机绑定失败时禁用，引导走降级路径）
+                    // 按压反馈：拍摄期间轻微收缩，松开回弹（品牌触感）
+                    val shutterScale by animateFloatAsState(
+                        targetValue = if (isCapturing) 0.9f else 1f,
+                        animationSpec = tween(150, easing = FastOutSlowInEasing),
+                        label = "popShutterScale"
+                    )
                     Button(
                         onClick = { captureWithPreset() },
-                        modifier = Modifier.size(72.dp),
-                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.size(72.dp).scale(shutterScale),
+                        shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(containerColor = accent),
                         contentPadding = PaddingValues(0.dp),
                         enabled = cameraBound && !isCapturing
@@ -544,12 +594,17 @@ fun PopCaptureScreen(
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 enabled = appliedBitmap != null && !isCapturing && !isSaving,
                 colors = ButtonDefaults.buttonColors(containerColor = accent),
-                shape = RoundedCornerShape(14.dp)
+                shape = AppDesign.ButtonShape
             ) {
                 Text(stringResource(R.string.pop_save_to_gallery), fontWeight = FontWeight.Bold)
             }
 
-            if (isCapturing || isSaving) {
+            // 拍摄/保存进度（展开-收起过渡，不做生硬的插入/移除）
+            AnimatedVisibility(
+                visible = isCapturing || isSaving,
+                enter = fadeIn(tween(200, easing = FastOutSlowInEasing)) + expandVertically(),
+                exit = fadeOut(tween(200, easing = FastOutSlowInEasing)) + shrinkVertically()
+            ) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(4.dp), color = accent)
             }
 
@@ -625,8 +680,8 @@ private fun ViewfinderPlaceholder(accent: Color) {
             drawLine(c, Offset(w/2-s, h/2+s), Offset(w/2-s, h/2+s-m), 3f)
         }
         Text(stringResource(R.string.pop_viewfinder_hint), color = Color.White.copy(alpha = 0.6f),
-            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-            fontSize = 12.sp)
+            modifier = Modifier.align(Alignment.BottomCenter).padding(AppDesign.ContentPadding),
+            style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -638,9 +693,9 @@ private fun ParamStatusCard(plan: CapturePlan, accent: Color) {
     val unsupported = plan.params.filter { it.status == ApplyStatus.UNSUPPORTED }
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
-        shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()
+        shape = AppDesign.CardShape, modifier = Modifier.fillMaxWidth()
     ) {
-        Column(Modifier.padding(12.dp)) {
+        Column(Modifier.padding(AppDesign.ContentPadding)) {
             Text(stringResource(R.string.pop_applied_params), color = accent, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
             if (plan.params.isEmpty()) {
@@ -648,7 +703,7 @@ private fun ParamStatusCard(plan: CapturePlan, accent: Color) {
                 return@Column
             }
             if (written.isNotEmpty()) {
-                SectionLabel(stringResource(R.string.pop_params_written), Color(0xFF4CAF50))
+                SectionLabel(stringResource(R.string.pop_params_written), SuccessGreen)
                 ParamChipRow(written)
             }
             if (post.isNotEmpty()) {
@@ -656,7 +711,7 @@ private fun ParamStatusCard(plan: CapturePlan, accent: Color) {
                 ParamChipRow(post)
             }
             if (unsupported.isNotEmpty()) {
-                SectionLabel(stringResource(R.string.pop_params_unsupported), Color(0xFFE53935))
+                SectionLabel(stringResource(R.string.pop_params_unsupported), ErrorRed)
                 ParamChipRow(unsupported)
                 Text(
                     stringResource(R.string.pop_unsupported_reasons),
@@ -670,7 +725,7 @@ private fun ParamStatusCard(plan: CapturePlan, accent: Color) {
 
 @Composable
 private fun SectionLabel(text: String, color: Color) {
-    Text(text, color = color, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+    Text(text, color = color, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
     Spacer(Modifier.height(4.dp))
 }
 
@@ -689,16 +744,16 @@ private fun ParamChipRow(params: List<ParamStatus>) {
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
                 contentColor = when (p.status) {
-                    ApplyStatus.WRITTEN -> Color(0xFF2E7D32)
+                    ApplyStatus.WRITTEN -> SuccessGreen
                     ApplyStatus.POST -> MaterialTheme.colorScheme.onSurface
                     ApplyStatus.UNSUPPORTED -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 },
-                shape = RoundedCornerShape(8.dp),
+                shape = AppDesign.SmallRadius,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
             ) {
                 Text(
                     text = "${paramLabel(p.key)} ${p.value}",
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
@@ -786,3 +841,6 @@ private fun rotateBitmap(src: Bitmap, degrees: Float): Bitmap {
         }
     } catch (e: Exception) { src }
 }
+
+/** 取景/成片预览区四态（AnimatedContent 过渡目标，实时帧不参与状态切换） */
+private enum class PreviewMode { Result, Live, Error, Placeholder }
