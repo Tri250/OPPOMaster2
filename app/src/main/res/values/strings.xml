@@ -1135,6 +1135,8 @@
     <string name="pop_camera_permission_button">授予相机权限</string>
     <string name="pop_camera_permission_denied">未获得相机权限：可用系统相机拍照或相册选图，拍后仍会完整套用调色参数。</string>
     <string name="pop_camera_bind_failed">相机启动失败：可能被其他应用占用或设备无可用后置摄像头。仍可使用系统相机或相册选图完成拍摄。</string>
+    <string name="pop_xdr_label">Pro XDR</string>
+    <string name="pop_xdr_desc">动态范围增强：暗部更通透、高光层次更丰富、细节更清晰，成片更有质感</string>
     <string name="pop_capture_failed">拍摄失败，请重试</string>
     <string name="pop_retake">重新拍摄</string>
     <string name="pop_system_camera">系统相机</string>

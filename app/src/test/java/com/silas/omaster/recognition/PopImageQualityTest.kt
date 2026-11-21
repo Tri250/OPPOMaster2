@@ -461,4 +461,88 @@ class PopImageQualityTest {
         val mid = dst[3]
         assertTrue("阶梯应被平滑出过渡值：$mid", mid in 51..199)
     }
+
+    // ---------- ⑧ Pro XDR 动态范围增强 ----------
+
+    @Test
+    fun `XDR提亮阴影压回高光中间调温和`() {
+        val w = 6; val h = 4
+        // 0..250 灰阶横条：x*50
+        val src = img(w, h) { x, _ -> rgb(x * 50, x * 50, x * 50) }
+        val out = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            src.copyOf(), out, w, h, 0, h, 0, h, null, 0f, 0f, 0f, xdr = 1f
+        )
+        // 阴影（灰 50）：显著提亮
+        assertTrue("阴影应提亮", lum(out[1]) > lum(src[1]))
+        // 中间调（灰 150）：变化温和（≤12 亮度单位）
+        val midDelta = Math.abs(lum(out[3]) - lum(src[3]))
+        assertTrue("中间调应温和：$midDelta", midDelta <= 12)
+        // 高光（灰 250）：压回层次
+        assertTrue("高光应回收", lum(out[5]) < lum(src[5]))
+    }
+
+    @Test
+    fun `XDR关闭逐位一致且多带无缝`() {
+        val w = 24; val h = 64
+        val rnd = Random(555)
+        val src = IntArray(w * h) { rgb(rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256)) }
+
+        // xdr 缺省（=0）：与既有行为逐位一致
+        val off = IntArray(w * h)
+        PresetPixelEffects.processBandInto(src.copyOf(), off, w, h, 0, h, 0, h, null, 0f, 0f, 0f)
+        assertTrue("xdr=0 应与既有行为逐位一致", off.contentEquals(src))
+
+        // 开启 XDR 后：任意分带与整带一致（无接缝）
+        val full = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            src.copyOf(), full, w, h, 0, h, 0, h, null, 0.5f, 0f, 0.5f, xdr = 1f
+        )
+        val multi = IntArray(w * h)
+        var y = 0
+        while (y < h) {
+            val y1 = minOf(h, y + 20)
+            val top = (y - 2).coerceAtLeast(0)
+            val bot = (y1 + 2).coerceAtMost(h)
+            val padTop = y - top
+            val bandH = bot - top
+            val band = IntArray(w * bandH) { i -> src[(top + i / w) * w + i % w] }
+            val out = IntArray(w * bandH)
+            PresetPixelEffects.processBandInto(
+                band, out, w, h, top, bandH, padTop, y1 - y, null, 0.5f, 0f, 0.5f, xdr = 1f
+            )
+            System.arraycopy(out, padTop * w, multi, y * w, (y1 - y) * w)
+            y = y1
+        }
+        assertTrue(
+            "XDR 多带应与整带一致，首个差异 idx=" +
+                full.indices.firstOrNull { full[it] != multi[it] },
+            full.contentEquals(multi)
+        )
+    }
+
+    @Test
+    fun `XDR不放大平坦区噪点`() {
+        val w = 32; val h = 32
+        val rnd = Random(4242)
+        val src = IntArray(w * h) {
+            val n = 128 + rnd.nextInt(13) - 6
+            rgb(n, n, n)
+        }
+        val out = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            src.copyOf(), out, w, h, 0, h, 0, h, null, 0f, 0f, 0f, xdr = 1f
+        )
+        fun variance(px: IntArray): Double {
+            var sum = 0.0; var sq = 0.0
+            for (p in px) { val l = lum(p).toDouble(); sum += l; sq += l * l }
+            val mean = sum / px.size
+            return sq / px.size - mean * mean
+        }
+        // 中间调 128 无阴影/高光调制；清晰度经 edgeW 门控（σ≤6 → 权重 0）
+        assertTrue(
+            "平坦区噪点方差不应放大：before=${variance(src)} after=${variance(out)}",
+            variance(out) < variance(src) * 1.15
+        )
+    }
 }

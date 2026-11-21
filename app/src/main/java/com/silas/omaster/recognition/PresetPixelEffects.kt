@@ -85,8 +85,9 @@ object PresetPixelEffects {
     //   ① 4x5 色彩矩阵（滤镜/饱和度/冷暖/影调/色温/EV/柔光）
     //   ② 亮度域高斯模糊 → 高频残差（边缘权重）
     //   ③ 保边降噪（仅高 ISO 启用）：平坦区向邻域均值 blend，边缘不动
-    //   ④ 亮度域 unsharp 锐化：结构细节增强，色彩零串染（luma-only）
-    //   ⑤ 径向暗角（逐像素定位；取景预览 [FilteredPreviewAnalyzer] 同公式，所见即所得）
+    //   ④ Pro XDR 动态范围增强（阴影提亮 + 高光回收 + 局部对比，luma-only）
+    //   ⑤ 亮度域 unsharp 锐化：结构细节增强，色彩零串染（luma-only）
+    //   ⑥ 径向暗角（逐像素定位；取景预览 [FilteredPreviewAnalyzer] 同公式，所见即所得）
     //
     // 带上下各留 [DEFAULT_RADIUS] 行重叠供邻域运算，只写中心行，
     // 任意分带数量结果与整带一致（无接缝，单测锁定）。
@@ -100,6 +101,19 @@ object PresetPixelEffects {
 
     /** 高频残差高于此值视为真实边缘：享受满额锐化并免降噪 */
     private const val EDGE_HIGH = 30f
+
+    // ── Pro XDR 动态范围增强（成片质感核心，luma-only 无色偏）──
+
+    /** 阴影提亮上限（xdr=1 时最暗区最多 +30 亮度） */
+    private const val XDR_SHADOW_LIFT = 30f
+    /** 阴影过渡上界：亮度低于此值开始提亮，线性平滑衰减 */
+    private const val XDR_SHADOW_END = 112f
+    /** 高光回收上限（xdr=1 时最亮区最多 −26 亮度） */
+    private const val XDR_HIGHLIGHT_PULL = 26f
+    /** 高光过渡起点：亮度高于此值开始回收 */
+    private const val XDR_HIGHLIGHT_START = 208f
+    /** 局部对比（清晰度）权重：复用高频残差 + edgeW 门控，平坦区噪点不被放大 */
+    private const val XDR_CLARITY = 0.45f
 
     /** smoothstep：残差 → 边缘权重（0..1），噪点不锐化、细纹理过渡、强边满额 */
     private fun edgeWeight(residual: Float): Float {
@@ -148,6 +162,8 @@ object PresetPixelEffects {
      * @param sharpenAmount 锐度 0..1
      * @param denoise 保边降噪强度 0..1（0 = 关闭）
      * @param vignette 暗角强度 0..1（0 = 关闭）
+     * @param xdr Pro XDR 强度 0..1（0 = 关闭；阴影提亮 + 高光回收 + 局部对比）
+     * @param radius 邻域半径
      */
     fun processBandInto(
         band: IntArray,
@@ -162,6 +178,7 @@ object PresetPixelEffects {
         sharpenAmount: Float,
         denoise: Float,
         vignette: Float,
+        xdr: Float = 0f,
         radius: Int = DEFAULT_RADIUS
     ) {
         System.arraycopy(band, 0, out, 0, band.size)
@@ -188,8 +205,9 @@ object PresetPixelEffects {
         val doDenoise = denoise > 0.01f
         val doSharpen = sharpenAmount > 0.02f
         val doVignette = vignette > 0.02f
+        val doXdr = xdr > 0.01f
 
-        // ③④⑤ 仅中心行输出（上下重叠行只参与邻域运算）
+        // ③④⑤⑥ 仅中心行输出（上下重叠行只参与邻域运算）
         for (ly in padTop until padTop + centerH) {
             val row = ly * w
             val absY = bandTop + ly
@@ -210,7 +228,22 @@ object PresetPixelEffects {
                     c = blendPixel(c, l, r, u, dn, a)
                 }
 
-                // ④ 亮度域 unsharp：结构增强、色彩零串染；smoothstep 权重保证
+                // ④ Pro XDR：阴影提亮 + 高光回收 + 局部对比（luma-only 无色偏；
+                // 清晰度复用高频残差并经 edgeW 门控，平坦区噪点不被放大）
+                if (doXdr) {
+                    val l = lum[i].toFloat()
+                    var adj = 0f
+                    if (l < XDR_SHADOW_END) {
+                        adj += xdr * (XDR_SHADOW_END - l) / XDR_SHADOW_END * XDR_SHADOW_LIFT
+                    }
+                    if (l > XDR_HIGHLIGHT_START) {
+                        adj -= xdr * (l - XDR_HIGHLIGHT_START) / (255f - XDR_HIGHLIGHT_START) * XDR_HIGHLIGHT_PULL
+                    }
+                    adj += (lum[i] - blur[i]) * xdr * XDR_CLARITY * edgeW
+                    if (adj > 0.5f || adj < -0.5f) c = addLumaDelta(c, adj)
+                }
+
+                // ⑤ 亮度域 unsharp：结构增强、色彩零串染；smoothstep 权重保证
                 // 平坦区噪点不被放大（权重 0），强边满额（权重 1）
                 if (doSharpen) {
                     val eff = sharpenAmount * 1.6f * edgeW
@@ -218,7 +251,7 @@ object PresetPixelEffects {
                     if (delta > 0.5f || delta < -0.5f) c = addLumaDelta(c, delta)
                 }
 
-                // ⑤ 径向暗角（0.75*maxSide 半径，0.55→1 渐暗；取景预览同公式）
+                // ⑥ 径向暗角（0.75*maxSide 半径，0.55→1 渐暗；取景预览同公式）
                 if (doVignette) {
                     val dx = x - cx
                     val dy = absY - cy
@@ -245,6 +278,7 @@ object PresetPixelEffects {
         sharpenAmount: Float,
         denoise: Float,
         vignette: Float,
+        xdr: Float = 0f,
         radius: Int = DEFAULT_RADIUS
     ) {
         val w = src.width
@@ -259,7 +293,7 @@ object PresetPixelEffects {
         val out = IntArray(w * bandH)
         processBandInto(
             band, out, w, h, top, bandH, padTop, y1 - y0,
-            matrix, sharpenAmount, denoise, vignette, radius
+            matrix, sharpenAmount, denoise, vignette, xdr, radius
         )
         // 写回必须跳过带顶 padTop 行重叠：若从 0 开始，除首带外每带都会把
         // padTop 行未完成降噪/锐化/暗角的重叠行写进成片并整体错位 → 每 192 行

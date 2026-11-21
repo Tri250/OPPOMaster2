@@ -169,6 +169,10 @@ fun PopCaptureScreen(
     // 【闭环修复】相机绑定失败如实呈现（被占用/无后摄等），与"连接中"占位区分
     var cameraError by remember { mutableStateOf(false) }
 
+    // Pro XDR 动态范围增强（默认开启）：阴影提亮 + 高光回收 + 局部对比，成片更有质感。
+    // 仅作用于拍后成片管线（与锐化同为拍后专属，取景预览不做邻域运算保证流畅）
+    var xdrEnabled by remember { mutableStateOf(true) }
+
     // 实时滤镜取景：与拍后套色同源的色彩矩阵，取景即成片观感
     val colorMatrix = remember(preset) { PresetColorTransform.buildColorMatrix(preset) }
     val vignetteStrength = remember(preset) { PresetColorTransform.vignetteStrength(preset) }
@@ -257,10 +261,13 @@ fun PopCaptureScreen(
      */
     fun stylePhoto(raw: Bitmap, preset: MasterPreset, jpegBytes: ByteArray? = null) {
         scope.launch {
-            val hasEffect = PresetColorTransform.hasVisibleEffect(preset)
+            // Pro XDR 开启时视为"确有可见效果"：无参数预设也走套色管线（否则直通原图）
+            val hasEffect = PresetColorTransform.hasVisibleEffect(preset) || xdrEnabled
             val styled = if (hasEffect) {
                 withContext(Dispatchers.Default) {
-                    PopImageProcessor.process(raw, preset, Runtime.getRuntime().maxMemory())
+                    PopImageProcessor.process(
+                        raw, preset, Runtime.getRuntime().maxMemory(), xdr = xdrEnabled
+                    )
                 }
             } else {
                 raw
@@ -407,6 +414,35 @@ fun PopCaptureScreen(
                     Text(
                         stringResource(capability.degradationHintRes), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                }
+            }
+
+            // Pro XDR 动态范围增强开关（默认开启，成片更有质感）
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                ),
+                shape = AppDesign.CardShape,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(AppDesign.ContentPadding),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.pop_xdr_label),
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            stringResource(R.string.pop_xdr_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                    Switch(checked = xdrEnabled, onCheckedChange = { xdrEnabled = it })
                 }
             }
 

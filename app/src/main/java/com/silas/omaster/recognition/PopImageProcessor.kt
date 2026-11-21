@@ -28,9 +28,15 @@ object PopImageProcessor {
      * 全分辨率处理入口。
      *
      * @param maxMemoryBytes Runtime.getRuntime().maxMemory()，用于内存守卫
+     * @param xdr Pro XDR 动态范围增强（默认关闭；开启后阴影提亮/高光回收/局部对比，成片更有质感）
      * @return 处理后的新 Bitmap；尺寸过小（<3px）无法做邻域运算时返回 src 本身
      */
-    fun process(src: Bitmap, preset: MasterPreset, maxMemoryBytes: Long): Bitmap {
+    fun process(
+        src: Bitmap,
+        preset: MasterPreset,
+        maxMemoryBytes: Long,
+        xdr: Boolean = false
+    ): Bitmap {
         val w = src.width
         val h = src.height
         if (w < 3 || h < 3) return src
@@ -56,7 +62,8 @@ object PopImageProcessor {
         while (y < work.height) {
             val y1 = minOf(work.height, y + BAND_ROWS)
             PresetPixelEffects.processBitmapBand(
-                work, out, y, y1, matrix, sharpen, denoise, vignette
+                work, out, y, y1, matrix, sharpen, denoise, vignette,
+                xdr = if (xdr) 1f else 0f
             )
             y = y1
         }
