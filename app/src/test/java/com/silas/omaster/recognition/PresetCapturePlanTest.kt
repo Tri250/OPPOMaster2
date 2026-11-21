@@ -91,13 +91,14 @@ class PresetCapturePlanTest {
     }
 
     @Test
-    fun `手动曝光激活时EV标记无法套用`() {
+    fun `手动曝光激活时EV标记不适用且归因正确`() {
         val plan = PresetCapturePlan.build(
             preset(iso = "100", shutter = "1/125", ev = "-1.0"), renoRanges
         )
         assertNull(plan.evSteps)
+        // 归因必须是"手动曝光接管"而非"设备不支持手动曝光"（设备恰恰支持）
         assertEquals(
-            UnsupportedReason.MANUAL_EXPOSURE_UNAVAILABLE,
+            UnsupportedReason.MANUAL_EXPOSURE_OVERRIDES,
             plan.statusOf(ParamKey.EV)?.reason
         )
     }
@@ -149,6 +150,9 @@ class PresetCapturePlanTest {
         // 显式"原图/标准"是有意选择，视为可套用
         assertEquals(ApplyStatus.POST,
             PresetCapturePlan.build(preset(filter = "标准 0%"), renoRanges).statusOf(ParamKey.FILTER)?.status)
+        // 显式 0% 强度（如"黑白 0%"）= 主动不加滤镜，同样不得误标 FILTER_UNRECOGNIZED
+        assertEquals(ApplyStatus.POST,
+            PresetCapturePlan.build(preset(filter = "黑白 0%"), renoRanges).statusOf(ParamKey.FILTER)?.status)
         // null 滤镜不产生任何参数项
         assertNull(PresetCapturePlan.build(preset(), renoRanges).statusOf(ParamKey.FILTER))
     }

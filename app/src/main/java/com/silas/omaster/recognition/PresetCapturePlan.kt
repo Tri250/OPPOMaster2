@@ -16,6 +16,8 @@ enum class UnsupportedReason {
     MANUAL_EXPOSURE_UNAVAILABLE,
     /** 手动曝光需 ISO 与快门同时提供，预设缺其一 */
     NEED_ISO_SHUTTER_PAIR,
+    /** 手动曝光激活时 ISO/快门已完全控制曝光，曝光补偿不再适用（非设备能力缺失） */
+    MANUAL_EXPOSURE_OVERRIDES,
     /** 设备不支持曝光补偿 */
     EV_UNAVAILABLE,
     /** 预设取值无法解析 */
@@ -126,8 +128,9 @@ object PresetCapturePlan {
         if (evRaw != null && evValue != 0f) {
             params += when {
                 captureEv != null -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.WRITTEN)
+                // 手动曝光下 EV 由 ISO/快门接管：如实标记"不适用"且归因正确，不再误报设备能力缺失
                 wantManual -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
-                    UnsupportedReason.MANUAL_EXPOSURE_UNAVAILABLE)
+                    UnsupportedReason.MANUAL_EXPOSURE_OVERRIDES)
                 steps == null -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
                     UnsupportedReason.EV_UNAVAILABLE)
                 else -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
@@ -178,6 +181,9 @@ object PresetCapturePlan {
         if (filter.isNullOrBlank()) return false
         val key = filter.trim().split(Regex("\\s+")).firstOrNull() ?: return false
         if (key in NEUTRAL_FILTER_NAMES) return true
+        // 显式 0% 强度（如"黑白 0%"）= 用户主动不加滤镜，与"原图/标准"同义，不得误标 FILTER_UNRECOGNIZED
+        val percent = parseFilterPercent(filter)
+        if (percent != null && percent <= 0f) return true
         return PresetColorTransform.filterAdjustment(filter) != PresetColorTransform.NEUTRAL
     }
 

@@ -33,15 +33,17 @@ object ImageExporter {
                 val uri = context.contentResolver.insert(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     values
-                )
-                uri?.let {
-                    context.contentResolver.openOutputStream(it)?.use { out ->
-                        if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 98, out)) {
-                            return false
-                        }
-                    } ?: return false
+                ) ?: return false
+                val ok = try {
+                    context.contentResolver.openOutputStream(uri)?.use { out ->
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 98, out)
+                    } ?: false
+                } catch (e: Exception) {
+                    false
                 }
-                uri != null
+                // 写入失败时清理 MediaStore 残留条目，避免相册出现 0 字节坏图
+                if (!ok) runCatching { context.contentResolver.delete(uri, null, null) }
+                ok
             } else {
                 // API 23-28（Q 以下）：无 MediaStore RELATIVE_PATH。写公共 Pictures 目录需要
                 // WRITE_EXTERNAL_STORAGE 运行时权限；未授权（或未声明）时改写应用专属外部目录
@@ -105,9 +107,19 @@ object ImageExporter {
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     values
                 ) ?: return false
-                context.contentResolver.openOutputStream(uri)?.use { out ->
-                    out.write(bytes)
-                } ?: return false
+                val ok = try {
+                    context.contentResolver.openOutputStream(uri)?.use { out ->
+                        out.write(bytes)
+                    } != null
+                } catch (e: Exception) {
+                    false
+                }
+                // 写入失败时清理 MediaStore 残留条目，避免相册出现 0 字节坏图；
+                // 提前返回 false（函数尾部 Log+true 会兜底吞掉失败结果）
+                if (!ok) {
+                    runCatching { context.contentResolver.delete(uri, null, null) }
+                    return false
+                }
             } else {
                 @Suppress("DEPRECATION")
                 val publicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)

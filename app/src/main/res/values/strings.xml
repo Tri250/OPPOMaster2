@@ -1130,10 +1130,11 @@
     <string name="pop_params_written">已写入拍摄（传感器生效）</string>
     <string name="pop_params_post">已应用（实时取景 + 成片）</string>
     <string name="pop_params_unsupported">无法套用</string>
-    <string name="pop_unsupported_reasons">无法套用原因：设备不支持关闭自动曝光 / 手动曝光需 ISO 与快门成对提供 / 设备不支持曝光补偿 / 取值无法解析 / 滤镜名未收录于引擎滤镜表。</string>
+    <string name="pop_unsupported_reasons">无法套用原因：设备不支持关闭自动曝光 / 手动曝光需 ISO 与快门成对提供 / 手动曝光下曝光补偿由 ISO/快门接管 / 设备不支持曝光补偿 / 取值无法解析 / 滤镜名未收录于引擎滤镜表。</string>
     <string name="pop_camera_permission_rationale">POP 即拍需要相机权限：授权后取景器将实时套用预设滤镜与调色参数，ISO/快门/曝光补偿在设备支持时写入拍摄。</string>
     <string name="pop_camera_permission_button">授予相机权限</string>
     <string name="pop_camera_permission_denied">未获得相机权限：可用系统相机拍照或相册选图，拍后仍会完整套用调色参数。</string>
+    <string name="pop_camera_bind_failed">相机启动失败：可能被其他应用占用或设备无可用后置摄像头。仍可使用系统相机或相册选图完成拍摄。</string>
     <string name="pop_capture_failed">拍摄失败，请重试</string>
     <string name="pop_retake">重新拍摄</string>
     <string name="pop_system_camera">系统相机</string>

@@ -98,8 +98,12 @@ fun PopCaptureScreen(
     // 无可套用参数时保留的传感器原始 JPEG 字节（保存时零重编码直通，v1.7.8）
     var capturedJpegBytes by remember { mutableStateOf<ByteArray?>(null) }
     var isCapturing by remember { mutableStateOf(false) }
+    // 【闭环修复】保存进行中防重复点击（连点会产生重复文件）
+    var isSaving by remember { mutableStateOf(false) }
     var toast by remember { mutableStateOf<String?>(null) }
     var photoUri by remember { mutableStateOf<Uri?>(null) }
+    // 系统相机临时照片实体文件（读取完成后即删，防 cache 目录无限累积）
+    var photoFile by remember { mutableStateOf<File?>(null) }
     var permissionRequested by remember { mutableStateOf(false) }
     var cameraGranted by remember {
         mutableStateOf(
@@ -143,6 +147,8 @@ fun PopCaptureScreen(
     val providerFuture = remember { ProcessCameraProvider.getInstance(context) }
     var boundProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var cameraBound by remember { mutableStateOf(false) }
+    // 【闭环修复】相机绑定失败如实呈现（被占用/无后摄等），与"连接中"占位区分
+    var cameraError by remember { mutableStateOf(false) }
 
     // 实时滤镜取景：与拍后套色同源的色彩矩阵，取景即成片观感
     val colorMatrix = remember(preset) { PresetColorTransform.buildColorMatrix(preset) }
@@ -190,6 +196,7 @@ fun PopCaptureScreen(
     DisposableEffect(cameraGranted, imageCapture) {
         if (cameraGranted) {
             val listener = Runnable {
+                cameraError = false
                 try {
                     val provider = providerFuture.get()
                     provider.unbindAll()
@@ -204,6 +211,7 @@ fun PopCaptureScreen(
                     cameraBound = true
                 } catch (e: Exception) {
                     cameraBound = false
+                    cameraError = true
                 }
             }
             providerFuture.addListener(listener, ContextCompat.getMainExecutor(context))
@@ -247,9 +255,9 @@ fun PopCaptureScreen(
         }
     }
 
-    /** 快门：拍摄 → 拍后套色 → 预览 */
+    /** 快门：拍摄 → 拍后套色 → 预览（相机未绑定成功时不触发，防无效点击） */
     fun captureWithPreset() {
-        if (isCapturing) return
+        if (isCapturing || !cameraBound) return
         isCapturing = true
         imageCapture.takePicture(
             ContextCompat.getMainExecutor(context),
@@ -294,11 +302,17 @@ fun PopCaptureScreen(
     val takePictureLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { success ->
+        // 临时照片读取完成后即清理（无论成功/失败/取消）
+        fun cleanupTempPhoto() {
+            photoFile?.delete()
+            photoFile = null
+        }
         if (success) {
             photoUri?.let { uri ->
                 isCapturing = true
                 scope.launch {
                     val bmp = loadBitmap(context, uri)
+                    cleanupTempPhoto()
                     if (bmp != null) {
                         stylePhoto(bmp, preset)
                     } else {
@@ -306,8 +320,12 @@ fun PopCaptureScreen(
                         isCapturing = false
                     }
                 }
+            } ?: run {
+                cleanupTempPhoto()
+                isCapturing = false
             }
         } else {
+            cleanupTempPhoto()
             isCapturing = false
         }
     }
@@ -401,7 +419,8 @@ fun PopCaptureScreen(
                     cameraGranted && cameraBound -> {
                         // 实时滤镜取景：ImageAnalysis 逐帧套色后的画面（所见即所得）
                         val frame = filteredFrame.value
-                        if (frame != null) {
+                        // isRecycled 防御：页面退出竞态下 analyzer.release() 可能刚回收缓冲
+                        if (frame != null && !frame.isRecycled) {
                             Image(
                                 frame.asImageBitmap(),
                                 contentDescription = stringResource(R.string.pop_preview),
@@ -411,6 +430,16 @@ fun PopCaptureScreen(
                         } else {
                             ViewfinderPlaceholder(accent)
                         }
+                    }
+                    cameraGranted && cameraError -> {
+                        // 【闭环修复】相机启动失败如实呈现：明示降级路径仍可用
+                        Text(
+                            stringResource(R.string.pop_camera_bind_failed),
+                            color = Color.White.copy(alpha = 0.75f),
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(20.dp)
+                        )
                     }
                     else -> ViewfinderPlaceholder(accent)
                 }
@@ -449,14 +478,14 @@ fun PopCaptureScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (cameraGranted) {
-                    // 快门按钮（防重复触发）
+                    // 快门按钮（防重复触发；相机绑定失败时禁用，引导走降级路径）
                     Button(
                         onClick = { captureWithPreset() },
                         modifier = Modifier.size(72.dp),
                         shape = RoundedCornerShape(50),
                         colors = ButtonDefaults.buttonColors(containerColor = accent),
                         contentPadding = PaddingValues(0.dp),
-                        enabled = !isCapturing
+                        enabled = cameraBound && !isCapturing
                     ) {
                         Icon(Icons.Default.CameraAlt, contentDescription = stringResource(R.string.pop_shutter),
                             modifier = Modifier.size(32.dp))
@@ -467,7 +496,8 @@ fun PopCaptureScreen(
                 SmallFloatingActionButton(
                     onClick = {
                         if (!isCapturing) {
-                            val uri = createPhotoUri(context)
+                            val (file, uri) = createPhotoFile(context)
+                            photoFile = file
                             photoUri = uri
                             isCapturing = true
                             takePictureLauncher.launch(uri)
@@ -494,7 +524,8 @@ fun PopCaptureScreen(
                     val bmp = appliedBitmap
                     if (bytes == null && bmp == null) {
                         toast = msgNeedPhoto
-                    } else {
+                    } else if (!isSaving) {
+                        isSaving = true
                         scope.launch {
                             val ok = withContext(Dispatchers.IO) {
                                 when {
@@ -505,19 +536,20 @@ fun PopCaptureScreen(
                                     else -> false
                                 }
                             }
+                            isSaving = false
                             toast = if (ok) msgSaved else msgSaveFailed
                         }
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
-                enabled = appliedBitmap != null && !isCapturing,
+                enabled = appliedBitmap != null && !isCapturing && !isSaving,
                 colors = ButtonDefaults.buttonColors(containerColor = accent),
                 shape = RoundedCornerShape(14.dp)
             ) {
                 Text(stringResource(R.string.pop_save_to_gallery), fontWeight = FontWeight.Bold)
             }
 
-            if (isCapturing) {
+            if (isCapturing || isSaving) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(4.dp), color = accent)
             }
 
@@ -695,10 +727,11 @@ private fun paramLabel(key: ParamKey): String = stringResource(
 
 // ---------- Android 层工具 ----------
 
-private fun createPhotoUri(context: Context): Uri {
+/** 系统相机临时照片：FileProvider Uri + 实体文件（读取完成后即删，防缓存累积） */
+private fun createPhotoFile(context: Context): Pair<File, Uri> {
     val dir = File(context.cacheDir, "pop_capture").apply { mkdirs() }
     val file = File(dir, "pop_${System.currentTimeMillis()}.jpg")
-    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    return file to FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
 }
 
 private suspend fun loadBitmap(context: Context, uri: Uri): Bitmap? = withContext(Dispatchers.IO) {
