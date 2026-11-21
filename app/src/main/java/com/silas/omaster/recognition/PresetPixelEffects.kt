@@ -1,10 +1,6 @@
 package com.silas.omaster.recognition
 
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.RadialGradient
-import android.graphics.Shader
 import kotlin.math.sqrt
 
 /**
@@ -77,32 +73,6 @@ object PresetPixelEffects {
         return result
     }
 
-    /**
-     * 径向暗角（四角压暗、中心不变）。输入为可变 Bitmap 时原地绘制；不可变时返回新 Bitmap。
-     * strength <= 0.02 视为无感，直接返回原图。
-     */
-    fun applyVignette(src: Bitmap, strength: Float): Bitmap {
-        if (strength <= 0.02f) return src
-        val w = src.width
-        val h = src.height
-        if (w <= 0 || h <= 0) return src
-
-        val target = if (src.isMutable) src else src.copy(Bitmap.Config.ARGB_8888, true)
-        val radius = maxOf(w, h) * 0.75f
-        val dark = (0.62f * strength).coerceIn(0f, 0.62f)
-        val canvas = Canvas(target)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            shader = RadialGradient(
-                w / 2f, h / 2f, radius,
-                intArrayOf(0x00000000, 0x00000000, (dark * 255).toInt() shl 24),
-                floatArrayOf(0f, 0.55f, 1f),
-                Shader.TileMode.CLAMP
-            )
-        }
-        canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), paint)
-        return target
-    }
-
     // ------------------------------------------------------------------
     // 【v1.7.8】全分辨率画质管线（OPPO Reno17 Pro 级质感）
     //
@@ -116,7 +86,7 @@ object PresetPixelEffects {
     //   ② 亮度域高斯模糊 → 高频残差（边缘权重）
     //   ③ 保边降噪（仅高 ISO 启用）：平坦区向邻域均值 blend，边缘不动
     //   ④ 亮度域 unsharp 锐化：结构细节增强，色彩零串染（luma-only）
-    //   ⑤ 径向暗角（与 [applyVignette] 同公式，逐像素定位）
+    //   ⑤ 径向暗角（逐像素定位；取景预览 [FilteredPreviewAnalyzer] 同公式，所见即所得）
     //
     // 带上下各留 [DEFAULT_RADIUS] 行重叠供邻域运算，只写中心行，
     // 任意分带数量结果与整带一致（无接缝，单测锁定）。
@@ -248,7 +218,7 @@ object PresetPixelEffects {
                     if (delta > 0.5f || delta < -0.5f) c = addLumaDelta(c, delta)
                 }
 
-                // ⑤ 径向暗角（与 applyVignette 同参数：0.75*maxSide 半径，0.55→1 渐暗）
+                // ⑤ 径向暗角（0.75*maxSide 半径，0.55→1 渐暗；取景预览同公式）
                 if (doVignette) {
                     val dx = x - cx
                     val dy = absY - cy

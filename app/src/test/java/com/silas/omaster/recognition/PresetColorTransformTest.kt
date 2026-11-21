@@ -113,6 +113,22 @@ class PresetColorTransformTest {
         val magenta = PresetColorTransform.buildColorMatrix(preset(colorHue = 100))
         assertNotEquals(base[12], magenta[12], 1e-3f)
         assertTrue(magenta[12] < base[12]) // B 对角增益下降 → 偏品红
+        // 【v1.8.0 审计修复】青品轴必须同时作用于 G 行，否则绿色内容完全不受色调影响
+        assertTrue("偏品红应压低 G 行增益", magenta[6] < base[6])
+        val green = PresetColorTransform.buildColorMatrix(preset(colorHue = -100))
+        assertTrue("偏绿应抬升 G 行增益", green[6] > base[6])
+    }
+
+    @Test
+    fun `中性取值的详情参数不判定为可见效果`() {
+        // 5500K 色温 / 0 色调的矩阵增量为 0，与 EV=0、饱和度 0 同口径
+        assertFalse(PresetColorTransform.hasVisibleEffect(preset(colorTemperature = 5500)))
+        assertFalse(PresetColorTransform.hasVisibleEffect(preset(colorHue = 0)))
+        assertFalse(PresetColorTransform.hasVisibleEffect(preset(saturation = 0)))
+        assertFalse(PresetColorTransform.hasVisibleEffect(preset(softLight = "无")))
+        // 非中性取值仍判定为可见效果
+        assertTrue(PresetColorTransform.hasVisibleEffect(preset(colorTemperature = 4000)))
+        assertTrue(PresetColorTransform.hasVisibleEffect(preset(colorHue = 100)))
     }
 
     @Test

@@ -172,7 +172,9 @@ object PresetColorTransform {
 
         // G 行
         m[5] = contrast * (lr - satFactor * lr)
-        m[6] = contrast * (lg + satFactor * (1 - lg))
+        // 【v1.8.0 审计修复】青品轴必须同时作用于 G 行：正值（偏品红）压低绿增益、
+        // 负值（偏绿）抬升绿增益。此前仅调制 B 行交叉项，绿色内容完全不受色调影响。
+        m[6] = contrast * (lg + satFactor * (1 - lg)) - cyanMagenta * 0.10f
         m[7] = contrast * (lb - satFactor * lb)
         m[8] = 0f; m[9] = lift
 
@@ -192,7 +194,10 @@ object PresetColorTransform {
         if (listOf(preset.saturation, preset.warmCool, preset.cyanMagenta, preset.tone)
                 .any { it != null && it != 0 }) return true
         if (filterAdjustment(preset.filter) != NEUTRAL) return true
-        if (preset.colorTemperature != null || preset.colorHue != null) return true
+        // 【v1.8.0 审计修复】中性取值的详情参数（5500K 色温 / 0 色调）不产生任何
+        // 矩阵增量，按"无可见效果"处理，与 POST 芯片门控口径一致
+        if (colorTempWarmDelta(preset.colorTemperature) != 0f) return true
+        if (colorHueCyanMagentaDelta(preset.colorHue) != 0f) return true
         if (parseExposureEv(preset.exposureCompensation) != 0f) return true
         if (parseSoftLight(preset.softLight) > 0f) return true
         if (vignetteStrength(preset) > 0f || sharpnessAmount(preset) > 0f) return true

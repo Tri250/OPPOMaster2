@@ -17,7 +17,7 @@ import androidx.camera.core.ImageProxy
  *
  * 把预设色彩矩阵逐帧应用到相机画面：
  * - 色彩矩阵与拍后套色同源（[PresetColorTransform.buildColorMatrix]）→ 取景与成片观感一致；
- * - 暗角按 [PresetPixelEffects.applyVignette] 同参数径向叠加；
+ * - 暗角按 [PresetPixelEffects.processBandInto] 同参数径向叠加（所见即所得）；
  * - 锐化为拍后专属（预览不做邻域像素运算，保证低功耗流畅）；
  * - ImageAnalysis 目标 1280x720 + KEEP_ONLY_LATEST，逐帧节流约 30fps；
  * - 方向：ImageProxy.toBitmap() 返回的是**传感器方向**像素（CameraX 不自动旋转，
@@ -120,7 +120,7 @@ class FilteredPreviewAnalyzer(
     }
 
     /**
-     * 径向暗角：与 PresetPixelEffects.applyVignette 严格同参数（所见即所得）——
+     * 径向暗角：与 PresetPixelEffects 条带管线（processBandInto）严格同参数（所见即所得）——
      * 中心 (w-1)/2、半径 0.75×长边、0.55 处开始线性压暗、边缘 alpha=0.62×强度×255。
      */
     private fun drawVignette(out: Bitmap) {

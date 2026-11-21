@@ -192,6 +192,22 @@ class PresetCapturePlanTest {
     }
 
     @Test
+    fun `中性取值的拍后参数不产生芯片`() {
+        // 【v1.8.0 审计修复】与 EV=0 契约对齐：取值存在但效果中性 → 不标记"拍后套用"
+        val plan = PresetCapturePlan.build(
+            preset(saturation = 0, colorTemperature = 5500), renoRanges
+        )
+        assertNull(plan.statusOf(ParamKey.SATURATION))
+        assertNull(plan.statusOf(ParamKey.COLOR_TEMP))
+        // 非中性取值仍正常 POST
+        val plan2 = PresetCapturePlan.build(
+            preset(saturation = -14, colorTemperature = 4300), renoRanges
+        )
+        assertEquals(ApplyStatus.POST, plan2.statusOf(ParamKey.SATURATION)?.status)
+        assertEquals(ApplyStatus.POST, plan2.statusOf(ParamKey.COLOR_TEMP)?.status)
+    }
+
+    @Test
     fun `快门写法解析为纳秒`() {
         assertEquals(8_000_000L, PresetCapturePlan.parseShutterNs("1/125"))
         assertEquals(16_666_666L, PresetCapturePlan.parseShutterNs("1/60"))

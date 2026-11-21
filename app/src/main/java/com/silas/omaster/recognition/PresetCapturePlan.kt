@@ -138,20 +138,30 @@ object PresetCapturePlan {
             }
         }
 
-        // 拍后套用项（与设备能力无关，恒可套用）
-        fun post(key: ParamKey, value: String?, present: Boolean) {
-            if (present && value != null) params += ParamStatus(key, value, ApplyStatus.POST)
+        // 拍后套用项（与设备能力无关，恒可套用）。
+        // 【v1.8.0 审计修复】门控口径与 EV（上方 evValue != 0f）及
+        // [PresetColorTransform.hasVisibleEffect] 对齐：取值存在但效果中性
+        // （饱和度 0 / 色温 5500K / 柔光"无"等）不产生芯片——
+        // 否则会显示"0 · 拍后套用"这类"假装已套用"的误导信息，
+        // 违背本类"UI 如实展示，不做假装已套用"的设计契约。
+        fun post(key: ParamKey, value: String?, effective: Boolean) {
+            if (effective && value != null) params += ParamStatus(key, value, ApplyStatus.POST)
         }
-        post(ParamKey.COLOR_TEMP, preset.colorTemperature?.let { "${it}K" }, preset.colorTemperature != null)
+        post(ParamKey.COLOR_TEMP, preset.colorTemperature?.let { "${it}K" },
+            PresetColorTransform.colorTempWarmDelta(preset.colorTemperature) != 0f)
         post(ParamKey.FILTER, preset.filter, isFilterApplicable(preset.filter))
-        post(ParamKey.SATURATION, formatSigned(preset.saturation), preset.saturation != null)
-        post(ParamKey.TONE, formatSigned(preset.tone), preset.tone != null)
-        post(ParamKey.WARM_COOL, formatSigned(preset.warmCool), preset.warmCool != null)
-        post(ParamKey.CYAN_MAGENTA, formatSigned(preset.cyanMagenta), preset.cyanMagenta != null)
-        post(ParamKey.SOFT_LIGHT, preset.softLight, preset.softLight != null)
-        post(ParamKey.SHARPNESS, preset.sharpness?.toString(), preset.sharpness != null)
-        post(ParamKey.VIGNETTE, preset.vignette, preset.vignette != null)
-        post(ParamKey.COLOR_HUE, formatSigned(preset.colorHue), preset.colorHue != null)
+        post(ParamKey.SATURATION, formatSigned(preset.saturation), (preset.saturation ?: 0) != 0)
+        post(ParamKey.TONE, formatSigned(preset.tone), (preset.tone ?: 0) != 0)
+        post(ParamKey.WARM_COOL, formatSigned(preset.warmCool), (preset.warmCool ?: 0) != 0)
+        post(ParamKey.CYAN_MAGENTA, formatSigned(preset.cyanMagenta), (preset.cyanMagenta ?: 0) != 0)
+        post(ParamKey.SOFT_LIGHT, preset.softLight,
+            PresetColorTransform.parseSoftLight(preset.softLight) > 0f)
+        post(ParamKey.SHARPNESS, preset.sharpness?.toString(),
+            PresetColorTransform.sharpnessAmount(preset) > 0f)
+        post(ParamKey.VIGNETTE, preset.vignette,
+            PresetColorTransform.vignetteStrength(preset) > 0f)
+        post(ParamKey.COLOR_HUE, formatSigned(preset.colorHue),
+            PresetColorTransform.colorHueCyanMagentaDelta(preset.colorHue) != 0f)
 
         // 滤镜名未识别（引擎滤镜表外）：如实标记，绝不"假装 POST"
         val filterValue = preset.filter
