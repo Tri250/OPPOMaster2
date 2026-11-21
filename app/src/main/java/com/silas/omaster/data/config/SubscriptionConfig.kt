@@ -44,11 +44,12 @@ internal class SubscriptionConfig(private val context: Context) {
 
         /**
          * 【v1.6.13】默认订阅种子版本：
-         * 1 = oppo 出厂源；2 = +realme；3 = +vivo / HONOR（本次追加）。
-         * 版本落后时幂等补齐一次；用户随后删除不会被再次补回。
+         * 1 = oppo 出厂源；2 = +realme；3 = +vivo / HONOR；
+         * 4 = Realme 默认启用翻转（本次追加，存量"出厂默认关闭"的一次性翻正）。
+         * 版本落后时幂等补齐一次；用户随后删除/关闭不会被再次改回。
          */
         private const val KEY_DEFAULT_SEED_VERSION = "default_seed_version"
-        private const val DEFAULT_SEED_VERSION = 3
+        private const val DEFAULT_SEED_VERSION = 4
 
         // 【v1.6.14 发现 2.0】订阅雷达未读新增计数（url → count）
         private const val KEY_UNSEEN_COUNTS = "unseen_counts"
@@ -121,14 +122,14 @@ internal class SubscriptionConfig(private val context: Context) {
                 )
             ) + migrated
         }
-        // 3) 补齐 Realme 预设（默认关闭，与旧版一致）
+        // 3) 补齐 Realme 预设（默认开启，与全源默认启用策略一致）
         if (migrated.none { it.url == REALME_PRESET_URL }) {
             migrated = migrated + Subscription(
                 url = REALME_PRESET_URL,
                 name = "Realme GR预设",
                 author = "@OMaster",
                 build = 1,
-                isEnabled = false,
+                isEnabled = true,
                 presetCount = 0,
                 lastUpdateTime = 0
             )
@@ -145,9 +146,10 @@ internal class SubscriptionConfig(private val context: Context) {
     }
 
     /**
-     * 【v1.6.13】默认订阅种子补齐（幂等）：为存量订阅列表追加 vivo / HONOR 社区预设源。
-     * 新源默认启用（isEnabled = true），启动时自动刷新机制（每日一次）会立即拉取；
-     * 仅在种子版本落后时执行，写入版本后用户删除不会被再次补回。
+     * 【v1.6.13】默认订阅种子补齐（幂等）：为存量订阅列表追加 vivo / HONOR 社区预设源，
+     * 【v1.8.2】种子 v4：把"出厂默认关闭"的 Realme 翻转为启用（仅一次，尊重用户后续手动关闭）。
+     * 启动时自动刷新机制（每日一次）会立即拉取新增启用源；
+     * 仅在种子版本落后时执行，写入版本后用户删除/关闭不会被再次改回。
      */
     private fun seedDefaultSubscriptions() {
         val currentSeed = prefs.getInt(KEY_DEFAULT_SEED_VERSION, 1)
@@ -180,10 +182,20 @@ internal class SubscriptionConfig(private val context: Context) {
             )
             changed = true
         }
+        // 【v1.8.2】种子 v4：存量 Realme（出厂默认关闭）一次性翻正为启用
+        migrated = migrated.map {
+            if (it.url == REALME_PRESET_URL && !it.isEnabled) {
+                changed = true
+                it.copy(isEnabled = true)
+            } else it
+        }
         if (changed) {
             _subscriptionsFlow.value = migrated
             saveSubscriptions()
-            android.util.Log.d(ConfigLog.TAG, "[Subscription] Seeded vivo/HONOR default subscriptions")
+            android.util.Log.d(
+                ConfigLog.TAG,
+                "[Subscription] Seeded default subscriptions (seed v$DEFAULT_SEED_VERSION)"
+            )
         }
         prefs.edit().putInt(KEY_DEFAULT_SEED_VERSION, DEFAULT_SEED_VERSION).apply()
     }
@@ -204,7 +216,7 @@ internal class SubscriptionConfig(private val context: Context) {
                 name = "Realme GR预设",
                 author = "@OMaster",
                 build = 1,
-                isEnabled = false,
+                isEnabled = true,
                 presetCount = 0,
                 lastUpdateTime = 0
             ),

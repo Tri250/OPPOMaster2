@@ -92,9 +92,10 @@ class ConfigMigrationTest {
 
         val subs = config.subscriptionsFlow.value
         // v1.6.13：官方 + Realme + vivo + HONOR 共 4 条出厂默认订阅
+        // v1.8.2：全源默认启用（Realme 不再出厂关闭）
         assertEquals(4, subs.size)
         assertTrue(subs.any { it.url == SubscriptionConfig.DEFAULT_PRESET_URL && it.isEnabled })
-        assertTrue(subs.any { it.url == SubscriptionConfig.REALME_PRESET_URL && !it.isEnabled })
+        assertTrue(subs.any { it.url == SubscriptionConfig.REALME_PRESET_URL && it.isEnabled })
         // vivo / HONOR 社区源：默认启用，启动自动刷新拉取
         assertTrue(subs.any { it.url == SubscriptionConfig.VIVO_PRESET_URL && it.isEnabled })
         assertTrue(subs.any { it.url == SubscriptionConfig.HONOR_PRESET_URL && it.isEnabled })
@@ -142,10 +143,10 @@ class ConfigMigrationTest {
         // 旧「官方内置预设」URL 归一化到当前官方地址
         assertTrue(subs.any { it.url == SubscriptionConfig.DEFAULT_PRESET_URL })
         assertFalse(subs.any { it.url == "https://example.com/old-official.json" })
-        // Realme 源补齐（默认关闭，与旧版语义一致）
+        // Realme 源补齐（v1.8.2 起默认开启，全源默认启用策略）
         assertTrue(
             subs.any {
-                it.url == SubscriptionConfig.REALME_PRESET_URL && !it.isEnabled
+                it.url == SubscriptionConfig.REALME_PRESET_URL && it.isEnabled
             }
         )
         // 迁移结果落盘，重启后仍可读回
