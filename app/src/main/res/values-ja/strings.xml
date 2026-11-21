@@ -83,8 +83,8 @@
     <!-- 更新設定 -->
     <string name="settings_section_update">更新設定</string>
     <string name="update_channel">更新チャンネル</string>
-    <string name="update_channel_gitee">Gitee（中国推奨）</string>
-    <string name="update_channel_github">GitHub（国際）</string>
+    <string name="update_channel_gitee">Gitee（ミラー、遅延あり）</string>
+    <string name="update_channel_github">GitHub（デフォルト、正式リリース）</string>
     <string name="auto_check_update">起動時に自動更新確認</string>
     <string name="auto_check_update_desc">アプリを開くたびに新しいバージョンを自動確認</string>
 
@@ -114,10 +114,10 @@
     <string name="tab_my">マイプリセット</string>
 
     <!-- チャンネル説明 -->
-    <string name="channel_gitee_desc">中国での高速アクセス</string>
+    <string name="channel_gitee_desc">サードパーティミラー、版が遅延する場合あり</string>
     <string name="channel_github_desc">国際アクセス、中国ではプロキシが必要な場合あり</string>
-    <string name="channel_gitee_desc_detail">中国での高速アクセス</string>
-    <string name="channel_github_desc_detail">国際アクセス、速度が遅い場合あり</string>
+    <string name="channel_gitee_desc_detail">サードパーティミラー、版が遅延する場合あり。更新なしの場合 GitHub に自動フォールバック</string>
+    <string name="channel_github_desc_detail">CI 実際リリースリポジトリ、常に最新。中国からはやや低速の場合あり</string>
 
     <!-- 言語説明 -->
     <string name="language_system_desc">システムデフォルト言語を使用</string>

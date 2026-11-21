@@ -79,8 +79,8 @@
     <!-- Update Settings -->
     <string name="settings_section_update">Update</string>
     <string name="update_channel">Update Channel</string>
-    <string name="update_channel_gitee">Gitee (China)</string>
-    <string name="update_channel_github">GitHub (International)</string>
+    <string name="update_channel_gitee">Gitee (mirror, may lag)</string>
+    <string name="update_channel_github">GitHub (default, authoritative)</string>
     <string name="auto_check_update">Auto Check Update</string>
     <string name="auto_check_update_desc">Automatically check for new version on app startup</string>
 
@@ -111,7 +111,7 @@
     <string name="tab_my">My Presets</string>
 
     <!-- Channel Descriptions -->
-    <string name="channel_gitee_desc">Fast access in China</string>
+    <string name="channel_gitee_desc">Third-party mirror, may lag behind</string>
     <string name="channel_github_desc">International access, may need proxy in China</string>
 
     <!-- Language Descriptions -->
@@ -771,8 +771,8 @@
     <string name="settings_dark_mode_dialog_title">Select Dark Mode</string>
 
     <!-- Channel Descriptions (Detail) -->
-    <string name="channel_gitee_desc_detail">Faster access in China</string>
-    <string name="channel_github_desc_detail">International access, may be slower</string>
+    <string name="channel_gitee_desc_detail">Third-party mirror, may lag behind; falls back to GitHub automatically</string>
+    <string name="channel_github_desc_detail">CI release repository, always latest; may be slower in China</string>
 
     <!-- Version Check Hint -->
     <string name="version_check_hint">Tap to check for updates</string>

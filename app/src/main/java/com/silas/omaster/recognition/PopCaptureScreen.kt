@@ -268,7 +268,7 @@ fun PopCaptureScreen(
                         // 【v1.8.0 方向修复】toBitmap() 不应用旋转，成片按 rotationDegrees 转正
                         // （与取景路径同源；无效果直通路径带 EXIF，无需处理）
                         val rotation = runCatching { image.imageInfo.rotationDegrees }.getOrDefault(0)
-                        image.toBitmap()?.let { rotateToUpright(it, rotation) }
+                        rotateToUpright(image.toBitmap(), rotation)
                     } catch (e: Exception) {
                         null
                     } finally {
