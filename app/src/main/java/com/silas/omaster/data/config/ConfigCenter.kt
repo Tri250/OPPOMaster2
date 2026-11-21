@@ -292,11 +292,14 @@ class ConfigCenter private constructor(context: Context) {
         }
 
     private fun loadUpdateChannel(): UpdateChannel {
-        val value = prefs.getString(KEY_UPDATE_CHANNEL, UpdateChannel.GITEE.name)
+        // 【v1.8.0】默认渠道改 GitHub：原默认 Gitee 指向的第三方镜像（qiublog/OMaster）
+        // 停更在 v1.4.1，版本比较恒判"无更新"，导致热更新推送整体失效。
+        // GitHub 为 CI 实际发布仓库（.github/workflows/release.yml），是权威版本源。
+        val value = prefs.getString(KEY_UPDATE_CHANNEL, UpdateChannel.GITHUB.name)
         return try {
-            UpdateChannel.valueOf(value ?: UpdateChannel.GITEE.name)
+            UpdateChannel.valueOf(value ?: UpdateChannel.GITHUB.name)
         } catch (e: Exception) {
-            UpdateChannel.GITEE
+            UpdateChannel.GITHUB
         }
     }
 

@@ -52,19 +52,37 @@ object UpdateChecker {
 
     /**
      * 检查更新（根据渠道选择）
+     *
+     * 【v1.8.0 热更新修复】双渠道回退：配置渠道查询失败（网络异常）或判定"无更新"时，
+     * 自动回退查询另一渠道，以"任一渠道有新版即提醒"为准。
+     * 背景：原默认 Gitee 渠道指向的第三方镜像停更在 v1.4.1，版本比较恒判无更新，
+     * 存量用户即使保持 Gitee 设置也能经回退收到 GitHub 权威发布（CI 实际发布仓库）的更新。
+     *
      * @param context 上下文
      * @param currentVersionCode 当前版本号
-     * @param channel 更新渠道，默认 Gitee
-     * @return 更新信息，失败返回 null
+     * @param channel 更新渠道，默认 GitHub
+     * @return 更新信息，两渠道均失败返回 null
      */
     suspend fun checkUpdate(
         context: Context,
         currentVersionCode: Int,
-        channel: UpdateChannel = UpdateChannel.GITEE
+        channel: UpdateChannel = UpdateChannel.GITHUB
     ): UpdateInfo? = withContext(Dispatchers.IO) {
-        return@withContext when (channel) {
+        val primary = when (channel) {
             UpdateChannel.GITEE -> checkGiteeUpdate(context, currentVersionCode)
             UpdateChannel.GITHUB -> checkGithubUpdate(context, currentVersionCode)
+        }
+        if (primary != null && primary.isNewer) return@withContext primary
+
+        val secondary = when (channel) {
+            UpdateChannel.GITEE -> checkGithubUpdate(context, currentVersionCode)
+            UpdateChannel.GITHUB -> checkGiteeUpdate(context, currentVersionCode)
+        }
+        // 回退渠道有新版 → 用回退结果；否则保留主渠道结果（供 UI 展示"已是最新"），
+        // 主渠道失败时退回回退渠道结果，两者都失败返回 null
+        when {
+            secondary != null && secondary.isNewer -> secondary
+            else -> primary ?: secondary
         }
     }
 

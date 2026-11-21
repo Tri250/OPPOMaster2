@@ -12,8 +12,8 @@ package com.silas.omaster.data.local
  * 更新渠道枚举
  */
 enum class UpdateChannel {
-    GITEE,    // 默认，国内访问快
-    GITHUB    // GitHub，国际访问
+    GITEE,    // Gitee 镜像（第三方维护，可能滞后；检查无更新时自动回退 GitHub）
+    GITHUB    // 默认，CI 实际发布仓库（权威版本源）
 }
 
 /**

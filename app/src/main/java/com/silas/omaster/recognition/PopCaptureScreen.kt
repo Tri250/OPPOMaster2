@@ -11,6 +11,7 @@ import android.hardware.camera2.CaptureRequest
 import android.net.Uri
 import android.os.Build
 import android.annotation.SuppressLint
+import android.util.Size
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.camera2.interop.Camera2Interop
@@ -20,6 +21,8 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -157,7 +160,19 @@ fun PopCaptureScreen(
         }
     }
     val imageAnalysis = remember {
+        // 【v1.8.0 画质】取景目标 1280x720（默认 640x480 拉伸到预览框观感模糊）；
+        // 不可用时就近取更高再退更低，KEEP_ONLY_LATEST + 30fps 节流保证流畅省电
         ImageAnalysis.Builder()
+            .setResolutionSelector(
+                ResolutionSelector.Builder()
+                    .setResolutionStrategy(
+                        ResolutionStrategy(
+                            Size(1280, 720),
+                            ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
+                        )
+                    )
+                    .build()
+            )
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
     }
@@ -250,7 +265,10 @@ fun PopCaptureScreen(
                         null
                     }
                     val bmp = try {
-                        image.toBitmap()
+                        // 【v1.8.0 方向修复】toBitmap() 不应用旋转，成片按 rotationDegrees 转正
+                        // （与取景路径同源；无效果直通路径带 EXIF，无需处理）
+                        val rotation = runCatching { image.imageInfo.rotationDegrees }.getOrDefault(0)
+                        image.toBitmap()?.let { rotateToUpright(it, rotation) }
                     } catch (e: Exception) {
                         null
                     } finally {
@@ -730,6 +748,8 @@ private fun rotateBitmap(src: Bitmap, degrees: Float): Bitmap {
     if (degrees == 0f) return src
     val matrix = Matrix().apply { postRotate(degrees) }
     return try {
-        Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
+        Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true).also {
+            if (it !== src) src.recycle()
+        }
     } catch (e: Exception) { src }
 }

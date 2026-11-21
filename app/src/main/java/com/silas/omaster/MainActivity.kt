@@ -91,6 +91,12 @@ import com.silas.omaster.data.repository.PresetRepository
 import com.silas.omaster.network.PresetRemoteManager
 
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.launch
 import com.silas.omaster.data.config.ConfigCenter
 import com.silas.omaster.data.local.HolidayGreeting
 import com.silas.omaster.data.local.HolidayGreetingManager
@@ -540,10 +546,12 @@ fun MainApp(
     // 节假日问候弹窗状态
     var holidayGreeting by remember { mutableStateOf<HolidayGreeting?>(null) }
 
-    // 冷启动时自动检查更新
-    LaunchedEffect(Unit) {
-        if (autoCheckUpdate) {
-            delay(2000)
+    // 冷启动自动检查更新 + 回前台再检查（v1.8.0：此前仅冷启动一次，常驻后台用户永远收不到提醒）
+    val autoCheckScope = rememberCoroutineScope()
+    // 上次自动检查时刻（elapsedRealtime）：组合时初始化为"现在"，避免启动瞬间与冷启动检查重复请求
+    val lastAutoCheckAt = remember { longArrayOf(android.os.SystemClock.elapsedRealtime()) }
+    fun runAutoUpdateCheck() {
+        autoCheckScope.launch {
             try {
                 val result = UpdateChecker.checkUpdate(context, VersionInfo.VERSION_CODE, updateChannel)
                 if (result != null && result.isNewer) {
@@ -554,6 +562,28 @@ fun MainApp(
                 android.util.Log.w("MainActivity", "自动检查更新失败", e)
             }
         }
+    }
+    LaunchedEffect(Unit) {
+        if (autoCheckUpdate) {
+            delay(2000)
+            lastAutoCheckAt[0] = android.os.SystemClock.elapsedRealtime()
+            runAutoUpdateCheck()
+        }
+    }
+    val resumeLifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(resumeLifecycleOwner, autoCheckUpdate) {
+        val observer = LifecycleEventObserver { _, event ->
+            // 回前台再检查：距上次 ≥6 小时才发起，避免频繁网络访问
+            if (event == Lifecycle.Event.ON_RESUME && autoCheckUpdate) {
+                val now = android.os.SystemClock.elapsedRealtime()
+                if (now - lastAutoCheckAt[0] >= 6L * 3600_000L) {
+                    lastAutoCheckAt[0] = now
+                    runAutoUpdateCheck()
+                }
+            }
+        }
+        resumeLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { resumeLifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     // 自动检查订阅更新（每日一次）

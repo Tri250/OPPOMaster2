@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.RadialGradient
 import android.graphics.Shader
@@ -19,7 +20,10 @@ import kotlin.math.hypot
  * - 色彩矩阵与拍后套色同源（[PresetColorTransform.buildColorMatrix]）→ 取景与成片观感一致；
  * - 暗角按 [PresetPixelEffects.applyVignette] 同参数径向叠加；
  * - 锐化为拍后专属（预览不做邻域像素运算，保证低功耗流畅）；
- * - ImageAnalysis 默认 640x480 + KEEP_ONLY_LATEST，逐帧节流约 30fps。
+ * - ImageAnalysis 目标 1280x720 + KEEP_ONLY_LATEST，逐帧节流约 30fps；
+ * - 方向：ImageProxy.toBitmap() 返回的是**传感器方向**像素（CameraX 不自动旋转，
+ *   见官方 orientation-rotation 文档与 ImageUtil.createBitmapFromImageProxy 实现），
+ *   必须按 [androidx.camera.core.ImageInfo.rotationDegrees] 自行转正，否则竖屏取景横躺 90°。
  *
  * 线程模型：分析器运行在单线程 Executor，通过 [enabled] 控制启停
  * （成片展示时暂停分析，重新取景自动恢复）。
@@ -60,9 +64,10 @@ class FilteredPreviewAnalyzer(
             image.close()
             return
         }
+        // toBitmap() 只转像素格式、不应用旋转，方向需按 rotationDegrees 自行转正（v1.8.0 修复）
+        val rotation = runCatching { image.imageInfo.rotationDegrees }.getOrDefault(0)
         val src = try {
-            // CameraX 1.3+：YUV/JPEG 均已应用 imageInfo.rotationDegrees，方向无需自转
-            image.toBitmap()
+            rotateToUpright(image.toBitmap(), rotation)
         } catch (e: Exception) {
             null
         } finally {
@@ -139,4 +144,18 @@ class FilteredPreviewAnalyzer(
         /** 约 30fps 节流：滤镜取景够流畅且省电 */
         private const val FRAME_INTERVAL_MS = 33L
     }
+}
+
+/**
+ * 按 rotationDegrees（顺时针转正角度）把位图转为正立方向，成功旋转后回收原图。
+ *
+ * CameraX 的 ImageProxy.toBitmap()（YUV/JPEG 皆然）只转换像素格式、不应用旋转，
+ * 取景帧与相机成片都必须经此转正（v1.8.0，修复 POP 取景方向错误）。
+ */
+internal fun rotateToUpright(src: Bitmap, degrees: Int): Bitmap {
+    if (degrees == 0) return src
+    val matrix = Matrix().apply { postRotate(degrees.toFloat()) }
+    val rotated = Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
+    if (rotated !== src) src.recycle()
+    return rotated
 }

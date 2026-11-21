@@ -144,6 +144,11 @@ object PresetPixelEffects {
      * （JPEG 解码缓冲 / 条带数组 / 缩放中间图）。预算取堆上限 45%，
      * 超限时按面积等比收缩，保证任何堆大小的设备都不 OOM。
      *
+     * 【v1.8.0 画质】应用已声明 largeHeap（AndroidManifest），主流设备堆上限
+     * 提升至 ~512MB，预算 ≈ 198MB → 允许 ≈ 2470 万像素，12MP 成片不再降采样；
+     * 此前无 largeHeap 时 192–256MB 堆会把 12MP 缩到 ~3K 长边（约 3–4 倍像素损失，
+     * 即"画质压缩感"主因）。
+     *
      * @param maxMemoryBytes Runtime.getRuntime().maxMemory()；<=0 时按 256MB 保守估计
      */
     fun chooseStyleMaxSide(w: Int, h: Int, maxMemoryBytes: Long): Int {
