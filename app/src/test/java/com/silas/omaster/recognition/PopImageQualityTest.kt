@@ -465,21 +465,39 @@ class PopImageQualityTest {
     // ---------- ⑧ Pro XDR 动态范围增强 ----------
 
     @Test
-    fun `XDR提亮阴影压回高光中间调温和`() {
-        val w = 6; val h = 4
-        // 0..250 灰阶横条：x*50
-        val src = img(w, h) { x, _ -> rgb(x * 50, x * 50, x * 50) }
+    fun `XDR影调对齐摄影惯例`() {
+        val w = 7; val h = 4
+        // 纵列灰阶：0(真黑) 50(阴影) 120(过渡) 150(中间调) 220(细节高光) 250(近白) 255(白点)
+        val grays = intArrayOf(0, 50, 120, 150, 220, 250, 255)
+        val src = img(w, h) { x, _ -> rgb(grays[x], grays[x], grays[x]) }
         val out = IntArray(w * h)
         PresetPixelEffects.processBandInto(
             src.copyOf(), out, w, h, 0, h, 0, h, null, 0f, 0f, 0f, xdr = 1f
         )
-        // 阴影（灰 50）：显著提亮
+        // 黑场锚点：真黑不抬（≤+6），画面"沉得下去"不发灰
+        assertTrue(
+            "真黑不应被抬：${lum(out[0]) - lum(src[0])}",
+            lum(out[0]) - lum(src[0]) <= 6
+        )
+        // 阴影显著提亮（去浊）
         assertTrue("阴影应提亮", lum(out[1]) > lum(src[1]))
-        // 中间调（灰 150）：变化温和（≤12 亮度单位）
-        val midDelta = Math.abs(lum(out[3]) - lum(src[3]))
-        assertTrue("中间调应温和：$midDelta", midDelta <= 12)
-        // 高光（灰 250）：压回层次
-        assertTrue("高光应回收", lum(out[5]) < lum(src[5]))
+        // 中间调温和（≤12 亮度单位）
+        assertTrue(
+            "中间调应温和：${Math.abs(lum(out[3]) - lum(src[3]))}",
+            Math.abs(lum(out[3]) - lum(src[3])) <= 12
+        )
+        // 细节高光回收（208-248 肩部恢复层次）
+        assertTrue("细节高光应回收", lum(out[4]) < lum(src[4]))
+        // 白点张力：纯白最多回收 20（≥235），白墙/金属反光保持通透不发灰
+        assertTrue(
+            "白点不应发灰：${lum(out[6])}",
+            lum(out[6]) >= 235
+        )
+        // 近白高光：肩部缓出，回收量随亮度单调不减（缓出肩部的数学性质）
+        assertTrue(
+            "回收量应随亮度单调不减：${lum(src[5]) - lum(out[5])} vs ${lum(src[6]) - lum(out[6])}",
+            lum(src[5]) - lum(out[5]) <= lum(src[6]) - lum(out[6])
+        )
     }
 
     @Test

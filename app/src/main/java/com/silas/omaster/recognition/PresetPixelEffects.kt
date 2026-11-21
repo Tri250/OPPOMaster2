@@ -103,17 +103,31 @@ object PresetPixelEffects {
     private const val EDGE_HIGH = 30f
 
     // ── Pro XDR 动态范围增强（成片质感核心，luma-only 无色偏）──
+    // 影调设计遵循摄影惯例：真黑留黑（黑场锚点防"灰蒙蒙"）、
+    // 白点单调肩部收敛（缓出二次曲线，防"高光发灰"且亮部梯度无色带）、
+    // 提亮为三角窗平滑过渡；清晰度仅作用于中间调并与锐化分工。
 
-    /** 阴影提亮上限（xdr=1 时最暗区最多 +30 亮度） */
+    /** 阴影提亮上限（满额区最大 +30 亮度） */
     private const val XDR_SHADOW_LIFT = 30f
-    /** 阴影过渡上界：亮度低于此值开始提亮，线性平滑衰减 */
+    /** 黑场锚点：亮度低于此值的纯黑不提亮，保证画面有"沉下去"的黑 */
+    private const val XDR_BLACK_ANCHOR = 6f
+    /** 阴影满额起点：此值以上提亮满额，向下平滑收敛至黑场锚点 */
+    private const val XDR_SHADOW_FULL = 34f
+    /** 阴影过渡上界：提亮量自此平滑衰减至 0 */
     private const val XDR_SHADOW_END = 112f
-    /** 高光回收上限（xdr=1 时最亮区最多 −26 亮度） */
-    private const val XDR_HIGHLIGHT_PULL = 26f
-    /** 高光过渡起点：亮度高于此值开始回收 */
+    /** 高光回收上限（白点最大 −14 亮度：肩部收敛防"高光发灰"，保通透） */
+    private const val XDR_HIGHLIGHT_PULL = 14f
+    /** 高光过渡起点：亮度高于此值开始沿单调肩部曲线回收 */
     private const val XDR_HIGHLIGHT_START = 208f
-    /** 局部对比（清晰度）权重：复用高频残差 + edgeW 门控，平坦区噪点不被放大 */
-    private const val XDR_CLARITY = 0.45f
+    /** 高光区间宽度（208→255）：肩部曲线的归一化分母 */
+    private const val XDR_HIGHLIGHT_RANGE = 47f
+    /** 局部对比（清晰度）权重：复用高频残差，强度低于锐化（⑤）避免光晕 */
+    private const val XDR_CLARITY = 0.30f
+    /** 清晰度中间调掩膜：暗部 <24 / 亮部 >208 不增强（护暗部噪点与高光通透） */
+    private const val XDR_CLARITY_LO = 24f
+    private const val XDR_CLARITY_LO_FULL = 64f
+    private const val XDR_CLARITY_HI = 160f
+    private const val XDR_CLARITY_HI_END = 208f
 
     /** smoothstep：残差 → 边缘权重（0..1），噪点不锐化、细纹理过渡、强边满额 */
     private fun edgeWeight(residual: Float): Float {
@@ -228,18 +242,27 @@ object PresetPixelEffects {
                     c = blendPixel(c, l, r, u, dn, a)
                 }
 
-                // ④ Pro XDR：阴影提亮 + 高光回收 + 局部对比（luma-only 无色偏；
-                // 清晰度复用高频残差并经 edgeW 门控，平坦区噪点不被放大）
+                // ④ Pro XDR：阴影提亮 + 高光回收 + 局部对比（luma-only 无色偏）。
+                // 影调结构对齐摄影惯例：黑场锚点（真黑不抬）、白点单调肩部
+                // 收敛（无影调翻转/色带）；清晰度经中间调掩膜 + edgeW 双门控，
+                // 与⑤锐化分工，不叠硬边光晕
                 if (doXdr) {
                     val l = lum[i].toFloat()
                     var adj = 0f
-                    if (l < XDR_SHADOW_END) {
-                        adj += xdr * (XDR_SHADOW_END - l) / XDR_SHADOW_END * XDR_SHADOW_LIFT
+                    if (l > XDR_BLACK_ANCHOR && l < XDR_SHADOW_END) {
+                        val wUp = ((l - XDR_BLACK_ANCHOR) / (XDR_SHADOW_FULL - XDR_BLACK_ANCHOR)).coerceIn(0f, 1f)
+                        val wDn = ((XDR_SHADOW_END - l) / (XDR_SHADOW_END - XDR_SHADOW_FULL)).coerceIn(0f, 1f)
+                        adj += xdr * XDR_SHADOW_LIFT * minOf(wUp, wDn)
                     }
                     if (l > XDR_HIGHLIGHT_START) {
-                        adj -= xdr * (l - XDR_HIGHLIGHT_START) / (255f - XDR_HIGHLIGHT_START) * XDR_HIGHLIGHT_PULL
+                        // 单调缓出肩部（ease-out 二次）：f'(l)=1−adj'(l)≥0.40 恒正，
+                        // 亮部梯度无影调翻转/色带；白点 −14 保持镜面高光通透
+                        val u = ((l - XDR_HIGHLIGHT_START) / XDR_HIGHLIGHT_RANGE).coerceIn(0f, 1f)
+                        adj -= xdr * XDR_HIGHLIGHT_PULL * (1f - (1f - u) * (1f - u))
                     }
-                    adj += (lum[i] - blur[i]) * xdr * XDR_CLARITY * edgeW
+                    val cLo = ((l - XDR_CLARITY_LO) / (XDR_CLARITY_LO_FULL - XDR_CLARITY_LO)).coerceIn(0f, 1f)
+                    val cHi = ((XDR_CLARITY_HI_END - l) / (XDR_CLARITY_HI_END - XDR_CLARITY_HI)).coerceIn(0f, 1f)
+                    adj += (lum[i] - blur[i]) * xdr * XDR_CLARITY * edgeW * minOf(cLo, cHi)
                     if (adj > 0.5f || adj < -0.5f) c = addLumaDelta(c, adj)
                 }
 
