@@ -31,7 +31,9 @@ object CameraCapabilityProbe {
         val evRange: Pair<Float, Float>?,
         val cameraCount: Int,
         /** 设备手动范围（POP 即拍写入拍摄参数的裁剪依据） */
-        val manualRanges: ManualRanges = ManualRanges.NONE
+        val manualRanges: ManualRanges = ManualRanges.NONE,
+        /** 探测到的后置主摄 id（多后摄机型用于让 CameraX 绑定与能力探测对齐） */
+        val cameraId: String? = null
     ) {
         val isManualExposure: Boolean get() = supportsManualIso && supportsManualShutter
 
@@ -53,8 +55,9 @@ object CameraCapabilityProbe {
         return try {
             val manager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
                 ?: return capabilityFromLevel(-1, 0, null)
-            val chars = pickBackCameraCharacteristics(manager)
+            val picked = pickBackCamera(manager)
                 ?: return capabilityFromLevel(-1, 0, null)
+            val chars = picked.second
             val level = chars.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) ?: -1
             val aeModes = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES)
             val manualIso = aeModes?.contains(CameraCharacteristics.CONTROL_AE_MODE_OFF) == true
@@ -75,27 +78,61 @@ object CameraCapabilityProbe {
                 aeModeOffSupported = manualIso
             )
             val cameraCount = runCatching { manager.cameraIdList.size }.getOrDefault(0)
-            capabilityFromLevel(level, cameraCount, evRange, manualIso, manualRanges)
+            capabilityFromLevel(level, cameraCount, evRange, manualIso, manualRanges, picked.first)
         } catch (e: Exception) {
             capabilityFromLevel(-1, 0, null)
         }
     }
 
     /**
-     * 选取后置主摄特性（OPPO Reno 等多摄设备 cameraIdList 顺序不保证后摄在前，
-     * 直接取 first 可能拿到前摄导致手动能力被误判）。
+     * 选取后置主摄（id + 特性）。
+     *
+     * 【v1.8.3 Reno17 适配】OPPO Reno 系列多摄机型的后摄不止一颗（主摄/超广角/长焦），
+     * cameraIdList 顺序不保证主摄在前。此前只按"第一个后摄"取，可能拿到超广角——
+     * 其 ISO/快门范围更窄甚至不支持 AE_OFF，导致内置预设的人文/清新人文（ISO 50、
+     * 1/100）被误判"无法写入拍摄"或数值被错误裁剪。改为按感光元件物理面积取最大者
+     * 作为主摄，并回传 id 供拍摄绑定对齐。
      */
-    private fun pickBackCameraCharacteristics(manager: CameraManager): CameraCharacteristics? = try {
+    private fun pickBackCamera(manager: CameraManager): Pair<String, CameraCharacteristics>? = try {
         val ids = manager.cameraIdList
-        val backId = ids.firstOrNull { id ->
+        val backs = ids.mapNotNull { id ->
             runCatching {
-                manager.getCameraCharacteristics(id).get(CameraCharacteristics.LENS_FACING) ==
-                    CameraCharacteristics.LENS_FACING_BACK
-            }.getOrDefault(false)
-        } ?: ids.firstOrNull()
-        backId?.let { manager.getCameraCharacteristics(it) }
+                val c = manager.getCameraCharacteristics(id)
+                if (c.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK) {
+                    id to c
+                } else null
+            }.getOrNull()
+        }
+        val mainId = chooseMainBackCameraId(
+            backs.map { it.first },
+            backs.map { (_, c) ->
+                c.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)?.let { it.width * it.height }
+            }
+        )
+        mainId?.let { id -> backs.firstOrNull { it.first == id } }
+            ?: ids.firstOrNull()?.let { id ->
+                runCatching { id to manager.getCameraCharacteristics(id) }.getOrNull()
+            }
     } catch (e: Exception) {
         null
+    }
+
+    /**
+     * 纯逻辑：从后摄候选中选出主摄 id（感光面积最大；面积未知记为 0，
+     * 并列取先出现者；无后摄返回 null）。供 JVM 单测锁定 Reno17 多摄选择契约。
+     */
+    internal fun chooseMainBackCameraId(ids: List<String>, sensorAreas: List<Float?>): String? {
+        if (ids.isEmpty()) return null
+        var bestIndex = 0
+        var bestArea = sensorAreas.getOrNull(0) ?: 0f
+        for (i in 1 until ids.size) {
+            val area = sensorAreas.getOrNull(i) ?: 0f
+            if (area > bestArea) {
+                bestArea = area
+                bestIndex = i
+            }
+        }
+        return ids[bestIndex]
     }
 
     /** 纯逻辑：由硬件级别常量构造 Capability（可 JVM 单测） */
@@ -104,7 +141,8 @@ object CameraCapabilityProbe {
         cameraCount: Int,
         evRange: Pair<Float, Float>?,
         manualIsoOverride: Boolean? = null,
-        manualRanges: ManualRanges = ManualRanges.NONE
+        manualRanges: ManualRanges = ManualRanges.NONE,
+        cameraId: String? = null
     ): Capability {
         val (level, supportsIso, supportsShutter, supportsEv) = when (hardwareLevel) {
             CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
@@ -134,7 +172,8 @@ object CameraCapabilityProbe {
             supportsExposureCompensation = supportsEv,
             evRange = evRange,
             cameraCount = cameraCount,
-            manualRanges = manualRanges
+            manualRanges = manualRanges,
+            cameraId = cameraId
         )
     }
 

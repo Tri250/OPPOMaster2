@@ -89,4 +89,34 @@ class CameraCapabilityProbeTest {
         assertEquals(-3.0f, cap.evRange!!.first, 0.001f)
         assertEquals(3.0f, cap.evRange!!.second, 0.001f)
     }
+
+    @Test
+    fun 多后摄机型选择感光面积最大的主摄() {
+        // 【v1.8.3 Reno17 适配】cameraIdList 顺序不保证主摄在前：
+        // 超广角面积小（1/4" ≈ 40mm²），主摄最大（1/1.56" ≈ 100mm²），长焦居中
+        val ids = listOf("0", "1", "2", "3") // 3=主摄，排在最后
+        val areas = listOf<Float?>(40f, null, 60f, 100f)
+        assertEquals("3", CameraCapabilityProbe.chooseMainBackCameraId(ids, areas))
+        // 面积全部未知 → 取先出现者（保持旧行为，不因缺失元数据误选）
+        assertEquals("0", CameraCapabilityProbe.chooseMainBackCameraId(ids, listOf(null, null, null, null)))
+        // 面积并列 → 取先出现者
+        assertEquals("0", CameraCapabilityProbe.chooseMainBackCameraId(listOf("0", "1"), listOf(100f, 100f)))
+        // 无后摄候选 → null，由调用方回退 cameraIdList 首个
+        assertEquals(null, CameraCapabilityProbe.chooseMainBackCameraId(emptyList(), emptyList()))
+    }
+
+    @Test
+    fun 能力卡携带主摄id供拍摄绑定对齐() {
+        val cap = CameraCapabilityProbe.capabilityFromLevel(
+            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED, 4, null,
+            manualIsoOverride = true,
+            manualRanges = ManualRanges(isoRange = 100..6400, exposureTimeRange = 100_000L..1_000_000_000L,
+                aeModeOffSupported = true),
+            cameraId = "3"
+        )
+        assertEquals("3", cap.cameraId)
+        // 未探测到 id 时为空，界面回退 CameraSelector.DEFAULT_BACK_CAMERA
+        assertEquals(null, CameraCapabilityProbe.capabilityFromLevel(
+            CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL, 1, null).cameraId)
+    }
 }

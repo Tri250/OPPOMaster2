@@ -14,6 +14,7 @@ import android.annotation.SuppressLint
 import android.util.Size
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.camera2.interop.Camera2Interop
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.CameraSelector
@@ -112,6 +113,25 @@ fun PopCaptureScreen(
     val accent = HasselbladOrange
     val capability = remember { CameraCapabilityProbe.probe(context) }
     val plan = remember(preset, capability) { PresetCapturePlan.build(preset, capability.manualRanges) }
+    // 【v1.8.3 Reno17 适配】多后摄机型（主摄/超广角/长焦）下，能力探测选的是
+    // 感光面积最大的后置主摄；CameraX 默认后摄可能与它不一致（写入的 ISO/快门
+    // 范围来自主摄，实际绑定的却是超广角 → 手动参数被拒或画面非预期）。
+    // 这里按探测到的 cameraId 过滤，保证"能力探测 / 拍摄计划 / 实际取景"同一颗镜头。
+    val cameraSelector = remember(capability.cameraId) {
+        val id = capability.cameraId
+        if (id == null) {
+            CameraSelector.DEFAULT_BACK_CAMERA
+        } else {
+            CameraSelector.Builder()
+                .addCameraFilter { infos ->
+                    infos.filter { info ->
+                        runCatching { Camera2CameraInfo.from(info).cameraId == id }
+                            .getOrDefault(false)
+                    }.ifEmpty { infos }
+                }
+                .build()
+        }
+    }
 
     var appliedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     // 无可套用参数时保留的传感器原始 JPEG 字节（保存时零重编码直通，v1.7.8）
@@ -216,7 +236,7 @@ fun PopCaptureScreen(
         }
     }
 
-    DisposableEffect(cameraGranted, imageCapture) {
+    DisposableEffect(cameraGranted, imageCapture, cameraSelector) {
         if (cameraGranted) {
             val listener = Runnable {
                 cameraError = false
@@ -226,7 +246,7 @@ fun PopCaptureScreen(
                     imageAnalysis.setAnalyzer(analyzerExecutor, analyzer)
                     provider.bindToLifecycle(
                         lifecycleOwner,
-                        CameraSelector.DEFAULT_BACK_CAMERA,
+                        cameraSelector,
                         imageAnalysis,
                         imageCapture
                     )

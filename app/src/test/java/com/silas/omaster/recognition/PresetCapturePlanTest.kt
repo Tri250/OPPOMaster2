@@ -55,17 +55,49 @@ class PresetCapturePlanTest {
     }
 
     @Test
-    fun `超范围ISO与快门被裁剪到设备范围`() {
+    fun `超范围ISO被裁剪时快门等比补偿保持曝光量`() {
+        // ISO 6400 超出上限 3200（-1EV）→ 快门 1/2000 延长到 1/1000（+1EV），曝光量不变
         val plan = PresetCapturePlan.build(
             preset(iso = "6400", shutter = "1/2000"), renoRanges
         )
         assertEquals(3200, plan.iso)
-        // 1/2000s = 500us < 100us 下限? 不，500_000ns > 100_000ns，取下限测试另一侧
-        assertEquals(500_000L, plan.shutterNs)
+        assertEquals(1_000_000L, plan.shutterNs)
+        assertEquals("6400→3200", plan.statusOf(ParamKey.ISO)?.value)
+        assertEquals("1/2000→1/1000", plan.statusOf(ParamKey.SHUTTER)?.value)
 
+        // 快门 1/10000 低于设备下限 100us → 取下限，ISO 在范围内不动
         val fast = PresetCapturePlan.build(preset(iso = "50", shutter = "1/10000"), renoRanges)
         assertEquals(50, fast.iso)
         assertEquals(100_000L, fast.shutterNs) // 100us 设备下限
+    }
+
+    @Test
+    fun `Reno17主摄下限ISO下曝光守恒且芯片如实`() {
+        // 【v1.8.3 Reno17 适配】主摄 ISO 下限 100，内置"人文/清新人文"指定 ISO 50 + 1/100：
+        // ISO 钳到 100（+1EV）时快门减半到 1/200（-1EV），成片亮度与预设意图一致
+        val reno17 = ManualRanges(
+            isoRange = 100..6400,
+            exposureTimeRange = 100_000L..1_000_000_000L,
+            evStepRange = -12..12,
+            evStepEv = 1f / 6f,
+            aeModeOffSupported = true
+        )
+        val plan = PresetCapturePlan.build(preset(iso = "50", shutter = "1/100"), reno17)
+        assertEquals(100, plan.iso)
+        assertEquals(5_000_000L, plan.shutterNs)
+        assertEquals(ApplyStatus.WRITTEN, plan.statusOf(ParamKey.ISO)?.status)
+        assertEquals("50→100", plan.statusOf(ParamKey.ISO)?.value)
+        assertEquals("1/100→1/200", plan.statusOf(ParamKey.SHUTTER)?.value)
+        assertTrue(plan.manualExposure)
+    }
+
+    @Test
+    fun `ISO在设备范围内时不补偿快门且展示原值`() {
+        val plan = PresetCapturePlan.build(preset(iso = "200", shutter = "1/100"), renoRanges)
+        assertEquals(200, plan.iso)
+        assertEquals(10_000_000L, plan.shutterNs)
+        assertEquals("200", plan.statusOf(ParamKey.ISO)?.value)
+        assertEquals("1/100", plan.statusOf(ParamKey.SHUTTER)?.value)
     }
 
     @Test
@@ -219,6 +251,10 @@ class PresetCapturePlanTest {
         assertEquals(500_000_000L, PresetCapturePlan.parseShutterNs("0.5"))
         assertNull(PresetCapturePlan.parseShutterNs("auto"))
         assertNull(PresetCapturePlan.parseShutterNs(null))
+        // 纳秒 → 展示写法（钳制补偿后的实际写入值）
+        assertEquals("1/200", PresetCapturePlan.formatShutterNs(5_000_000L))
+        assertEquals("1/100", PresetCapturePlan.formatShutterNs(10_000_000L))
+        assertEquals("2s", PresetCapturePlan.formatShutterNs(2_000_000_000L))
     }
 
     @Test

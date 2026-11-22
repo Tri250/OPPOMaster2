@@ -34,7 +34,8 @@ enum class ParamKey {
 
 data class ParamStatus(
     val key: ParamKey,
-    /** 展示值（取预设原始写法，如 "200-400"、"1/125"） */
+    /** 展示值：预设原始写法（如 "200-400"、"1/125"）；写入前被设备范围钳制/补偿时
+     *  为 "原值→实际值"（如 "50→100"、"1/100→1/200"） */
     val value: String,
     val status: ApplyStatus,
     val reason: UnsupportedReason? = null
@@ -95,8 +96,18 @@ object PresetCapturePlan {
             ranges.isoRange != null && ranges.exposureTimeRange != null
         val wantManual = canManual && isoValue != null && shutterValue != null
 
-        val captureIso = if (wantManual) isoValue!!.coerceIn(ranges.isoRange!!) else null
-        val captureShutter = if (wantManual) shutterValue!!.coerceIn(ranges.exposureTimeRange!!) else null
+        val captureIso = if (wantManual) isoValue.coerceIn(ranges.isoRange) else null
+        // 【v1.8.3 Reno17 适配】设备 ISO 范围可能不含预设值（如 Reno17 主摄下限 ISO 100，
+        // 而内置"人文/清新人文"指定 ISO 50）。直接钳制会让曝光量翻倍（+1EV 过曝）；
+        // 此处按 ISO 钳制比例等比调整快门，保持 ISO×快门（曝光量）不变后再落设备快门
+        // 范围，确保成片亮度符合预设意图（快门变化 1 档以内，不影响构图与主体）。
+        val captureShutter = if (wantManual) {
+            val requestedShutter = shutterValue
+            // 曝光量 ISO×t 守恒：ISO 被抬高（如 50→100）则快门缩短，被压低则快门延长
+            val compensation = isoValue.toDouble() / captureIso!!.toDouble()
+            Math.round(requestedShutter * compensation)
+                .coerceIn(ranges.exposureTimeRange)
+        } else null
 
         val evValue = PresetColorTransform.parseExposureEv(preset.exposureCompensation)
         val steps = evToSteps(evValue, ranges)
@@ -105,7 +116,11 @@ object PresetCapturePlan {
         // ISO（Auto = AE 决定，不产生芯片）
         if (preset.iso != null && !isoAuto) {
             params += when {
-                captureIso != null -> ParamStatus(ParamKey.ISO, preset.iso, ApplyStatus.WRITTEN)
+                captureIso != null -> ParamStatus(
+                    ParamKey.ISO,
+                    appliedLabel(preset.iso, captureIso.toString(), captureIso != isoValue),
+                    ApplyStatus.WRITTEN
+                )
                 !canManual -> ParamStatus(ParamKey.ISO, preset.iso, ApplyStatus.UNSUPPORTED,
                     UnsupportedReason.MANUAL_EXPOSURE_UNAVAILABLE)
                 isoValue == null -> ParamStatus(ParamKey.ISO, preset.iso, ApplyStatus.UNSUPPORTED,
@@ -118,7 +133,15 @@ object PresetCapturePlan {
         // 快门（Auto = AE 决定，不产生芯片）
         if (preset.shutterSpeed != null && !shutterAuto) {
             params += when {
-                captureShutter != null -> ParamStatus(ParamKey.SHUTTER, preset.shutterSpeed, ApplyStatus.WRITTEN)
+                captureShutter != null -> ParamStatus(
+                    ParamKey.SHUTTER,
+                    appliedLabel(
+                        preset.shutterSpeed,
+                        formatShutterNs(captureShutter),
+                        captureShutter != shutterValue
+                    ),
+                    ApplyStatus.WRITTEN
+                )
                 !canManual -> ParamStatus(ParamKey.SHUTTER, preset.shutterSpeed, ApplyStatus.UNSUPPORTED,
                     UnsupportedReason.MANUAL_EXPOSURE_UNAVAILABLE)
                 shutterValue == null -> ParamStatus(ParamKey.SHUTTER, preset.shutterSpeed, ApplyStatus.UNSUPPORTED,
@@ -265,4 +288,23 @@ object PresetCapturePlan {
     }
 
     private fun formatSigned(value: Int?): String = value?.let { (if (it >= 0) "+" else "") + it } ?: ""
+
+    /**
+     * 设备范围钳制/补偿后，实际写入值与预设原始写法不同时展示"原值→实际值"，
+     * 如实反映真正写进拍摄请求的内容（不做"显示即套用"的虚报）。
+     */
+    private fun appliedLabel(raw: String, applied: String, changed: Boolean): String =
+        if (changed) "$raw→$applied" else raw
+
+    /** 纳秒 → 快门写法（"1/200" / "2s"），用于展示设备钳制后的实际写入值 */
+    fun formatShutterNs(ns: Long): String {
+        if (ns <= 0L) return "0"
+        if (ns >= 1_000_000_000L) {
+            val seconds = ns / 1_000_000_000.0
+            val rounded = Math.round(seconds)
+            return if (Math.abs(seconds - rounded) < 1e-6) "${rounded}s"
+            else String.format(java.util.Locale.ROOT, "%.2fs", seconds)
+        }
+        return "1/${Math.round(1_000_000_000.0 / ns)}"
+    }
 }
