@@ -151,18 +151,26 @@ object PresetCapturePlan {
             }
         }
 
-        // 曝光补偿：手动曝光已包含曝光控制，AE 开启时按步进写入；EV=0 视为无需套用
+        // 曝光补偿：手动曝光已包含曝光控制，AE 开启时按步进写入；EV=0 视为无需套用。
+        // 【v1.8.10 三轮审计】纯乱码文本（不含任何数字）如实归因 VALUE_UNPARSEABLE，
+        // 与 ISO/快门口径一致，不再静默当作 0EV 丢失无提示；含数字文本经
+        // parseExposureEv 宽容解析（"+0.5EV"/"±0.3" 等后缀写法），解析为 0 的
+        // （"0"/"0.0"）维持"无需套用、不产生芯片"既有契约
         val evRaw = preset.exposureCompensation
-        if (evRaw != null && evValue != 0f) {
-            params += when {
-                captureEv != null -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.WRITTEN)
-                // 手动曝光下 EV 由 ISO/快门接管：如实标记"不适用"且归因正确，不再误报设备能力缺失
-                wantManual -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
-                    UnsupportedReason.MANUAL_EXPOSURE_OVERRIDES)
-                steps == null -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
-                    UnsupportedReason.EV_UNAVAILABLE)
-                else -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
+        if (evRaw != null && !isAutoValue(evRaw)) {
+            if (!evRaw.any { it.isDigit() }) {
+                params += ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
                     UnsupportedReason.VALUE_UNPARSEABLE)
+            } else if (evValue != 0f) {
+                params += when {
+                    captureEv != null -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.WRITTEN)
+                    // 手动曝光下 EV 由 ISO/快门接管：如实标记"不适用"且归因正确，不再误报设备能力缺失
+                    wantManual -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
+                        UnsupportedReason.MANUAL_EXPOSURE_OVERRIDES)
+                    // 设备无步进信息/步进非法（解析失败已前置归因）
+                    else -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
+                        UnsupportedReason.EV_UNAVAILABLE)
+                }
             }
         }
 

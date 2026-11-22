@@ -113,7 +113,12 @@ object PresetColorTransform {
      * 不可解析 → 0
      */
     fun parseExposureEv(value: String?): Float {
-        val v = value?.trim()?.replace("+", "") ?: return 0f
+        // 【v1.8.10 三轮审计】容忍 "EV" 后缀写法（全局去 EV，区间 "-0.3EV~-1.0EV" 同步支持）：
+        // 截图 OCR 与部分订阅源沿用相机界面 "±0.5EV" 原文，此前解析失败静默归零，
+        // EV 效果丢失且无任何归因提示——与 parseIso（"ISO 100"）/parseShutterNs（"1/60s"）
+        // 的单位后缀宽容度对齐
+        val v = value?.trim()?.replace("+", "")?.replace("±", "")
+            ?.replace(Regex("ev", RegexOption.IGNORE_CASE), "")?.trim() ?: return 0f
         if (v.isEmpty()) return 0f
         // 区间写法取中值（"-0.3~-1.0" → -0.65）
         val range = Regex("^(-?\\d+(?:\\.\\d+)?)\\s*[~～–]\\s*(-?\\d+(?:\\.\\d+)?)$").find(v)

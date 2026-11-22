@@ -157,6 +157,24 @@ class PresetCapturePlanTest {
     }
 
     @Test
+    fun `EV纯乱码文本如实归因不再静默`() {
+        // 【v1.8.10 三轮审计】不含数字的乱码 EV（此前静默当作 0EV、无任何提示）
+        // 与 ISO/快门口径一致归因 VALUE_UNPARSEABLE
+        val plan = PresetCapturePlan.build(preset(ev = "自动补偿"), renoRanges)
+        assertEquals(ApplyStatus.UNSUPPORTED, plan.statusOf(ParamKey.EV)?.status)
+        assertEquals(UnsupportedReason.VALUE_UNPARSEABLE, plan.statusOf(ParamKey.EV)?.reason)
+    }
+
+    @Test
+    fun `EV单位后缀写法正常写入拍摄`() {
+        // 【v1.8.10 三轮审计】相机界面原文 "±0.5EV" 类写法（OCR/订阅源常见）
+        // 经宽容解析后正常换算步数写入，不再静默丢失
+        val plan = PresetCapturePlan.build(preset(ev = "+0.5EV"), renoRanges)
+        assertEquals(ApplyStatus.WRITTEN, plan.statusOf(ParamKey.EV)?.status)
+        assertNotNull(plan.evSteps)
+    }
+
+    @Test
     fun `调色参数恒为拍后套用`() {
         val plan = PresetCapturePlan.build(
             preset(filter = "胶片", saturation = -14, colorTemperature = 4300), renoRanges

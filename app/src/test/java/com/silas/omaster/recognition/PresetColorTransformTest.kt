@@ -228,6 +228,21 @@ class PresetColorTransformTest {
     }
 
     @Test
+    fun `EV单位后缀与前缀符号宽容解析`() {
+        // 【v1.8.10 三轮审计】截图 OCR 与订阅源沿用相机界面 "±0.5EV" 原文写法，
+        // 此前解析失败静默归零（EV 效果丢失且无归因）——与 parseIso("ISO 100")/
+        // parseShutterNs("1/60s") 的单位后缀宽容度对齐
+        assertEquals(0.5f, PresetColorTransform.parseExposureEv("+0.5EV"), 1e-4f)
+        assertEquals(0.5f, PresetColorTransform.parseExposureEv("0.5ev"), 1e-4f)
+        assertEquals(0.3f, PresetColorTransform.parseExposureEv("±0.3"), 1e-4f)
+        assertEquals(-1f, PresetColorTransform.parseExposureEv("-1EV"), 1e-4f)
+        // 区间 + 后缀组合
+        assertEquals(-0.65f, PresetColorTransform.parseExposureEv("-0.3EV~-1.0EV"), 1e-4f)
+        // 纯乱码仍归零（拍摄链由 plan 层 VALUE_UNPARSEABLE 归因，套色链无 EV 调整）
+        assertEquals(0f, PresetColorTransform.parseExposureEv("补偿值"), 1e-4f)
+    }
+
+    @Test
     fun `柔光强度解析支持文字与数字`() {
         assertEquals(0.3f, PresetColorTransform.parseSoftLight("弱"), 1e-4f)
         assertEquals(0.5f, PresetColorTransform.parseSoftLight("柔美"), 1e-4f) // 内置预设真实写法
