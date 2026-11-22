@@ -245,9 +245,14 @@ fun PopCaptureScreen(
     LaunchedEffect(appliedBitmap) { analyzer.enabled = appliedBitmap == null }
     DisposableEffect(Unit) {
         onDispose {
+            // 【v1.8.10 审计修复】退出顺序：先解除新帧来源（clearAnalyzer），
+            // 再停用并回收缓冲（release）——此前 release 先行，executor 中已排队
+            // 的 analyze 任务可能在缓冲回收后仍执行 setBitmap，触发
+            // "Canvas: trying to use a recycled bitmap" 崩溃；配合 analyze 内
+            // runCatching 兜底（预览帧丢失无害）
+            imageAnalysis.clearAnalyzer()
             analyzer.enabled = false
             analyzer.release()
-            imageAnalysis.clearAnalyzer()
             analyzerExecutor.shutdown()
         }
     }
@@ -490,7 +495,13 @@ fun PopCaptureScreen(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                     }
-                    Switch(checked = xdrEnabled, onCheckedChange = { xdrEnabled = it })
+                    // 【v1.8.10 审计修复】成片态禁用：套色按拍摄瞬间快照完成、原图
+                    // 已回收，无法重套——可点却无反应会误导用户；开关只影响下一张
+                    Switch(
+                        checked = xdrEnabled,
+                        onCheckedChange = { xdrEnabled = it },
+                        enabled = appliedBitmap == null
+                    )
                 }
             }
 
