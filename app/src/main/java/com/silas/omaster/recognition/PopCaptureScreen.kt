@@ -254,6 +254,11 @@ fun PopCaptureScreen(
             analyzer.enabled = false
             analyzer.release()
             analyzerExecutor.shutdown()
+            // 【v1.8.10 四轮审计】系统相机临时照片兜底清理：loadBitmap 读取中
+            // 退出页面（协程取消）或发起拍摄后直接返回时，回调内 cleanupTempPhoto
+            // 不会执行，cache 目录残留临时照片文件
+            photoFile?.delete()
+            photoFile = null
         }
     }
 

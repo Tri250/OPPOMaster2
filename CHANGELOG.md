@@ -19,7 +19,9 @@
 - **双缓冲退役资格修正（P2，二轮审计）**：延后回收的 retired 缓冲在"同 slot 尺寸变回原值被重新启用"时取消回收资格——否则下一次缓冲替换会误回收活跃缓冲，造成画面撕裂 / recycled bitmap 崩溃（被替换后自动重回延后回收链，无泄漏）
 - **成片态 XDR 开关如实禁用（P3，二轮审计）**：套色按拍摄瞬间快照完成、原图已回收，成片态切换开关本无效果——禁用防止"可点却无反应"的误导，开关只影响下一张
 - **EV 单位后缀宽容解析 + 乱码如实归因（P2，三轮审计）**：`parseExposureEv` 此前只认裸数字——截图 OCR 与部分订阅源沿用相机界面 "±0.5EV" 原文写法，解析失败静默归零，EV 效果丢失且无任何归因提示；修复后容忍 "EV" 后缀（含区间组合 "-0.3EV~-1.0EV"）与 "±" 前缀，与 parseIso（"ISO 100"）/parseShutterNs（"1/60s"）的宽容度对齐；纯乱码 EV 文本（不含数字）在拍摄计划层如实归因 VALUE_UNPARSEABLE，与 ISO/快门口径一致，不再静默丢提示（新增 2 项引擎测试 + 2 项计划层测试锁定）
+- **系统相机临时照片退出兜底清理（P3，四轮审计）**：`photoFile`（FileProvider cache 临时照片）此前仅在拍摄回调内清理——读取中退出页面（协程取消）或发起拍摄后直接返回时残留 cache 目录；onDispose 追加兜底删除
 - **三轮审计确认健全**：能力探测 Limited 级判定链（AE_OFF + 曝光范围探测，不硬编码降级）、拍摄计划成对/守恒/归因链（含快门钳制后芯片 modified 标记）、processBandInto 数学（矩阵先行 → 亮度域、降噪读原始带无污染、跨带暗角全图中心一致、vigDark 钳位）、既有 11 处 EV 解析测试断言全兼容
+- **四轮审计确认健全**：相机回调链（rotationDegrees runCatching + finally close + toBitmap 异常兜底）、系统相机三条清理路径（成功/取消/uri null）、相册路径 `launch("image/*")` MIME 限定与 `isCapturing` 竞态门控、`stylePhoto` 末尾复位（成功路径 isCapturing=false + styled!==raw 才回收原图）、`loadBitmap`（IO 调度 + 内存守卫与相机成片同源 + EXIF 转正 + 逐级回收无泄漏）、`rotateToUpright`（internal 共用，取景帧与成片同一转正逻辑）
 
 #### 🛡️ 全量自检修复（稳定性 / 性能 / 兼容性 / 权限管理 / 安装链路）
 四域扫描 + 逐条源码实证，确认并修复 5 项：
