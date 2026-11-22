@@ -103,6 +103,7 @@ import java.util.concurrent.Executors
  * 如实分级，不做"假装已套用"。
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@androidx.annotation.OptIn(markerClass = [ExperimentalCamera2Interop::class])
 @Composable
 fun PopCaptureScreen(
     preset: MasterPreset,

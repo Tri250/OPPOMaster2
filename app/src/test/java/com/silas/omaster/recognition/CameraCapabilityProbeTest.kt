@@ -86,8 +86,9 @@ class CameraCapabilityProbeTest {
             CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL, 4,
             evRange = (-3.0f to 3.0f)
         )
-        assertEquals(-3.0f, cap.evRange!!.first, 0.001f)
-        assertEquals(3.0f, cap.evRange!!.second, 0.001f)
+        val ev = requireNotNull(cap.evRange)
+        assertEquals(-3.0f, ev.first, 0.001f)
+        assertEquals(3.0f, ev.second, 0.001f)
     }
 
     @Test
