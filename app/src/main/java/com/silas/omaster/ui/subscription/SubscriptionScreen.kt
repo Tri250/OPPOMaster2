@@ -73,46 +73,76 @@ fun SubscriptionScreen(
     val updateUptodateMsg = stringResource(R.string.sub_update_uptodate)
     val updateFailMsg = stringResource(R.string.sub_update_fail)
     // 刷新结果文案模板：无参 stringResource 取原始占位符串，回调内 String.format 格式化
-    val refreshPartialTpl = stringResource(R.string.refresh_partial)
-    val refreshSuccessTpl = stringResource(R.string.refresh_success)
-    val refreshUpToDateMsg = stringResource(R.string.refresh_up_to_date)
     val refreshFailedMsg = stringResource(R.string.refresh_failed)
+    // 【v1.8.10 订阅管理】全源强制刷新结果文案（组合期预取，回调内格式化）
+    val refreshForcedSuccessTpl = stringResource(R.string.refresh_forced_success)
+    val refreshForcedPartialTpl = stringResource(R.string.refresh_forced_partial)
     val autoUpdateEnabled by config.autoUpdateSubscriptionFlow.collectAsState()
     
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember { mutableStateOf(false) }
-    
+
+    /**
+     * 【v1.8.10 订阅管理】全源强制刷新（下拉刷新与顶栏刷新按钮共用）。
+     *
+     * 与旧版"按 build 号跳过"的增量刷新不同：所有启用的订阅 JSON 一律
+     * forceUpdate = true 重新下载 → 重新校验解析 → 落盘 → 重载预设，
+     * 忽略版本跳过（同 build 也重新解析数据），确保预设库与云端源逐字一致。
+     * 各源增量 diff 聚合为一份变更预览（新增/修改/删除），有变更时弹窗展示。
+     */
+    suspend fun forceRefreshAllSubscriptions() {
+        Logger.i("SubscriptionScreen", "全源强制刷新开始，共 ${subscriptions.size} 个订阅（忽略版本跳过）")
+        var successCount = 0
+        var failCount = 0
+        val aggregated = mutableListOf<PresetRemoteManager.DeltaResult>()
+        val enabledSubs = subscriptions.filter { it.isEnabled }
+        Logger.d("SubscriptionScreen", "启用的订阅: ${enabledSubs.size} 个")
+        for (sub in enabledSubs) {
+            Logger.d("SubscriptionScreen", "强制刷新: ${sub.name} (${sub.url})")
+            PresetRemoteManager.fetchAndSave(context, sub.url, forceUpdate = true).fold(
+                onSuccess = { fetch ->
+                    successCount++
+                    Logger.i("SubscriptionScreen", "强制刷新成功: ${sub.name} (${fetch.presetList.presets.size} 个预设)")
+                    aggregated += fetch.changelog
+                },
+                onFailure = { e ->
+                    failCount++
+                    Logger.w("SubscriptionScreen", "强制刷新失败: ${sub.name}, 错误: ${e.message}")
+                }
+            )
+        }
+        if (enabledSubs.isNotEmpty()) {
+            // 解析数据：清 JsonUtil 缓存并按新 JSON 重载预设（首页/详情/悬浮窗同源生效）
+            PresetRepository.getInstance(context).reloadDefaultPresets()
+            val message = when {
+                successCount > 0 && failCount > 0 ->
+                    String.format(Locale.getDefault(), refreshForcedPartialTpl, successCount, failCount)
+                successCount > 0 ->
+                    String.format(Locale.getDefault(), refreshForcedSuccessTpl, successCount)
+                else -> refreshFailedMsg
+            }
+            Logger.i("SubscriptionScreen", "全源强制刷新完成: 成功=$successCount, 失败=$failCount")
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            // 有真实变更（新增/修改/删除）时弹出聚合变更预览，解析结果透明化
+            if (aggregated.any { it.hasChanges }) {
+                showChangelogDialog = PresetRemoteManager.DeltaResult(
+                    added = aggregated.flatMap { it.added },
+                    removedIds = aggregated.flatMap { it.removedIds },
+                    modified = aggregated.flatMap { it.modified }
+                )
+            }
+        } else {
+            Logger.d("SubscriptionScreen", "没有启用的订阅，跳过刷新")
+        }
+    }
+
     val pullRefreshState = rememberPullRefreshState(
         refreshing = refreshing,
         onRefresh = {
             scope.launch {
+                if (refreshing) return@launch
                 refreshing = true
-                var successCount = 0
-                var upToDateCount = 0
-                val enabledSubs = subscriptions.filter { it.isEnabled }
-                for (sub in enabledSubs) {
-                    val result = PresetRemoteManager.fetchAndSave(context, sub.url)
-                    if (result.isSuccess) {
-                        successCount++
-                    } else if (result.exceptionOrNull()?.message == "无需更新") {
-                        upToDateCount++
-                    }
-                }
-                if (enabledSubs.isNotEmpty()) {
-                    PresetRepository.getInstance(context).reloadDefaultPresets()
-                    // 【v1.7.7 P2 修复】i18n 泄漏：4 条结果文案硬编码中文 →
-                    // 复用已有资源（与首页下拉刷新同源，三语一致）；
-                    // 模板组合期预取，回调内格式化（规避 LocalContextGetResourceValueCall）
-                    val message = when {
-                        successCount > 0 && upToDateCount > 0 ->
-                            String.format(Locale.getDefault(), refreshPartialTpl, successCount, upToDateCount)
-                        successCount > 0 ->
-                            String.format(Locale.getDefault(), refreshSuccessTpl, successCount)
-                        upToDateCount > 0 -> refreshUpToDateMsg
-                        else -> refreshFailedMsg
-                    }
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                }
+                forceRefreshAllSubscriptions()
                 refreshing = false
             }
         }
@@ -133,43 +163,7 @@ fun SubscriptionScreen(
                             scope.launch {
                                 if (refreshing) return@launch
                                 refreshing = true
-                                Logger.i("SubscriptionScreen", "开始手动刷新订阅，共 ${subscriptions.size} 个订阅")
-                                var successCount = 0
-                                var upToDateCount = 0
-                                var failCount = 0
-                                val enabledSubs = subscriptions.filter { it.isEnabled }
-                                Logger.d("SubscriptionScreen", "启用的订阅: ${enabledSubs.size} 个")
-                                for (sub in enabledSubs) {
-                                    Logger.d("SubscriptionScreen", "正在更新: ${sub.name} (${sub.url})")
-                                    val result = PresetRemoteManager.fetchAndSave(context, sub.url)
-                                    if (result.isSuccess) {
-                                        successCount++
-                                        Logger.i("SubscriptionScreen", "更新成功: ${sub.name}")
-                                    } else if (result.exceptionOrNull()?.message == "无需更新") {
-                                        upToDateCount++
-                                        Logger.d("SubscriptionScreen", "已是最新: ${sub.name}")
-                                    } else {
-                                        failCount++
-                                        val error = result.exceptionOrNull()?.message ?: "未知错误"
-                                        Logger.w("SubscriptionScreen", "更新失败: ${sub.name}, 错误: $error")
-                                    }
-                                }
-                                if (enabledSubs.isNotEmpty()) {
-                                    PresetRepository.getInstance(context).reloadDefaultPresets()
-                                    // 【v1.7.7 P2 修复】同上：结果文案多语言化（模板组合期预取，回调内格式化）
-                                    val message = when {
-                                        successCount > 0 && upToDateCount > 0 ->
-                                            String.format(Locale.getDefault(), refreshPartialTpl, successCount, upToDateCount)
-                                        successCount > 0 ->
-                                            String.format(Locale.getDefault(), refreshSuccessTpl, successCount)
-                                        upToDateCount > 0 -> refreshUpToDateMsg
-                                        else -> refreshFailedMsg
-                                    }
-                                    Logger.i("SubscriptionScreen", "刷新完成: 成功=$successCount, 最新=$upToDateCount, 失败=$failCount")
-                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Logger.d("SubscriptionScreen", "没有启用的订阅，跳过刷新")
-                                }
+                                forceRefreshAllSubscriptions()
                                 refreshing = false
                             }
                         },

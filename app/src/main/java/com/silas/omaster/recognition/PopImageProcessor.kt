@@ -29,20 +29,25 @@ object PopImageProcessor {
      *
      * @param maxMemoryBytes Runtime.getRuntime().maxMemory()，用于内存守卫
      * @param xdr Pro XDR 动态范围增强（默认关闭；开启后阴影提亮/高光回收/局部对比，成片更有质感）
+     * @param sharpeningScale 锐化强度倍率（机型调校）：
+     *        【v1.8.10 Reno15/16/17 机型适配】ColorOS 静态出片自带 HAL 锐化，
+     *        该档位传 0.8 降权防双重锐化光晕（RenoDeviceProfile.sharpeningMultiplier）；
+     *        默认 1.0 与既有引擎输出逐位一致
      * @return 处理后的新 Bitmap；尺寸过小（<3px）无法做邻域运算时返回 src 本身
      */
     fun process(
         src: Bitmap,
         preset: MasterPreset,
         maxMemoryBytes: Long,
-        xdr: Boolean = false
+        xdr: Boolean = false,
+        sharpeningScale: Float = 1f
     ): Bitmap {
         val w = src.width
         val h = src.height
         if (w < 3 || h < 3) return src
 
         val matrix = PresetColorTransform.buildColorMatrix(preset)
-        val sharpen = PresetColorTransform.sharpnessAmount(preset)
+        val sharpen = PresetColorTransform.sharpnessAmount(preset) * sharpeningScale
         val vignette = PresetColorTransform.vignetteStrength(preset)
         val iso = PresetCapturePlan.parseIso(preset.iso) ?: 0
         val denoise = if (iso >= DENOISE_ISO_THRESHOLD) 0.55f else 0f

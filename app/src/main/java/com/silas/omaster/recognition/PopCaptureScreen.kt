@@ -118,6 +118,9 @@ fun PopCaptureScreen(
     val accent = HasselbladOrange
     val capability = remember { CameraCapabilityProbe.probe(context) }
     val plan = remember(preset, capability) { PresetCapturePlan.build(preset, capability.manualRanges) }
+    // 【v1.8.10 Reno15/16/17 机型适配】机型档：拍摄画质模式择优 + 拍后锐化降权
+    // 调校（识别失败为 null → 通用调校，与旧版行为一致）
+    val deviceFamily = remember { RenoDeviceProfile.currentFamily() }
     // 【v1.8.3 Reno17 适配】多后摄机型（主摄/超广角/长焦）下，能力探测选的是
     // 感光面积最大的后置主摄；CameraX 默认后摄可能与它不一致（写入的 ISO/快门
     // 范围来自主摄，实际绑定的却是超广角 → 手动参数被拒或画面非预期）。
@@ -191,7 +194,10 @@ fun PopCaptureScreen(
     }
 
     // ── 自研相机管线：ImageAnalysis 实时滤镜取景 + 按拍摄计划配置 ImageCapture ──
-    val imageCapture = remember(plan) { buildImageCapture(plan) }
+    // 【v1.8.10 Reno15/16/17 机型适配】画质模式来自能力探测（HAL 可用才写入）
+    val imageCapture = remember(plan, capability.qualityModes) {
+        buildImageCapture(plan, capability.qualityModes)
+    }
     val providerFuture = remember { ProcessCameraProvider.getInstance(context) }
     var boundProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var cameraBound by remember { mutableStateOf(false) }
@@ -296,7 +302,11 @@ fun PopCaptureScreen(
             val styled = if (hasEffect) {
                 withContext(Dispatchers.Default) {
                     PopImageProcessor.process(
-                        raw, preset, Runtime.getRuntime().maxMemory(), xdr = xdrEnabled
+                        raw, preset, Runtime.getRuntime().maxMemory(),
+                        xdr = xdrEnabled,
+                        // 【v1.8.10 Reno15/16/17 机型适配】ColorOS 出片自带 HAL 锐化，
+                        // Reno 档 App 侧降权防双重锐化光晕（识别失败 → 1.0 逐位一致）
+                        sharpeningScale = RenoDeviceProfile.sharpeningMultiplier(deviceFamily)
                     )
                 }
             } else {
@@ -559,6 +569,29 @@ fun PopCaptureScreen(
             // 参数应用状态卡（已写入拍摄 / 取景与成片已套用 / 无法套用+原因）
             ParamStatusCard(plan, accent)
 
+            // 【v1.8.10 Reno15/16/17 机型适配】慢快门稳拍提示（部分 Reno 档无 OIS）：
+            // 手动快门慢于 1/30s 时给出明确稳拍预期，减少抖动糊片（更易出片）
+            plan.shutterNs?.let { shutterNs ->
+                if (RenoDeviceProfile.needsSteadyHint(shutterNs)) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = WarningYellow.copy(alpha = 0.12f)
+                        ),
+                        shape = AppDesign.CardShape,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string.pop_steady_hint,
+                                PresetCapturePlan.formatShutterNs(shutterNs)
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(AppDesign.ContentPadding)
+                        )
+                    }
+                }
+            }
+
             // 相机权限引导（未授权时提供授权入口，同时保留降级路径说明）
             if (!cameraGranted) {
                 Card(
@@ -721,14 +754,42 @@ private fun openAppDetailsSettings(context: Context) {
 /** 按拍摄计划构造 ImageCapture：手动曝光设备关闭 AE 并写入 ISO/快门，其余按步进写 EV */
 @androidx.annotation.OptIn(markerClass = [ExperimentalCamera2Interop::class])
 @SuppressLint("UnsafeOptInUsageError")
-private fun buildImageCapture(plan: CapturePlan): ImageCapture {
+private fun buildImageCapture(
+    plan: CapturePlan,
+    qualityModes: CameraCapabilityProbe.QualityModes
+): ImageCapture {
     // 【v1.7.8 画质】MAXIMIZE_QUALITY：关闭零快门延迟，换取厂商全链路后处理
     // （多帧合成 / HDR / 降噪）与最高输出分辨率；MINIMIZE_LATENCY 会跳过这些管线，
     // 是 v1.7.7 及以前"POP 即拍画质非常差"的主因之一。
     val builder = ImageCapture.Builder()
         .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+    val extender = Camera2Interop.Extender(builder)
+    // 【v1.8.10 Reno15/16/17 机型适配】HAL 画质模式探测择优：HIGH_QUALITY 语义下
+    // HAL 用该模块最高质量实现（多帧降噪 / 边缘增强 / 色散校正 / 高质量色调映射），
+    // 与 MAXIMIZE_QUALITY 的厂商后处理链路叠加，成片噪点与通透度更接近原生相机质感。
+    // 仅写探测可用的键——能力之外的键不写，绝不虚报。
+    if (qualityModes.noiseReduction) {
+        extender.setCaptureRequestOption(
+            CaptureRequest.NOISE_REDUCTION_MODE, CameraMetadata.NOISE_REDUCTION_MODE_HIGH_QUALITY
+        )
+    }
+    if (qualityModes.edge) {
+        extender.setCaptureRequestOption(
+            CaptureRequest.EDGE_MODE, CameraMetadata.EDGE_MODE_HIGH_QUALITY
+        )
+    }
+    if (qualityModes.aberration) {
+        extender.setCaptureRequestOption(
+            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+            CameraMetadata.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY
+        )
+    }
+    if (qualityModes.tonemap) {
+        extender.setCaptureRequestOption(
+            CaptureRequest.TONEMAP_MODE, CameraMetadata.TONEMAP_MODE_HIGH_QUALITY
+        )
+    }
     if (plan.manualExposure) {
-        val extender = Camera2Interop.Extender(builder)
         extender.setCaptureRequestOption(
             CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF
         )
@@ -748,7 +809,6 @@ private fun buildImageCapture(plan: CapturePlan): ImageCapture {
         }
     } else {
         plan.evSteps?.let { steps ->
-            val extender = Camera2Interop.Extender(builder)
             extender.setCaptureRequestOption(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, steps)
         }
     }
