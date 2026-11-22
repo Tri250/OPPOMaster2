@@ -684,7 +684,7 @@ fun PopCaptureScreen(
 }
 
 /** 按拍摄计划构造 ImageCapture：手动曝光设备关闭 AE 并写入 ISO/快门，其余按步进写 EV */
-@OptIn(ExperimentalCamera2Interop::class)
+@androidx.annotation.OptIn(markerClass = [ExperimentalCamera2Interop::class])
 @SuppressLint("UnsafeOptInUsageError")
 private fun buildImageCapture(plan: CapturePlan): ImageCapture {
     // 【v1.7.8 画质】MAXIMIZE_QUALITY：关闭零快门延迟，换取厂商全链路后处理

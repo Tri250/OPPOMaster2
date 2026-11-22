@@ -295,4 +295,26 @@ class PresetCapturePlanTest {
         val color = PresetCapturePlan.build(preset(filter = "复古", warmCool = 100), renoRanges)
         assertEquals(ApplyStatus.POST, color.statusOf(ParamKey.WARM_COOL)?.status)
     }
+
+    @Test
+    fun `EV按Reno17主摄三分之一步长量化写入`() {
+        // 【v1.8.3 Reno17 审计】主摄 EV 步进 1/3（±3EV）：内置预设 EV 量化后
+        // 漂移 ≤ 1/6 EV 且始终落在作者意图区间内（6 条 EV 预设仿真核验）
+        val reno17 = renoRanges.copy(evStepRange = -9..9, evStepEv = 1f / 3f)
+        assertEquals(-1, PresetCapturePlan.evToSteps(-0.3f, reno17))   // 人文/蓝调通透 -0.3
+        assertEquals(-2, PresetCapturePlan.evToSteps(-0.65f, reno17))  // 清新人文 -0.3~-1.0
+        assertEquals(1, PresetCapturePlan.evToSteps(0.3f, reno17))     // 梦幻富士 +0.3
+        assertEquals(-1, PresetCapturePlan.evToSteps(-0.35f, reno17))  // 霓虹灯 0~-0.7
+        assertNull(PresetCapturePlan.evToSteps(0f, reno17))            // 复古怀旧 -0.3~0.3（中性不写）
+    }
+
+    @Test
+    fun `EV半值点量化为设备步长固有行为`() {
+        // "-1~0"（晴天复古）中值 -0.5EV 恰落 1/3 步长半值点：Math.round(-1.5f) = -1；
+        // 正半轴 Math.round(1.5f) = 2，两方向漂移均 1/6 EV，为 1/3 步长设备
+        // 固有量化（无更优解）。芯片展示作者原始写法，实际步长落在意图区间内
+        val reno17 = renoRanges.copy(evStepRange = -9..9, evStepEv = 1f / 3f)
+        assertEquals(-1, PresetCapturePlan.evToSteps(-0.5f, reno17))
+        assertEquals(2, PresetCapturePlan.evToSteps(0.5f, reno17))
+    }
 }
