@@ -174,9 +174,13 @@ object PresetCapturePlan {
         // 违背本类"UI 如实展示，不做假装已套用"的设计契约。
         // 【v1.8.3 审计修复】黑白/单色灰度滤镜下，矩阵强制归零饱和度/冷暖/青品
         // （真灰度输出，见 buildColorMatrix），这些参数不得显示"拍后套用"芯片——
-        // 否则内置"高对比黑白"（冷暖 +100/青品 -39）、"梦幻黑白"（冷暖 -80）
-        // 会虚报效果。滤镜本身与影调/柔光/暗角等仍如实 POST。
-        val grayscale = PresetColorTransform.filterAdjustment(preset.filter).grayscale
+        // 否则内置"高对比黑白"（冷暖 +100/青品 -39）会虚报效果。
+        // 滤镜本身与影调/柔光/暗角等仍如实 POST。
+        // 【v1.8.8 调色盘百分比真实化】灰度强度化后仅满灰度（a≥1）归零；
+        // 部分灰度（如"黑白 50%"）下饱和度/冷暖/青品按 (1-a) 比例仍生效，芯片恢复显示。
+        val grayAmount = PresetColorTransform.filterAdjustment(preset.filter)
+            .let { if (it.grayscale) it.grayscaleAmount else 0f }
+        val fullGrayscale = grayAmount >= 1f
         fun post(key: ParamKey, value: String?, effective: Boolean) {
             if (effective && value != null) params += ParamStatus(key, value, ApplyStatus.POST)
         }
@@ -184,12 +188,12 @@ object PresetCapturePlan {
             PresetColorTransform.colorTempWarmDelta(preset.colorTemperature) != 0f)
         post(ParamKey.FILTER, preset.filter, isFilterApplicable(preset.filter))
         post(ParamKey.SATURATION, formatSigned(preset.saturation),
-            !grayscale && (preset.saturation ?: 0) != 0)
+            !fullGrayscale && (preset.saturation ?: 0) != 0)
         post(ParamKey.TONE, formatSigned(preset.tone), (preset.tone ?: 0) != 0)
         post(ParamKey.WARM_COOL, formatSigned(preset.warmCool),
-            !grayscale && (preset.warmCool ?: 0) != 0)
+            !fullGrayscale && (preset.warmCool ?: 0) != 0)
         post(ParamKey.CYAN_MAGENTA, formatSigned(preset.cyanMagenta),
-            !grayscale && (preset.cyanMagenta ?: 0) != 0)
+            !fullGrayscale && (preset.cyanMagenta ?: 0) != 0)
         post(ParamKey.SOFT_LIGHT, preset.softLight,
             PresetColorTransform.parseSoftLight(preset.softLight) > 0f)
         post(ParamKey.SHARPNESS, preset.sharpness?.toString(),

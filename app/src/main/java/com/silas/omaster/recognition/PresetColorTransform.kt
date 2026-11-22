@@ -14,7 +14,15 @@ data class FilterAdjust(
     val contrastDelta: Float = 0f,
     val lift: Float = 0f,
     val ev: Float = 0f,
-    val grayscale: Boolean = false
+    /** 灰度滤镜（黑白/单色）标记；强度比例见 [grayscaleAmount] */
+    val grayscale: Boolean = false,
+    /**
+     * 【v1.8.8 调色盘百分比真实化】灰度强度 0..1（1=完全去色）。
+     * "黑白 50%" 此前被硬性渲染成 100% 黑白（grayscale 布尔不随强度缩放），
+     * 百分比控制在黑白滤镜上完全失效；现在按强度保留 (1-强度) 比例的色彩，
+     * 与彩色滤镜的百分比语义对齐——调色盘滑杆拖到多少，出片就缩放多少。
+     */
+    val grayscaleAmount: Float = 1f
 )
 
 /**
@@ -32,6 +40,16 @@ data class FilterAdjust(
 object PresetColorTransform {
 
     val NEUTRAL = FilterAdjust()
+
+    /**
+     * 调色盘可选滤镜名（与 [filterAdjustment] 的滤镜表逐字一致）。
+     * UI 通过此列表渲染滤镜 chips，保证"选什么名、引擎认什么名"，
+     * 避免展示层与引擎层两份名单漂移。
+     */
+    val PRESET_FILTER_NAMES = listOf(
+        "黑白", "单色", "胶片", "复古", "高级灰", "鲜明", "明艳", "浓郁", "夜景", "柔光",
+        "童话", "暖调", "冷调", "琥珀", "清新", "通透", "清透", "人文", "美味", "霓虹", "赛博朋克"
+    )
 
     /**
      * 滤镜名 → 调整量。前缀匹配（兼容"黑白 高对比"带后缀写法），未知/原图/标准 → 中性。
@@ -84,8 +102,10 @@ object PresetColorTransform {
         contrastDelta = contrastDelta * factor,
         lift = lift * factor,
         ev = ev * factor,
-        // 黑白/单色：强度 > 0 仍去色，强度为 0 已由上层返回 NEUTRAL
-        grayscale = grayscale
+        // 黑白/单色：灰度强度随百分比缩放（"黑白 50%" = 保留 50% 色彩的部分灰度），
+        // 强度为 0 已由上层返回 NEUTRAL
+        grayscale = grayscale,
+        grayscaleAmount = grayscaleAmount * factor
     )
 
     /**
@@ -152,15 +172,22 @@ object PresetColorTransform {
             adj.cyanMagenta + colorHueCyanMagentaDelta(preset.colorHue)).coerceIn(-1f, 1f)
         val tone = ((preset.tone ?: 0).coerceIn(-100, 100) / 100f + adj.tone).coerceIn(-1f, 1f)
 
-        // 黑白/单色滤镜：完全去色且不受冷暖/青品影响
-        val satFactor = if (adj.grayscale) 0f else 1f + saturation * 0.8f
-        if (adj.grayscale) { warmCool = 0f; cyanMagenta = 0f }
+        // 【v1.8.8 调色盘百分比真实化】灰度强度化：a=1 完全去色（与旧布尔行为逐位一致），
+        // a=0 无灰度滤镜，0<a<1 部分灰度——统一公式 (1-a)×(1+sat×0.8) 在两端点
+        // 精确退化为旧路径（a=1 → 0；a=0 → 1+sat×0.8），内置预设 0%/100% 契约不变。
+        // 部分灰度时冷暖/青品按 (1-a) 保留（满灰度仍强制归零，不受冷暖/青品影响）。
+        val grayAmount = if (adj.grayscale) adj.grayscaleAmount else 0f
+        val colorKeep = 1f - grayAmount
+        val satFactor = colorKeep * (1f + saturation * 0.8f)
+        warmCool *= colorKeep
+        cyanMagenta *= colorKeep
 
         // 【v1.8.3 审计修复】灰度（黑白/单色）下"影调"切换为暗房语义：
         // 负影调 = 低调摄影（压黑位 + 增强反差），正影调 = 高调摄影（提黑位 + 柔化反差）。
         // 彩色路径的"负影调 → 降对比柔化"语义不适用于纯灰度输出——否则内置
         // "高对比黑白"（影调 -61）会渲染成 c≈0.68 的灰蒙黑白，与预期效果相反。
-        val toneContrast = if (adj.grayscale) -tone * 0.5f else tone * 0.5f
+        // 暗房语义仅在满灰度（a≥1）启用；部分灰度画面仍以彩色为主，沿用彩色语义。
+        val toneContrast = if (grayAmount >= 1f) -tone * 0.5f else tone * 0.5f
         var contrast = 1f + toneContrast + adj.contrastDelta - fade * 0.15f
         contrast = (contrast * 2f.pow(ev)).coerceAtLeast(0.05f)
         val lift = tone * 18f + adj.lift + fade * 12f

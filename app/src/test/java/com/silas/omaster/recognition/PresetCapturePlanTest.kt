@@ -281,8 +281,7 @@ class PresetCapturePlanTest {
     @Test
     fun `灰度滤镜下饱和度冷暖青品不产生虚报芯片`() {
         // 【v1.8.3 审计修复】黑白滤镜矩阵强制归零饱和度/冷暖/青品（真灰度输出），
-        // 芯片不得标记"拍后套用"（内置"高对比黑白"冷暖+100/青品-39、
-        // "梦幻黑白"冷暖-80 此前被虚报）
+        // 芯片不得标记"拍后套用"（内置"高对比黑白"冷暖+100/青品-39 此前被虚报）
         val plan = PresetCapturePlan.build(
             preset(filter = "黑白", saturation = 0, warmCool = 100, cyanMagenta = -39), renoRanges
         )
@@ -294,6 +293,22 @@ class PresetCapturePlanTest {
         // 彩色滤镜下冷暖仍正常 POST
         val color = PresetCapturePlan.build(preset(filter = "复古", warmCool = 100), renoRanges)
         assertEquals(ApplyStatus.POST, color.statusOf(ParamKey.WARM_COOL)?.status)
+    }
+
+    @Test
+    fun `部分灰度滤镜下冷暖芯片恢复显示`() {
+        // 【v1.8.8 调色盘百分比真实化】"黑白 25%"（内置"梦幻黑白"）= 部分灰度，
+        // 冷暖/青品/饱和度按 (1-a) 比例真实参与混色——芯片恢复如实显示；
+        // 仅满灰度（a≥1）才抑制
+        val partial = PresetCapturePlan.build(
+            preset(filter = "黑白 25%", warmCool = -80, saturation = 0), renoRanges
+        )
+        assertEquals(ApplyStatus.POST, partial.statusOf(ParamKey.WARM_COOL)?.status)
+        // 饱和度为 0（中性）仍不显示
+        assertNull(partial.statusOf(ParamKey.SATURATION))
+        // "黑白 100%"（内置"高对比黑白"）满灰度仍抑制
+        val full = PresetCapturePlan.build(preset(filter = "黑白 100%", warmCool = 100), renoRanges)
+        assertNull(full.statusOf(ParamKey.WARM_COOL))
     }
 
     @Test

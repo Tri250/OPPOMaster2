@@ -8,7 +8,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -29,6 +31,8 @@ import coil.compose.AsyncImage
 import com.silas.omaster.R
 import com.silas.omaster.model.PresetItem
 import com.silas.omaster.model.PresetSection
+import com.silas.omaster.recognition.PresetColorTransform
+import com.silas.omaster.recognition.SectionParamsParser
 import com.silas.omaster.util.PresetI18n
 
 import java.io.File
@@ -397,7 +401,10 @@ fun UniversalCreatePresetScreen(
             onDismissRequest = { showAddItemDialog = false },
             title = { Text(if (editingItem == null) stringResource(R.string.add_item) else stringResource(R.string.edit_item)) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
                     // 参数名输入
                     Column {
                         OutlinedTextField(
@@ -414,7 +421,16 @@ fun UniversalCreatePresetScreen(
                             modifier = Modifier.padding(top = 4.dp, start = 4.dp)
                         )
                     }
-                    
+
+                    // 【v1.8.8 调色盘百分比真实化】滤镜快速控件：
+                    // 参数名为滤镜（中/英/日）时，点选滤镜名 + 拖动强度滑杆合成
+                    // 引擎标准值 "名称 NN%"——出片按百分比真实缩放
+                    // （PresetColorTransform.filterAdjustment / grayscaleAmount），
+                    // 不再需要手敲文本格式；自由文本输入框保留（高级用法可继续用）。
+                    if (SectionParamsParser.labelKey(label) == "filter") {
+                        FilterIntensityPicker(value = value, onValueChange = { value = it })
+                    }
+
                     // 参数值输入
                     Column {
                         OutlinedTextField(
@@ -647,5 +663,73 @@ fun SectionCard(
                 Text(stringResource(R.string.add_item))
             }
         }
+    }
+}
+
+/**
+ * 【v1.8.8 调色盘百分比真实化】滤镜快速控件：滤镜名 chips + 强度滑杆。
+ *
+ * 把引擎滤镜表（[PresetColorTransform.PRESET_FILTER_NAMES]，与出片引擎逐字一致）
+ * 渲染为可点选 chips，配合 0–100% 强度滑杆（5% 步进精准控制）合成引擎标准值
+ * "名称 NN%" 写回参数项——POP 即拍出片按该百分比真实缩放（彩色滤镜全维缩放、
+ * 黑白/单色灰度按比例保留色彩），所见百分比特性即可出片特性。
+ *
+ * 值解析："复古 75%" → 复古·75；"复古" → 复古·100（无百分比 = 满强度，
+ * 与引擎 parseFilterPercent 语义一致）；自由文本自定义名（如"黑白 高对比"）
+ * 不在 chips 中选中，但滑杆拖动后合成 "自定义名 NN%" 仍被引擎识别。
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FilterIntensityPicker(value: String, onValueChange: (String) -> Unit) {
+    val percentRegex = Regex("^(.*?)[ \\t]+(\\d{1,3})[ \\t]*%$")
+    val parsed = percentRegex.find(value.trim())
+    val name = parsed?.groupValues?.get(1)?.trim()?.takeIf { it.isNotEmpty() }
+        ?: value.trim().takeIf { it.isNotEmpty() }
+        ?: "复古"
+    val percent = parsed?.groupValues?.get(2)?.toIntOrNull()?.coerceIn(0, 100) ?: 100
+
+    fun compose(n: String, p: Int) = "$n $p%"
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.filter_intensity),
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "$name · $percent%",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            PresetColorTransform.PRESET_FILTER_NAMES.forEach { f ->
+                FilterChip(
+                    selected = f == name,
+                    onClick = { onValueChange(compose(f, percent)) },
+                    label = { Text(f, style = MaterialTheme.typography.labelMedium) }
+                )
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Slider(
+                value = percent.toFloat(),
+                onValueChange = { p ->
+                    onValueChange(compose(name, p.roundToInt().coerceIn(0, 100)))
+                },
+                valueRange = 0f..100f,
+                steps = 19, // 5% 步进，精准控制
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Text(
+            text = "拖动滑杆设定滤镜强度，出片按此百分比真实缩放（黑白滤镜按比例保留色彩）",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

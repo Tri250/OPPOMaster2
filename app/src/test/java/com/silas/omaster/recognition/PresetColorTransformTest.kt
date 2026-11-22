@@ -58,6 +58,59 @@ class PresetColorTransformTest {
     }
 
     @Test
+    fun `黑白滤镜强度按百分比真实缩放`() {
+        // 【v1.8.8 调色盘百分比真实化】"黑白 50%" = 部分灰度：保留 50% 色彩，
+        // 不再硬性渲染成 100% 黑白（百分比控制在灰度滤镜上此前完全失效）
+        val adj = PresetColorTransform.filterAdjustment("黑白 50%")
+        assertTrue(adj.grayscale)
+        assertEquals(0.5f, adj.grayscaleAmount, 1e-4f)
+
+        // 满灰度：R/B 通道权重一致（红像素 → 中性灰）
+        val full = PresetColorTransform.buildColorMatrix(preset(filter = "黑白"))
+        val redFull = applyMatrix(full, 200f, 20f, 20f)
+        assertEquals("100% 黑白应完全去色", redFull.r, redFull.b, 0.5f)
+
+        // 部分灰度：色彩按比例保留（红像素仍偏红，但饱和度被压向灰）；
+        // 色差（R-B spread）以"无滤镜"为基准 → 50% 强度应保留约一半色差
+        val half = PresetColorTransform.buildColorMatrix(preset(filter = "黑白 50%"))
+        val redHalf = applyMatrix(half, 200f, 20f, 20f)
+        assertTrue("50% 黑白应保留红蓝色差", redHalf.r > redHalf.b + 5f)
+        val neutral = PresetColorTransform.buildColorMatrix(preset())
+        val redNeutral = applyMatrix(neutral, 200f, 20f, 20f)
+        val neutralSpread = redNeutral.r - redNeutral.b
+        val halfSpread = redHalf.r - redHalf.b
+        assertTrue(
+            "50% 强度色彩残量应为满彩的一半（±20%）",
+            halfSpread in (neutralSpread * 0.4f)..(neutralSpread * 0.6f)
+        )
+
+        // 0% 已由 NEUTRAL 契约覆盖（滤镜强度百分比按比例缩放测试）
+        // 25%（内置"梦幻黑白"）：灰度强度与缩放一致
+        assertEquals(0.25f, PresetColorTransform.filterAdjustment("黑白 25%").grayscaleAmount, 1e-4f)
+        // 冷暖在部分灰度下按 (1-a) 保留：a=0.25 → 冷暖 -80 保留 -0.6（作者数据如实生效）
+        val partialWithWc = PresetColorTransform.buildColorMatrix(preset(filter = "黑白 25%", warmCool = -80))
+        val partialNoWc = PresetColorTransform.buildColorMatrix(preset(filter = "黑白 25%"))
+        assertTrue(
+            "部分灰度下冷暖应参与混色（B 行偏移改变）",
+            kotlin.math.abs(partialWithWc[14] - partialNoWc[14]) > 1f
+        )
+    }
+
+    @Test
+    fun `黑白满强度与无百分比矩阵逐位一致`() {
+        // 向后兼容锁定：a=1 端点精确退化为旧布尔路径（含冷暖归零、暗房影调语义）
+        listOf("黑白", "黑白 100%", "单色", "单色 100%").forEach { f ->
+            val adj = PresetColorTransform.filterAdjustment(f)
+            assertTrue(adj.grayscale)
+            assertEquals("满强度灰度 grayscaleAmount 应为 1: $f", 1f, adj.grayscaleAmount, 1e-6f)
+        }
+        // 满灰度下冷暖/青品归零不受强度公式影响（与 v1.8.3 行为一致）
+        val withWc = PresetColorTransform.buildColorMatrix(preset(filter = "黑白", warmCool = 80))
+        val noWc = PresetColorTransform.buildColorMatrix(preset(filter = "黑白"))
+        assertEquals(withWc.toList(), noWc.toList())
+    }
+
+    @Test
     fun `灰度滤镜下影调走暗房语义`() {
         // 【v1.8.3 审计修复】内置"高对比黑白"（影调 -61）必须渲染成强反差低调，
         // 而非彩色路径的"负影调 → 降对比"灰蒙输出
@@ -201,5 +254,17 @@ class PresetColorTransformTest {
         assertTrue(PresetColorTransform.hasVisibleEffect(preset(vignette = "开")))
         assertTrue(PresetColorTransform.hasVisibleEffect(preset(sharpness = 20)))
         assertFalse(PresetColorTransform.hasVisibleEffect(preset(filter = "原图")))
+    }
+
+    private data class Rgb(val r: Float, val g: Float, val b: Float)
+
+    /** 4x5 行主序 ColorMatrix 采样：R' = R·m[0]+G·m[1]+B·m[2]+m[4]，逐行同理 */
+    private fun applyMatrix(m: FloatArray, r: Float, g: Float, b: Float): Rgb {
+        val clamp = { v: Float -> v.coerceIn(0f, 255f) }
+        return Rgb(
+            clamp(r * m[0] + g * m[1] + b * m[2] + m[4]),
+            clamp(r * m[5] + g * m[6] + b * m[7] + m[9]),
+            clamp(r * m[10] + g * m[11] + b * m[12] + m[14])
+        )
     }
 }
