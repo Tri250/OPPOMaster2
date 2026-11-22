@@ -564,6 +564,36 @@ fun PopCaptureScreen(
                         PreviewMode.Placeholder -> ViewfinderPlaceholder(accent)
                     }
                 }
+
+                // 【v1.8.10 Reno15/16/17】取景期稳拍提示（参数卡提示的预览区前置）：
+                // 慢快门预设下用户取景时视线集中于预览画面，参数卡（预览下方）提示易漏看；
+                // 在预览画面上直接给出稳拍预期与当前快门值，按下快门前即可调整姿势/依托，
+                // 减少抖动糊片（更易出片）。仅 Live 态展示：成片/占位/错误态无取景行为
+                if (mode == PreviewMode.Live) {
+                    plan.shutterNs?.takeIf { RenoDeviceProfile.needsSteadyHint(it) }?.let { shutterNs ->
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = WarningYellow.copy(alpha = 0.12f)
+                            ),
+                            shape = AppDesign.CardShape,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(AppDesign.ContentPadding)
+                        ) {
+                            Text(
+                                stringResource(
+                                    R.string.pop_steady_hint,
+                                    PresetCapturePlan.formatShutterNs(shutterNs)
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(
+                                    horizontal = AppDesign.ContentPadding,
+                                    vertical = 6.dp
+                                )
+                            )
+                        }
+                    }
+                }
             }
 
             // 参数应用状态卡（已写入拍摄 / 取景与成片已套用 / 无法套用+原因）
