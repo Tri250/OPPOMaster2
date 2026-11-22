@@ -4,6 +4,7 @@ import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -100,7 +101,14 @@ class FrameViewModel(
                         ratio = s.outputRatio
                     )
                 )
-                s.renderedBitmap?.recycle()
+                // 【v1.8.10 审计修复】旧位图回收与 Compose 绘制竞态：
+                // _state 更新前 Compose 可能仍在绘制上一帧 renderedBitmap，
+                // 此时 recycle 会触发 "Canvas: trying to use a recycled bitmap" 崩溃。
+                // Android 8.0(API 26) 起 Bitmap 像素内存由 GC 统一管理，显式 recycle
+                // 非必需；仅在 API 23-25（native 内存需手动释放）保留显式回收。
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+                    s.renderedBitmap?.recycle()
+                }
                 _state.value = _state.value.copy(renderedBitmap = result)
             } catch (e: Exception) {
                 android.util.Log.e("FrameViewModel", "Failed to render", e)

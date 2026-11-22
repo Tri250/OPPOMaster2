@@ -366,6 +366,12 @@ fun PresetImage(
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(imageUri)
+                // 【v1.8.10 审计修复】预设封面源图可能为高分辨率网络图（2000px+），
+                // 未声明 scale 时 Coil 按原图尺寸全量解码进内存缓存——预设列表
+                // 26+ 张卡片将造成数十 MB 内存与解码开销。Scale.FIT 以控件布局
+                // 尺寸为解码目标采样（配合 contentScale=Crop 显示），内存与耗时
+                // 随卡片尺寸而非源图尺寸。
+                .scale(coil.size.Scale.FIT)
                 .crossfade(AnimationSpecs.FastTween.durationMillis)
                 .diskCachePolicy(CachePolicy.ENABLED)
                 .memoryCachePolicy(CachePolicy.ENABLED)

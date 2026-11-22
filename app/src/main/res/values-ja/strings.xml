@@ -912,6 +912,7 @@
     <string name="pop_camera_permission_rationale">POP 即撮にはカメラ権限が必要です：許可するとファインダーにプリセットのフィルターと調色パラメータをリアルタイムに適用し、ISO・シャッター・露出補正は機器が対応する場合に撮影へ書き込みます。</string>
     <string name="pop_camera_permission_button">カメラ権限を許可</string>
     <string name="pop_camera_permission_denied">カメラ権限なし：システムカメラまたは写真選択が利用できます。撮影後も調色パラメータは完全に適用されます。</string>
+    <string name="pop_camera_permission_settings">システム設定を開く</string>
     <string name="pop_camera_bind_failed">カメラを起動できませんでした：他のアプリが使用中か、リアカメラが利用できない可能性があります。システムカメラやアルバムからの選択は引き続き利用できます。</string>
     <string name="pop_xdr_label">Pro XDR</string>
     <string name="pop_xdr_desc">ダイナミックレンジ拡張：シャドウが明るく、ハイライトの階調が豊かで、質感が際立ちます</string>

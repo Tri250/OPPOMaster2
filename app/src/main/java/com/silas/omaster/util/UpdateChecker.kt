@@ -237,42 +237,50 @@ object UpdateChecker {
 
     /**
      * 查询下载进度
-     * @return Pair<下载状态, 进度百分比> 状态：1=等待中, 2=下载中, 4=完成, 8=失败, 16=暂停
+     * @return Pair(下载状态, 进度百分比) 状态：1=等待中, 2=下载中, 4=完成, 8=失败, 16=暂停；查询异常返回 (-1, 0)
      */
     fun queryDownloadProgress(context: Context, downloadId: Long): Pair<Int, Int> {
-        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-        val query = DownloadManager.Query().setFilterById(downloadId)
-        val cursor = downloadManager.query(query)
+        // 【v1.8.10 审计修复】DownloadManager.query 在部分 ROM 可能返回 null cursor，
+        // 且列索引缺失时 getColumnIndexOrThrow 直接抛异常（调用方多为 UI 轮询，
+        // 一崩即更新对话框闪退）。整体兜底为 (-1, 0)，由调用方按"查询失败"处理。
+        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
+            ?: return Pair(-1, 0)
+        val cursor = try {
+            downloadManager.query(DownloadManager.Query().setFilterById(downloadId))
+        } catch (e: Exception) {
+            Log.e(TAG, "查询下载进度失败", e)
+            null
+        } ?: return Pair(-1, 0)
 
         var status = -1
         var progress = 0
-
-        if (cursor.moveToFirst()) {
-            status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
-
-            when (status) {
-                DownloadManager.STATUS_PENDING -> {
-                    progress = 0
-                }
-                DownloadManager.STATUS_RUNNING -> {
-                    val downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                    val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
-                }
-                DownloadManager.STATUS_SUCCESSFUL -> {
-                    progress = 100
-                }
-                DownloadManager.STATUS_FAILED -> {
-                    progress = -1
-                }
-                DownloadManager.STATUS_PAUSED -> {
-                    val downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                    val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                    progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
+        try {
+            if (cursor.moveToFirst()) {
+                // 列缺失时 getColumnIndexOrThrow 抛 IllegalArgumentException，
+                // 由下方 catch 统一兜底为 (-1, 0)（查询失败语义）
+                status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+                when (status) {
+                    DownloadManager.STATUS_PENDING -> progress = 0
+                    DownloadManager.STATUS_RUNNING -> {
+                        val downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                        val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                        progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
+                    }
+                    DownloadManager.STATUS_SUCCESSFUL -> progress = 100
+                    DownloadManager.STATUS_FAILED -> progress = -1
+                    DownloadManager.STATUS_PAUSED -> {
+                        val downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                        val total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                        progress = if (total > 0) ((downloaded * 100) / total).toInt() else 0
+                    }
                 }
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "解析下载进度 cursor 失败", e)
+            return Pair(-1, 0)
+        } finally {
+            cursor.close()
         }
-        cursor.close()
         return Pair(status, progress)
     }
 

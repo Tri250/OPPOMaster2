@@ -2,6 +2,7 @@ package com.silas.omaster.recognition
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -11,6 +12,7 @@ import android.hardware.camera2.CaptureRequest
 import android.net.Uri
 import android.os.Build
 import android.annotation.SuppressLint
+import android.provider.Settings
 import android.util.Size
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -70,6 +72,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.silas.omaster.R
 import com.silas.omaster.model.MasterPreset
@@ -146,10 +150,14 @@ fun PopCaptureScreen(
     var photoFile by remember { mutableStateOf<File?>(null) }
     var permissionRequested by remember { mutableStateOf(false) }
     var cameraGranted by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
-                PackageManager.PERMISSION_GRANTED
-        )
+        mutableStateOf(hasCameraPermission(context))
+    }
+    // 【v1.8.10 审计修复】权限状态此前只在首帧求值：用户在系统设置里授予
+    // 权限后返回本页，cameraGranted 不会刷新，画面停留在"未授权"引导页
+    // （须退出重进才恢复）。ON_RESUME 重新求值，下方 DisposableEffect 以
+    // cameraGranted 为键，自动重新绑定相机，无需手动干预。
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        cameraGranted = hasCameraPermission(context)
     }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -564,6 +572,15 @@ fun PopCaptureScreen(
                         OutlinedButton(onClick = { permissionLauncher.launch(requestPermissions) }) {
                             Text(stringResource(R.string.pop_camera_permission_button))
                         }
+                        // 【v1.8.10 审计修复】"不再询问"永久拒绝后，系统权限弹窗不再展示，
+                        // 重试按钮只能得到瞬时拒绝——此前无任何恢复路径（用户被卡死）。
+                        // 已请求过仍未授权时，提供系统应用设置直达入口。
+                        if (permissionRequested && !cameraGranted) {
+                            Spacer(Modifier.height(4.dp))
+                            TextButton(onClick = { openAppDetailsSettings(context) }) {
+                                Text(stringResource(R.string.pop_camera_permission_settings))
+                            }
+                        }
                         if (permissionRequested) {
                             Spacer(Modifier.height(6.dp))
                             Text(stringResource(R.string.pop_camera_permission_denied),
@@ -681,6 +698,23 @@ fun PopCaptureScreen(
             snackbarHostState.showSnackbar(message = msg, withDismissAction = true)
             toast = null
         }
+    }
+}
+
+/** 【v1.8.10 审计修复】权限状态求值抽为顶层纯函数：首帧与 ON_RESUME 共用同一判据 */
+private fun hasCameraPermission(context: Context): Boolean =
+    ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+
+/** 跳转系统应用详情页（权限被永久拒绝"不再询问"后的唯一恢复路径） */
+private fun openAppDetailsSettings(context: Context) {
+    runCatching {
+        context.startActivity(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", context.packageName, null)
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
     }
 }
 

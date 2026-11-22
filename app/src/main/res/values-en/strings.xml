@@ -1113,6 +1113,7 @@
     <string name="pop_camera_permission_rationale">POP Capture needs camera permission: once granted, the viewfinder applies the preset filter and color parameters in real time; ISO / shutter / exposure compensation are written to the capture when the device supports it.</string>
     <string name="pop_camera_permission_button">Grant camera permission</string>
     <string name="pop_camera_permission_denied">No camera permission: use the system camera or pick a photo; color parameters are still fully applied after shooting.</string>
+    <string name="pop_camera_permission_settings">Open system settings</string>
     <string name="pop_camera_bind_failed">Camera failed to start: it may be in use by another app, or no rear camera is available. You can still use the system camera or pick a photo from the gallery.</string>
     <string name="pop_xdr_label">Pro XDR</string>
     <string name="pop_xdr_desc">Dynamic range enhancement: brighter shadows, richer highlight detail, crisper textures</string>

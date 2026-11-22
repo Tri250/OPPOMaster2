@@ -1134,6 +1134,7 @@
     <string name="pop_camera_permission_rationale">POP 即拍需要相机权限：授权后取景器将实时套用预设滤镜与调色参数，ISO/快门/曝光补偿在设备支持时写入拍摄。</string>
     <string name="pop_camera_permission_button">授予相机权限</string>
     <string name="pop_camera_permission_denied">未获得相机权限：可用系统相机拍照或相册选图，拍后仍会完整套用调色参数。</string>
+    <string name="pop_camera_permission_settings">打开系统设置</string>
     <string name="pop_camera_bind_failed">相机启动失败：可能被其他应用占用或设备无可用后置摄像头。仍可使用系统相机或相册选图完成拍摄。</string>
     <string name="pop_xdr_label">Pro XDR</string>
     <string name="pop_xdr_desc">动态范围增强：暗部更通透、高光层次更丰富、细节更清晰，成片更有质感</string>
