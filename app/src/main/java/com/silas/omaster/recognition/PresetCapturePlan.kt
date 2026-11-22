@@ -263,7 +263,9 @@ object PresetCapturePlan {
 
     /**
      * "1/125" / "1/125s" / "2s" / "0.5" / "125" → 纳秒。
-     * 约定：带斜杠按分数快门；纯小数按秒；纯整数优先按秒（如 "2" 表示 2 秒长曝光）。
+     * 约定：带斜杠按分数快门（分子/分母，"3/4"=0.75s——【v1.8.10 审计修复】
+     * 此前忽略分子把 "3/4" 错解析成 1/4s，曝光量偏差 3 倍）；纯小数按秒；
+     * 纯整数优先按秒（如 "2" 表示 2 秒长曝光）。
      */
     fun parseShutterNs(value: String?): Long? {
         val v = value?.trim()?.replace(Regex("s$", RegexOption.IGNORE_CASE), "")
@@ -272,9 +274,11 @@ object PresetCapturePlan {
         if (v.contains('/')) {
             val parts = v.split('/')
             if (parts.size != 2) return null
+            // 分子容忍不等号前缀（"<1/100" 表示快门上限描述，取 1/100）
+            val num = Regex("[\\d.]+").find(parts[0])?.value?.toDoubleOrNull() ?: return null
             val den = parts[1].trim().toDoubleOrNull() ?: return null
-            if (den <= 0.0) return null
-            val seconds = 1.0 / den
+            if (num <= 0.0 || den <= 0.0) return null
+            val seconds = num / den
             return (seconds * 1_000_000_000).toLong().takeIf { it > 0 }
         }
         val seconds = v.toDoubleOrNull() ?: return null

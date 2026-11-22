@@ -294,16 +294,21 @@ fun PopCaptureScreen(
      *
      * @param raw 原始位图（调用方交出所有权，内部按需回收）
      * @param jpegBytes 相机原始 JPEG 字节（仅相机路径非空；无效果时保存直通）
+     * @param xdr 本张成片的 XDR 套色开关：相机路径传"按下快门瞬间"的开关快照——
+     *        拍摄进行中（约 0.3~1s）用户切换开关时，保证传感器写入意图与
+     *        拍后套色判定用的是同一份状态（【v1.8.10 审计修复】此前回读实时值，
+     *        存在写入用旧值、套色用新值的窗口）；系统相机/相册路径传当前值
+     *        （无传感器写入概念，以用户最新意图为准）
      */
-    fun stylePhoto(raw: Bitmap, preset: MasterPreset, jpegBytes: ByteArray? = null) {
+    fun stylePhoto(raw: Bitmap, preset: MasterPreset, jpegBytes: ByteArray? = null, xdr: Boolean) {
         scope.launch {
             // Pro XDR 开启时视为"确有可见效果"：无参数预设也走套色管线（否则直通原图）
-            val hasEffect = PresetColorTransform.hasVisibleEffect(preset) || xdrEnabled
+            val hasEffect = PresetColorTransform.hasVisibleEffect(preset) || xdr
             val styled = if (hasEffect) {
                 withContext(Dispatchers.Default) {
                     PopImageProcessor.process(
                         raw, preset, Runtime.getRuntime().maxMemory(),
-                        xdr = xdrEnabled,
+                        xdr = xdr,
                         // 【v1.8.10 Reno15/16/17 机型适配】ColorOS 出片自带 HAL 锐化，
                         // Reno 档 App 侧降权防双重锐化光晕（识别失败 → 1.0 逐位一致）
                         sharpeningScale = RenoDeviceProfile.sharpeningMultiplier(deviceFamily)
@@ -325,6 +330,9 @@ fun PopCaptureScreen(
     fun captureWithPreset() {
         if (isCapturing || !cameraBound) return
         isCapturing = true
+        // 拍摄发起瞬间锁定套色状态：回调完成时若用户已切换 XDR 开关，
+        // 仍按按下快门那一刻的意图套色（与本次拍摄写入的传感器参数同源）
+        val xdrAtCapture = xdrEnabled
         imageCapture.takePicture(
             ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageCapturedCallback() {
@@ -353,7 +361,7 @@ fun PopCaptureScreen(
                         toast = msgCaptureFailed
                         return
                     }
-                    stylePhoto(bmp, preset, jpegBytes)
+                    stylePhoto(bmp, preset, jpegBytes, xdr = xdrAtCapture)
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -380,7 +388,7 @@ fun PopCaptureScreen(
                     val bmp = loadBitmap(context, uri)
                     cleanupTempPhoto()
                     if (bmp != null) {
-                        stylePhoto(bmp, preset)
+                        stylePhoto(bmp, preset, xdr = xdrEnabled)
                     } else {
                         toast = msgReadFailed
                         isCapturing = false
@@ -405,7 +413,7 @@ fun PopCaptureScreen(
             scope.launch {
                 val bmp = loadBitmap(context, uri)
                 if (bmp != null) {
-                    stylePhoto(bmp, preset)
+                    stylePhoto(bmp, preset, xdr = xdrEnabled)
                 } else {
                     toast = msgReadFailed
                     isCapturing = false

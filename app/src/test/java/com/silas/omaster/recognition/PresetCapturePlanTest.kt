@@ -264,6 +264,27 @@ class PresetCapturePlanTest {
     }
 
     @Test
+    fun `快门分数分子参与解析不被忽略`() {
+        // 【v1.8.10 审计修复】此前忽略分子只取分母，"3/4" 被错解析成 1/4s
+        // （曝光量偏差 3 倍，成片过暗）；修复后按 分子/分母 真实分数换算
+        assertEquals(750_000_000L, PresetCapturePlan.parseShutterNs("3/4"))
+        assertEquals(16_000_000L, PresetCapturePlan.parseShutterNs("2/125"))
+        assertEquals(500_000_000L, PresetCapturePlan.parseShutterNs("1/2"))
+        assertEquals(8_000_000L, PresetCapturePlan.parseShutterNs("1/125s"))
+        // 分母非法（0/负数/缺失）→ 无法解析
+        assertNull(PresetCapturePlan.parseShutterNs("1/0"))
+        assertNull(PresetCapturePlan.parseShutterNs("1/-60"))
+        assertNull(PresetCapturePlan.parseShutterNs("1/"))
+    }
+
+    @Test
+    fun `快门前缀写法分子取数字部分`() {
+        // "<x/y" 是快门上限描述语义：分子取数字部分，分母照常
+        assertEquals(10_000_000L, PresetCapturePlan.parseShutterNs("<1/100"))
+        assertEquals(4_000_000L, PresetCapturePlan.parseShutterNs("≤1/250"))
+    }
+
+    @Test
     fun `Auto曝光值不产生误导芯片`() {
         // 【v1.8.3 审计修复】"Auto" = 交给相机 AE 的正常创作意图，不得标记
         // "取值无法解析"虚报错误（内置 5 条预设含 ISO/快门 Auto 写法）

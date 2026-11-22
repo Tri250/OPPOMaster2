@@ -62,6 +62,8 @@ object ImageExporter {
                 val file = File(dir, fileName)
                 FileOutputStream(file).use { out ->
                     if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 98, out)) {
+                        // 压缩失败（IO/编码异常）：清理半成品文件，避免相册出现坏图
+                        file.delete()
                         return false
                     }
                 }

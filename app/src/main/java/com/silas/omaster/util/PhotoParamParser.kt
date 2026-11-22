@@ -18,7 +18,9 @@ import kotlin.math.roundToInt
  */
 object PhotoParamParser {
 
-    /** 快门速度："1/250" / "0.004" / "1/250s" → "1/250s"；无法解析返回 null */
+    /** 快门速度："1/250" / "0.004" / "2/250" → "1/250"（约分；分数短快门不带 s），
+     *  "1.6" → "1.6s"（秒级带 s）；无法解析返回 null。
+     *  输出可被 [PresetCapturePlan.parseShutterNs] 无损回读（分数/小数双兼容）。 */
     fun formatShutter(raw: String?): String? {
         if (raw.isNullOrBlank()) return null
         val s = raw.trim().removeSuffix("s").removeSuffix("S").trim()
