@@ -86,6 +86,11 @@ object PresetCapturePlan {
 
         val isoValue = parseIso(preset.iso)
         val shutterValue = parseShutterNs(preset.shutterSpeed)
+        // 【v1.8.3 审计修复】"Auto/自动" = 交给相机 AE 决定的正常创作意图，
+        // 不是"取值无法解析"——内置 5 条预设含 Auto 写法，此前被误标
+        // UNSUPPORTED(VALUE_UNPARSEABLE) 虚报错误。Auto 不产生任何芯片。
+        val isoAuto = isAutoValue(preset.iso)
+        val shutterAuto = isAutoValue(preset.shutterSpeed)
         val canManual = ranges.aeModeOffSupported &&
             ranges.isoRange != null && ranges.exposureTimeRange != null
         val wantManual = canManual && isoValue != null && shutterValue != null
@@ -97,8 +102,8 @@ object PresetCapturePlan {
         val steps = evToSteps(evValue, ranges)
         val captureEv = if (!wantManual && steps != null) steps else null
 
-        // ISO
-        if (preset.iso != null) {
+        // ISO（Auto = AE 决定，不产生芯片）
+        if (preset.iso != null && !isoAuto) {
             params += when {
                 captureIso != null -> ParamStatus(ParamKey.ISO, preset.iso, ApplyStatus.WRITTEN)
                 !canManual -> ParamStatus(ParamKey.ISO, preset.iso, ApplyStatus.UNSUPPORTED,
@@ -110,8 +115,8 @@ object PresetCapturePlan {
             }
         }
 
-        // 快门
-        if (preset.shutterSpeed != null) {
+        // 快门（Auto = AE 决定，不产生芯片）
+        if (preset.shutterSpeed != null && !shutterAuto) {
             params += when {
                 captureShutter != null -> ParamStatus(ParamKey.SHUTTER, preset.shutterSpeed, ApplyStatus.WRITTEN)
                 !canManual -> ParamStatus(ParamKey.SHUTTER, preset.shutterSpeed, ApplyStatus.UNSUPPORTED,
@@ -144,16 +149,24 @@ object PresetCapturePlan {
         // （饱和度 0 / 色温 5500K / 柔光"无"等）不产生芯片——
         // 否则会显示"0 · 拍后套用"这类"假装已套用"的误导信息，
         // 违背本类"UI 如实展示，不做假装已套用"的设计契约。
+        // 【v1.8.3 审计修复】黑白/单色灰度滤镜下，矩阵强制归零饱和度/冷暖/青品
+        // （真灰度输出，见 buildColorMatrix），这些参数不得显示"拍后套用"芯片——
+        // 否则内置"高对比黑白"（冷暖 +100/青品 -39）、"梦幻黑白"（冷暖 -80）
+        // 会虚报效果。滤镜本身与影调/柔光/暗角等仍如实 POST。
+        val grayscale = PresetColorTransform.filterAdjustment(preset.filter).grayscale
         fun post(key: ParamKey, value: String?, effective: Boolean) {
             if (effective && value != null) params += ParamStatus(key, value, ApplyStatus.POST)
         }
         post(ParamKey.COLOR_TEMP, preset.colorTemperature?.let { "${it}K" },
             PresetColorTransform.colorTempWarmDelta(preset.colorTemperature) != 0f)
         post(ParamKey.FILTER, preset.filter, isFilterApplicable(preset.filter))
-        post(ParamKey.SATURATION, formatSigned(preset.saturation), (preset.saturation ?: 0) != 0)
+        post(ParamKey.SATURATION, formatSigned(preset.saturation),
+            !grayscale && (preset.saturation ?: 0) != 0)
         post(ParamKey.TONE, formatSigned(preset.tone), (preset.tone ?: 0) != 0)
-        post(ParamKey.WARM_COOL, formatSigned(preset.warmCool), (preset.warmCool ?: 0) != 0)
-        post(ParamKey.CYAN_MAGENTA, formatSigned(preset.cyanMagenta), (preset.cyanMagenta ?: 0) != 0)
+        post(ParamKey.WARM_COOL, formatSigned(preset.warmCool),
+            !grayscale && (preset.warmCool ?: 0) != 0)
+        post(ParamKey.CYAN_MAGENTA, formatSigned(preset.cyanMagenta),
+            !grayscale && (preset.cyanMagenta ?: 0) != 0)
         post(ParamKey.SOFT_LIGHT, preset.softLight,
             PresetColorTransform.parseSoftLight(preset.softLight) > 0f)
         post(ParamKey.SHARPNESS, preset.sharpness?.toString(),
@@ -200,6 +213,12 @@ object PresetCapturePlan {
         val percent = parseFilterPercent(filter)
         if (percent != null && percent <= 0f) return true
         return PresetColorTransform.filterAdjustment(filter) != PresetColorTransform.NEUTRAL
+    }
+
+    /** "Auto"（任意大小写）/ "自动" → true：交给相机 AE 决定的正常创作意图 */
+    private fun isAutoValue(value: String?): Boolean {
+        val v = value?.trim() ?: return false
+        return v.lowercase() == "auto" || v == "自动"
     }
 
     /** "100" / "200-400" / "Auto" / null → ISO；不可解析 → null */

@@ -58,6 +58,24 @@ class PresetColorTransformTest {
     }
 
     @Test
+    fun `灰度滤镜下影调走暗房语义`() {
+        // 【v1.8.3 审计修复】内置"高对比黑白"（影调 -61）必须渲染成强反差低调，
+        // 而非彩色路径的"负影调 → 降对比"灰蒙输出
+        val bwBase = PresetColorTransform.buildColorMatrix(preset(filter = "黑白", softLight = "柔美"))
+        val bwLow = PresetColorTransform.buildColorMatrix(preset(filter = "黑白", tone = -61, softLight = "柔美"))
+        val bwHigh = PresetColorTransform.buildColorMatrix(preset(filter = "黑白", tone = 61, softLight = "柔美"))
+        // 负影调 = 低调摄影：压黑位（lift 下降）+ 增强反差（R 增益上升）
+        assertTrue("负影调应增强灰度反差", bwLow[0] > bwBase[0])
+        assertTrue("负影调应压低黑位", bwLow[9] < bwBase[9])
+        // 正影调 = 高调摄影：提黑位 + 柔化反差
+        assertTrue("正影调应柔化灰度反差", bwHigh[0] < bwBase[0])
+        assertTrue("正影调应提亮黑位", bwHigh[9] > bwBase[9])
+        // 彩色路径语义不变：负影调仍降对比
+        val colorLow = PresetColorTransform.buildColorMatrix(preset(tone = -61))
+        assertTrue(colorLow[0] < PresetColorTransform.buildColorMatrix(preset())[0])
+    }
+
+    @Test
     fun `胶片滤镜提黑降对比`() {
         val neutral = PresetColorTransform.buildColorMatrix(preset())
         val film = PresetColorTransform.buildColorMatrix(preset(filter = "胶片"))

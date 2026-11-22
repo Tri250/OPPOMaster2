@@ -29,11 +29,15 @@ class PresetCapturePlanTest {
         ev: String? = null,
         filter: String? = null,
         saturation: Int? = null,
-        colorTemperature: Int? = null
+        colorTemperature: Int? = null,
+        warmCool: Int? = null,
+        cyanMagenta: Int? = null,
+        tone: Int? = null
     ) = MasterPreset(
         id = "t", name = "测试", coverPath = "",
         iso = iso, shutterSpeed = shutter, exposureCompensation = ev,
-        filter = filter, saturation = saturation, colorTemperature = colorTemperature
+        filter = filter, saturation = saturation, colorTemperature = colorTemperature,
+        warmCool = warmCool, cyanMagenta = cyanMagenta, tone = tone
     )
 
     private fun CapturePlan.statusOf(key: ParamKey) = params.firstOrNull { it.key == key }
@@ -215,5 +219,44 @@ class PresetCapturePlanTest {
         assertEquals(500_000_000L, PresetCapturePlan.parseShutterNs("0.5"))
         assertNull(PresetCapturePlan.parseShutterNs("auto"))
         assertNull(PresetCapturePlan.parseShutterNs(null))
+    }
+
+    @Test
+    fun `快门带不等号前缀仍按分数解析`() {
+        // 【v1.8.3 审计】内置"清新人文"真实写法 "<1/100"（下限语义）→ 1/100s
+        assertEquals(10_000_000L, PresetCapturePlan.parseShutterNs("<1/100"))
+    }
+
+    @Test
+    fun `Auto曝光值不产生误导芯片`() {
+        // 【v1.8.3 审计修复】"Auto" = 交给相机 AE 的正常创作意图，不得标记
+        // "取值无法解析"虚报错误（内置 5 条预设含 ISO/快门 Auto 写法）
+        val plan = PresetCapturePlan.build(preset(iso = "Auto", shutter = "Auto"), renoRanges)
+        assertNull(plan.statusOf(ParamKey.ISO))
+        assertNull(plan.statusOf(ParamKey.SHUTTER))
+        assertNull(plan.iso)
+        assertFalse(plan.manualExposure)
+        // 真正无法解析的取值仍如实标记
+        val bad = PresetCapturePlan.build(preset(iso = "abc", shutter = "xyz"), renoRanges)
+        assertEquals(UnsupportedReason.VALUE_UNPARSEABLE, bad.statusOf(ParamKey.ISO)?.reason)
+        assertEquals(UnsupportedReason.VALUE_UNPARSEABLE, bad.statusOf(ParamKey.SHUTTER)?.reason)
+    }
+
+    @Test
+    fun `灰度滤镜下饱和度冷暖青品不产生虚报芯片`() {
+        // 【v1.8.3 审计修复】黑白滤镜矩阵强制归零饱和度/冷暖/青品（真灰度输出），
+        // 芯片不得标记"拍后套用"（内置"高对比黑白"冷暖+100/青品-39、
+        // "梦幻黑白"冷暖-80 此前被虚报）
+        val plan = PresetCapturePlan.build(
+            preset(filter = "黑白", saturation = 0, warmCool = 100, cyanMagenta = -39), renoRanges
+        )
+        assertNull(plan.statusOf(ParamKey.SATURATION))
+        assertNull(plan.statusOf(ParamKey.WARM_COOL))
+        assertNull(plan.statusOf(ParamKey.CYAN_MAGENTA))
+        // 滤镜本身仍如实 POST
+        assertEquals(ApplyStatus.POST, plan.statusOf(ParamKey.FILTER)?.status)
+        // 彩色滤镜下冷暖仍正常 POST
+        val color = PresetCapturePlan.build(preset(filter = "复古", warmCool = 100), renoRanges)
+        assertEquals(ApplyStatus.POST, color.statusOf(ParamKey.WARM_COOL)?.status)
     }
 }

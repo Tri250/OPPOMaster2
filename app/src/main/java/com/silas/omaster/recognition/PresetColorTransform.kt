@@ -156,7 +156,12 @@ object PresetColorTransform {
         val satFactor = if (adj.grayscale) 0f else 1f + saturation * 0.8f
         if (adj.grayscale) { warmCool = 0f; cyanMagenta = 0f }
 
-        var contrast = 1f + tone * 0.5f + adj.contrastDelta - fade * 0.15f
+        // 【v1.8.3 审计修复】灰度（黑白/单色）下"影调"切换为暗房语义：
+        // 负影调 = 低调摄影（压黑位 + 增强反差），正影调 = 高调摄影（提黑位 + 柔化反差）。
+        // 彩色路径的"负影调 → 降对比柔化"语义不适用于纯灰度输出——否则内置
+        // "高对比黑白"（影调 -61）会渲染成 c≈0.68 的灰蒙黑白，与预期效果相反。
+        val toneContrast = if (adj.grayscale) -tone * 0.5f else tone * 0.5f
+        var contrast = 1f + toneContrast + adj.contrastDelta - fade * 0.15f
         contrast = (contrast * 2f.pow(ev)).coerceAtLeast(0.05f)
         val lift = tone * 18f + adj.lift + fade * 12f
 
