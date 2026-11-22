@@ -135,6 +135,74 @@ object PresetPixelEffects {
         return t * t * (3f - 2f * t)
     }
 
+    // ── Pro XDR 全局影调（拍后与取景预览共用的单一事实来源）──
+
+    /**
+     * XDR 全局项对给定亮度的调整量（阴影三角窗提亮 + 高光缓出肩部回收）。
+     *
+     * 【v1.8.9 审计修复】拍后 [processBandInto] 与取景预览
+     * [FilteredPreviewAnalyzer] 共用本函数，保证"所见即所得"：
+     * 预览按整像素亮度查表（[buildXdrToneLut]）后以同一语义施加，
+     * 与拍后全局项逐位一致。清晰度（局部对比，需邻域运算）仍为拍后专属，
+     * 与锐化定位相同。
+     *
+     * 影调结构（摄影惯例，luma-only 无色偏）：
+     * - 黑场锚点 ≤6 不抬（真黑"沉得下去"）；
+     * - 6→34 平滑升至满额 +30，34→112 平滑收敛至 0；
+     * - ≥208 沿单调缓出肩部回收，白点 −14（镜面高光通透不发灰）。
+     */
+    fun xdrGlobalLumaAdjust(luma: Float, xdr: Float): Float {
+        var adj = 0f
+        if (luma > XDR_BLACK_ANCHOR && luma < XDR_SHADOW_END) {
+            val wUp = ((luma - XDR_BLACK_ANCHOR) / (XDR_SHADOW_FULL - XDR_BLACK_ANCHOR)).coerceIn(0f, 1f)
+            val wDn = ((XDR_SHADOW_END - luma) / (XDR_SHADOW_END - XDR_SHADOW_FULL)).coerceIn(0f, 1f)
+            adj += xdr * XDR_SHADOW_LIFT * minOf(wUp, wDn)
+        }
+        if (luma > XDR_HIGHLIGHT_START) {
+            val u = ((luma - XDR_HIGHLIGHT_START) / XDR_HIGHLIGHT_RANGE).coerceIn(0f, 1f)
+            adj -= xdr * XDR_HIGHLIGHT_PULL * (1f - (1f - u) * (1f - u))
+        }
+        return adj
+    }
+
+    /** 清晰度（局部对比）中间调掩膜：暗部 <24 / 亮部 >208 不增强（护暗部噪点与高光通透） */
+    private fun clarityMask(luma: Float): Float {
+        val cLo = ((luma - XDR_CLARITY_LO) / (XDR_CLARITY_LO_FULL - XDR_CLARITY_LO)).coerceIn(0f, 1f)
+        val cHi = ((XDR_CLARITY_HI_END - luma) / (XDR_CLARITY_HI_END - XDR_CLARITY_HI)).coerceIn(0f, 1f)
+        return minOf(cLo, cHi)
+    }
+
+    /**
+     * 256 级亮度 → XDR 全局调整量表（取景预览用，纯 JVM 可单测）。
+     * 与拍后 [xdrGlobalLumaAdjust] 逐位同源；强度 ≤0 返回全零表（关闭）。
+     */
+    fun buildXdrToneLut(xdr: Float): FloatArray =
+        FloatArray(256) { xdrGlobalLumaAdjust(it.toFloat(), xdr) }
+
+    /**
+     * 对 ARGB_8888 像素数组原地施加 XDR 全局影调（取景预览帧用）。
+     *
+     * 与拍后 [processBandInto] 的 XDR 全局项**逐位一致**（同一
+     * [xdrGlobalLumaAdjust] + 同一 (通道+增量).toInt() 截断钳位语义）——
+     * 预览所见即拍后所得（清晰度/锐化/降噪为拍后专属，不在本表内）。
+     */
+    fun applyXdrToneLutInto(px: IntArray, lut: FloatArray) {
+        for (i in px.indices) {
+            val c = px[i]
+            val r = (c shr 16) and 0xFF
+            val g = (c shr 8) and 0xFF
+            val b = c and 0xFF
+            val l = ((r * 54 + g * 183 + b * 19) shr 8).coerceIn(0, 255)
+            val d = lut[l]
+            if (d > 0.5f || d < -0.5f) {
+                val nr = (r + d).toInt().coerceIn(0, 255)
+                val ng = (g + d).toInt().coerceIn(0, 255)
+                val nb = (b + d).toInt().coerceIn(0, 255)
+                px[i] = (c and 0xFF000000.toInt()) or (nr shl 16) or (ng shl 8) or nb
+            }
+        }
+    }
+
     /**
      * 内存守卫：返回"可安全全分辨率处理的最大边长"，0 = 当前尺寸可全分辨率处理。
      *
@@ -245,24 +313,14 @@ object PresetPixelEffects {
                 // ④ Pro XDR：阴影提亮 + 高光回收 + 局部对比（luma-only 无色偏）。
                 // 影调结构对齐摄影惯例：黑场锚点（真黑不抬）、白点单调肩部
                 // 收敛（无影调翻转/色带）；清晰度经中间调掩膜 + edgeW 双门控，
-                // 与⑤锐化分工，不叠硬边光晕
+                // 与⑤锐化分工，不叠硬边光晕。
+                // 全局项（阴影/高光）与取景预览共用 [xdrGlobalLumaAdjust] 单一
+                // 事实来源（v1.8.9 审计修复：预览所见 = 拍后所得）；清晰度需
+                // 邻域运算，与锐化同为拍后专属
                 if (doXdr) {
                     val l = lum[i].toFloat()
-                    var adj = 0f
-                    if (l > XDR_BLACK_ANCHOR && l < XDR_SHADOW_END) {
-                        val wUp = ((l - XDR_BLACK_ANCHOR) / (XDR_SHADOW_FULL - XDR_BLACK_ANCHOR)).coerceIn(0f, 1f)
-                        val wDn = ((XDR_SHADOW_END - l) / (XDR_SHADOW_END - XDR_SHADOW_FULL)).coerceIn(0f, 1f)
-                        adj += xdr * XDR_SHADOW_LIFT * minOf(wUp, wDn)
-                    }
-                    if (l > XDR_HIGHLIGHT_START) {
-                        // 单调缓出肩部（ease-out 二次）：f'(l)=1−adj'(l)≥0.40 恒正，
-                        // 亮部梯度无影调翻转/色带；白点 −14 保持镜面高光通透
-                        val u = ((l - XDR_HIGHLIGHT_START) / XDR_HIGHLIGHT_RANGE).coerceIn(0f, 1f)
-                        adj -= xdr * XDR_HIGHLIGHT_PULL * (1f - (1f - u) * (1f - u))
-                    }
-                    val cLo = ((l - XDR_CLARITY_LO) / (XDR_CLARITY_LO_FULL - XDR_CLARITY_LO)).coerceIn(0f, 1f)
-                    val cHi = ((XDR_CLARITY_HI_END - l) / (XDR_CLARITY_HI_END - XDR_CLARITY_HI)).coerceIn(0f, 1f)
-                    adj += (lum[i] - blur[i]) * xdr * XDR_CLARITY * edgeW * minOf(cLo, cHi)
+                    val adj = xdrGlobalLumaAdjust(l, xdr) +
+                            (lum[i] - blur[i]) * xdr * XDR_CLARITY * edgeW * clarityMask(l)
                     if (adj > 0.5f || adj < -0.5f) c = addLumaDelta(c, adj)
                 }
 

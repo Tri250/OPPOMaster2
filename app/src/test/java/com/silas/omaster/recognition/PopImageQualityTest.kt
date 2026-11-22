@@ -563,4 +563,94 @@ class PopImageQualityTest {
             variance(out) < variance(src) * 1.15
         )
     }
+
+    // ── v1.8.9 审计：XDR 全局项单一事实来源（拍后与取景预览逐位一致）──
+
+    @Test
+    fun `xdrGlobalLumaAdjust曲线符合摄影惯例`() {
+        // 黑场锚点：真黑（≤6）不抬
+        assertEquals(0f, PresetPixelEffects.xdrGlobalLumaAdjust(0f, 1f), 1e-4f)
+        assertEquals(0f, PresetPixelEffects.xdrGlobalLumaAdjust(6f, 1f), 1e-4f)
+        // 阴影三角窗：34 满额 +30，112 收敛回 0
+        assertEquals(30f, PresetPixelEffects.xdrGlobalLumaAdjust(34f, 1f), 1e-4f)
+        assertEquals(0f, PresetPixelEffects.xdrGlobalLumaAdjust(112f, 1f), 1e-4f)
+        // 高光肩部：208 起点 0，白点 −14
+        assertEquals(0f, PresetPixelEffects.xdrGlobalLumaAdjust(208f, 1f), 1e-4f)
+        assertEquals(-14f, PresetPixelEffects.xdrGlobalLumaAdjust(255f, 1f), 1e-3f)
+        // 强度 0 = 关闭
+        assertEquals(0f, PresetPixelEffects.xdrGlobalLumaAdjust(34f, 0f), 1e-6f)
+    }
+
+    @Test
+    fun `xdr高光肩部单调无影调翻转`() {
+        // 输出亮度随输入单调非降（f'(l)≥0.40 恒正）：肩部无影调翻转/色带
+        var prev = -1f
+        for (l in 208..255) {
+            val out = l + PresetPixelEffects.xdrGlobalLumaAdjust(l.toFloat(), 1f)
+            assertTrue("肩部必须单调非降：l=$l out=$out prev=$prev", out >= prev - 1e-3f)
+            prev = out
+        }
+        // 阴影三角窗同样单调非降（无色带）
+        prev = -1f
+        for (l in 0..112) {
+            val out = l + PresetPixelEffects.xdrGlobalLumaAdjust(l.toFloat(), 1f)
+            assertTrue("阴影窗必须单调非降：l=$l out=$out prev=$prev", out >= prev - 1e-3f)
+            prev = out
+        }
+    }
+
+    @Test
+    fun `取景预览XDR查表与拍后全局项逐位一致`() {
+        // v1.8.9 审计修复的核心契约：取景所见 = 拍后所得。
+        // applyXdrToneLutInto（预览）必须与拍后 processBandInto 的 XDR 全局项
+        // 逐位一致——同一 xdrGlobalLumaAdjust + 同一 (通道+增量).toInt() 钳位语义
+        val lut = PresetPixelEffects.buildXdrToneLut(1f)
+        val pixels = IntArray(256)
+        var idx = 0
+        for (l in 0 until 64) {
+            // 灰阶 + 彩色 + 通道极值饱和色（覆盖钳位路径）
+            val v = l * 4
+            pixels[idx++] = argb(v, v, v)
+            pixels[idx++] = argb(v, (255 - v).coerceIn(0, 255), (v * 3 / 4).coerceIn(0, 255))
+            pixels[idx++] = argb(255 - v, v, 128)
+            pixels[idx++] = argb(v.coerceIn(0, 255), 255 - v, (255 - v).coerceIn(0, 255))
+        }
+        PresetPixelEffects.applyXdrToneLutInto(pixels, lut)
+        // 正向构造期望值逐位比对
+        var j = 0
+        for (l in 0 until 64) {
+            val v = l * 4
+            val orig = listOf(
+                Triple(v, v, v),
+                Triple(v, (255 - v).coerceIn(0, 255), (v * 3 / 4).coerceIn(0, 255)),
+                Triple(255 - v, v, 128),
+                Triple(v.coerceIn(0, 255), 255 - v, (255 - v).coerceIn(0, 255))
+            )
+            for ((r0, g0, b0) in orig) {
+                val lum = ((r0 * 54 + g0 * 183 + b0 * 19) shr 8).coerceIn(0, 255)
+                val d = PresetPixelEffects.xdrGlobalLumaAdjust(lum.toFloat(), 1f)
+                val er = (r0 + d).toInt().coerceIn(0, 255)
+                val eg = (g0 + d).toInt().coerceIn(0, 255)
+                val eb = (b0 + d).toInt().coerceIn(0, 255)
+                val c = pixels[j++]
+                assertEquals("像素 (${r0},${g0},${b0}) R 通道", er, (c shr 16) and 0xFF)
+                assertEquals("像素 (${r0},${g0},${b0}) G 通道", eg, (c shr 8) and 0xFF)
+                assertEquals("像素 (${r0},${g0},${b0}) B 通道", eb, c and 0xFF)
+                assertEquals("alpha 必须保留", 0xFF, (c ushr 24) and 0xFF)
+            }
+        }
+    }
+
+    @Test
+    fun `取景预览XDR关闭时逐位不动`() {
+        val off = PresetPixelEffects.buildXdrToneLut(0f)
+        assertTrue("关闭状态 LUT 应全零", off.all { it == 0f })
+        val px = intArrayOf(argb(30, 40, 200), argb(220, 230, 240), argb(128, 128, 128))
+        val copy = px.copyOf()
+        PresetPixelEffects.applyXdrToneLutInto(px, off)
+        assertTrue("关闭状态预览帧必须逐位不变", px.contentEquals(copy))
+    }
+
+    private fun argb(r: Int, g: Int, b: Int) =
+        (0xFF shl 24) or (r shl 16) or (g shl 8) or b
 }

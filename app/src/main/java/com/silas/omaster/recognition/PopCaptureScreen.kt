@@ -191,7 +191,8 @@ fun PopCaptureScreen(
     var cameraError by remember { mutableStateOf(false) }
 
     // Pro XDR 动态范围增强（默认开启）：阴影提亮 + 高光回收 + 局部对比，成片更有质感。
-    // 仅作用于拍后成片管线（与锐化同为拍后专属，取景预览不做邻域运算保证流畅）
+    // 全局影调（阴影/高光）进取景预览，与拍后逐位一致（v1.8.9 审计修复：所见即所得）；
+    // 清晰度（局部对比）需邻域运算，与锐化/降噪同为拍后专属，不在预览内
     var xdrEnabled by remember { mutableStateOf(true) }
 
     // 实时滤镜取景：与拍后套色同源的色彩矩阵，取景即成片观感
@@ -204,8 +205,8 @@ fun PopCaptureScreen(
             Thread(r, "pop-filter-preview").apply { isDaemon = true }
         }
     }
-    val analyzer = remember(colorMatrix, vignetteStrength) {
-        FilteredPreviewAnalyzer(colorMatrix, vignetteStrength) { bmp ->
+    val analyzer = remember(colorMatrix, vignetteStrength, xdrEnabled) {
+        FilteredPreviewAnalyzer(colorMatrix, vignetteStrength, if (xdrEnabled) 1f else 0f) { bmp ->
             filteredFrame.value = bmp
         }
     }

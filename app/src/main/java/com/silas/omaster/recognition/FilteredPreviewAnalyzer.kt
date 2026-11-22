@@ -18,7 +18,11 @@ import androidx.camera.core.ImageProxy
  * 把预设色彩矩阵逐帧应用到相机画面：
  * - 色彩矩阵与拍后套色同源（[PresetColorTransform.buildColorMatrix]）→ 取景与成片观感一致；
  * - 暗角按 [PresetPixelEffects.processBandInto] 同参数径向叠加（所见即所得）；
- * - 锐化为拍后专属（预览不做邻域像素运算，保证低功耗流畅）；
+ * - 【v1.8.9 审计修复】Pro XDR 全局影调（阴影提亮 + 高光回收）进取景：
+ *   此前 XDR 仅作用于拍后成片，而开关默认开启，导致取景所见与拍后所得
+ *   不一致（默认每张成片都"变亮/收高光"而预览毫无变化）。全局项按整像素
+ *   亮度查表施加，与拍后全局项逐位一致（[PresetPixelEffects.xdrGlobalLumaAdjust]）；
+ *   清晰度（局部对比）需邻域运算，与锐化/降噪同为拍后专属，不在预览内；
  * - ImageAnalysis 目标 1280x720 + KEEP_ONLY_LATEST，逐帧节流约 30fps；
  * - 方向：ImageProxy.toBitmap() 返回的是**传感器方向**像素（CameraX 不自动旋转，
  *   见官方 orientation-rotation 文档与 ImageUtil.createBitmapFromImageProxy 实现），
@@ -30,6 +34,8 @@ import androidx.camera.core.ImageProxy
 class FilteredPreviewAnalyzer(
     colorMatrix: FloatArray,
     private val vignetteStrength: Float,
+    /** Pro XDR 全局影调强度（0=关闭，1=开启；预览仅全局项，清晰度为拍后专属） */
+    private val xdrStrength: Float,
     private val onFrame: (Bitmap) -> Unit
 ) : ImageAnalysis.Analyzer {
 
@@ -44,6 +50,11 @@ class FilteredPreviewAnalyzer(
     private val canvas = Canvas()
     private var vignetteWidth = 0
     private var vignetteHeight = 0
+
+    /** XDR 全局影调查找表（与拍后同源，单一事实来源）；强度 ≤0 为全零表 */
+    private val xdrLut: FloatArray = PresetPixelEffects.buildXdrToneLut(xdrStrength)
+    private val doXdr: Boolean = xdrStrength > 0.01f
+    private var lutScratch: IntArray? = null
 
     // 双缓冲输出位图交替写入，避免 Compose 读取时撕裂
     private var buffers = arrayOfNulls<Bitmap>(2)
@@ -81,10 +92,30 @@ class FilteredPreviewAnalyzer(
         }
         canvas.setBitmap(out)
         canvas.drawBitmap(src, 0f, 0f, colorPaint)
+        // XDR 全局影调先于暗角施加，与拍后条带管线顺序一致（①矩阵 → ④XDR → ⑥暗角）
+        if (doXdr) applyXdrTone(out)
         if (vignetteStrength > 0.02f) drawVignette(out)
         canvas.setBitmap(null)
         src.recycle()
         onFrame(out)
+    }
+
+    /**
+     * 对输出帧原地施加 XDR 全局影调（[PresetPixelEffects.applyXdrToneLutInto]）。
+     * 逐帧复用一个同尺寸 IntArray 像素缓冲，避免每帧 getPixels/setPixels 分配。
+     */
+    private fun applyXdrTone(out: Bitmap) {
+        val w = out.width
+        val h = out.height
+        val n = w * h
+        var scratch = lutScratch
+        if (scratch == null || scratch.size != n) {
+            scratch = IntArray(n)
+            lutScratch = scratch
+        }
+        out.getPixels(scratch, 0, w, 0, 0, w, h)
+        PresetPixelEffects.applyXdrToneLutInto(scratch, xdrLut)
+        out.setPixels(scratch, 0, w, 0, 0, w, h)
     }
 
     /** 复用同尺寸缓冲，尺寸变化（首帧/分辨率切换）时重建，旧缓冲延后回收 */
@@ -117,6 +148,7 @@ class FilteredPreviewAnalyzer(
         buffers[1] = null
         retired?.recycle()
         retired = null
+        lutScratch = null
     }
 
     /**
