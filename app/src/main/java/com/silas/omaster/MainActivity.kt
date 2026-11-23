@@ -555,7 +555,13 @@ fun MainApp(
             try {
                 val result = UpdateChecker.checkUpdate(context, VersionInfo.VERSION_CODE, updateChannel)
                 if (result != null && result.isNewer) {
-                    showUpdateDialog = result
+                    // 【v1.8.10 强制提醒热更新】强更提醒不受 autoCheckUpdate 开关门控——
+                    // 低于强制基线（FORCE_UPDATE_MIN）的存量用户即使关闭自动检查更新，
+                    // 也必须收到强提醒（轻量 JSON 请求，冷启动 + 6h 节流，可接受）；
+                    // 普通软提醒仍尊重用户开关
+                    if (result.forceUpdate || autoCheckUpdate) {
+                        showUpdateDialog = result
+                    }
                 }
             } catch (e: Exception) {
                 // v1.6.15 稳定性修复：空 catch 导致线上无法诊断更新链路失败，补日志
@@ -564,17 +570,18 @@ fun MainApp(
         }
     }
     LaunchedEffect(Unit) {
-        if (autoCheckUpdate) {
-            delay(2000)
-            lastAutoCheckAt[0] = android.os.SystemClock.elapsedRealtime()
-            runAutoUpdateCheck()
-        }
+        // 【v1.8.10 强制提醒热更新】无条件执行检查（含强更判定），开关分流在
+        // runAutoUpdateCheck 内部处理——冷启动延迟 2s 保持原状
+        delay(2000)
+        lastAutoCheckAt[0] = android.os.SystemClock.elapsedRealtime()
+        runAutoUpdateCheck()
     }
     val resumeLifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(resumeLifecycleOwner, autoCheckUpdate) {
         val observer = LifecycleEventObserver { _, event ->
-            // 回前台再检查：距上次 ≥6 小时才发起，避免频繁网络访问
-            if (event == Lifecycle.Event.ON_RESUME && autoCheckUpdate) {
+            // 回前台再检查：距上次 ≥6 小时才发起，避免频繁网络访问。
+            // 【v1.8.10】无条件监听（含强更判定），开关分流在检查内部处理
+            if (event == Lifecycle.Event.ON_RESUME) {
                 val now = android.os.SystemClock.elapsedRealtime()
                 if (now - lastAutoCheckAt[0] >= 6L * 3600_000L) {
                     lastAutoCheckAt[0] = now
@@ -986,9 +993,14 @@ fun MainApp(
 
         // 自动检查更新弹窗
         showUpdateDialog?.let { updateInfo ->
+            // 【v1.8.10 强制提醒热更新】低于强制基线（UpdateChecker.FORCE_UPDATE_MIN）的
+            // 存量用户：弹窗不可关闭（back/外部点击无效）、无"稍后"按钮，仅"立即更新"——
+            // 旧版本存在已知数据管线缺陷（订阅全源刷新失效/快门分数解析曝光错算等）；
+            // 点击"立即更新"即关闭弹窗并启动下载，渠道故障时用户不会被锁死
+            val isForceUpdate = updateInfo.forceUpdate
             AlertDialog(
                 onDismissRequest = { showUpdateDialog = null },
-                title = { 
+                title = {
                     Text(
                         text = "发现新版本",
                         style = MaterialTheme.typography.titleLarge,
@@ -998,6 +1010,15 @@ fun MainApp(
                 },
                 text = {
                     Column {
+                        if (isForceUpdate) {
+                            Text(
+                                text = "当前版本过低，存在已知的数据管线与拍摄链路缺陷，需更新后使用。",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
                         // 版本信息卡片
                         androidx.compose.material3.Card(
                             modifier = Modifier.fillMaxWidth(),
@@ -1097,15 +1118,24 @@ fun MainApp(
                     }
                 },
                 dismissButton = {
-                    androidx.compose.material3.TextButton(
-                        onClick = { showUpdateDialog = null }
-                    ) {
-                        Text(
-                            "稍后",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    // 强更时无"稍后"按钮（slot 渲染空），用户只能"立即更新"
+                    if (!isForceUpdate) {
+                        androidx.compose.material3.TextButton(
+                            onClick = { showUpdateDialog = null }
+                        ) {
+                            Text(
+                                "稍后",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 },
+                // 【v1.8.10 强制提醒热更新】强更弹窗禁用 back 与外部点击关闭；
+                // 非强更保持默认可关闭行为
+                properties = androidx.compose.ui.window.DialogProperties(
+                    dismissOnBackPress = !isForceUpdate,
+                    dismissOnClickOutside = !isForceUpdate
+                ),
                 containerColor = MaterialTheme.colorScheme.surface,
                 titleContentColor = MaterialTheme.colorScheme.onSurface,
                 textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
