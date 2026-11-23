@@ -5,7 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 强制提醒热更新判定测试（【v1.8.10】FORCE_UPDATE_MIN 基线 = v1.8.10）
+ * 提醒热更新判定测试（【v1.8.10】FORCE_UPDATE_MIN 基线 = v1.8.10）
  *
  * 版本码映射（VersionInfo.parseVersionCode）：
  * v1.8.9  = 1*10000 +  8*100 +  9 = 1809

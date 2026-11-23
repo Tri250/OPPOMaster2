@@ -555,9 +555,9 @@ fun MainApp(
             try {
                 val result = UpdateChecker.checkUpdate(context, VersionInfo.VERSION_CODE, updateChannel)
                 if (result != null && result.isNewer) {
-                    // 【v1.8.10 强制提醒热更新】强更提醒不受 autoCheckUpdate 开关门控——
-                    // 低于强制基线（FORCE_UPDATE_MIN）的存量用户即使关闭自动检查更新，
-                    // 也必须收到强提醒（轻量 JSON 请求，冷启动 + 6h 节流，可接受）；
+                    // 【v1.8.10 提醒热更新】基线警示提醒不受 autoCheckUpdate 开关门控——
+                    // 低于基线（FORCE_UPDATE_MIN）的存量用户即使关闭自动检查更新，
+                    // 也收到本次提醒（轻量 JSON 请求，冷启动 + 6h 节流，可接受）；
                     // 普通软提醒仍尊重用户开关
                     if (result.forceUpdate || autoCheckUpdate) {
                         showUpdateDialog = result
@@ -570,7 +570,7 @@ fun MainApp(
         }
     }
     LaunchedEffect(Unit) {
-        // 【v1.8.10 强制提醒热更新】无条件执行检查（含强更判定），开关分流在
+        // 【v1.8.10 提醒热更新】无条件执行检查（含基线判定），开关分流在
         // runAutoUpdateCheck 内部处理——冷启动延迟 2s 保持原状
         delay(2000)
         lastAutoCheckAt[0] = android.os.SystemClock.elapsedRealtime()
@@ -580,7 +580,7 @@ fun MainApp(
     DisposableEffect(resumeLifecycleOwner, autoCheckUpdate) {
         val observer = LifecycleEventObserver { _, event ->
             // 回前台再检查：距上次 ≥6 小时才发起，避免频繁网络访问。
-            // 【v1.8.10】无条件监听（含强更判定），开关分流在检查内部处理
+            // 【v1.8.10】无条件监听（含基线判定），开关分流在检查内部处理
             if (event == Lifecycle.Event.ON_RESUME) {
                 val now = android.os.SystemClock.elapsedRealtime()
                 if (now - lastAutoCheckAt[0] >= 6L * 3600_000L) {
@@ -993,11 +993,12 @@ fun MainApp(
 
         // 自动检查更新弹窗
         showUpdateDialog?.let { updateInfo ->
-            // 【v1.8.10 强制提醒热更新】低于强制基线（UpdateChecker.FORCE_UPDATE_MIN）的
-            // 存量用户：弹窗不可关闭（back/外部点击无效）、无"稍后"按钮，仅"立即更新"——
-            // 旧版本存在已知数据管线缺陷（订阅全源刷新失效/快门分数解析曝光错算等）；
-            // 点击"立即更新"即关闭弹窗并启动下载，渠道故障时用户不会被锁死
-            val isForceUpdate = updateInfo.forceUpdate
+            // 【v1.8.10 提醒热更新】低于基线（UpdateChecker.FORCE_UPDATE_MIN）的存量用户：
+            // 普通可关闭提醒（back/外部点击/稍后均可用），仅正文顶部追加警示文案；
+            // 即使关闭"自动检查更新"开关也会收到本次提醒（runAutoUpdateCheck 内
+            // forceUpdate || autoCheckUpdate 分流）——旧版本存在已知数据管线缺陷，
+            // 但不锁定用户；点击"立即更新"即关闭弹窗并启动下载
+            val showForceNotice = updateInfo.forceUpdate
             AlertDialog(
                 onDismissRequest = { showUpdateDialog = null },
                 title = {
@@ -1010,9 +1011,9 @@ fun MainApp(
                 },
                 text = {
                     Column {
-                        if (isForceUpdate) {
+                        if (showForceNotice) {
                             Text(
-                                text = "当前版本过低，存在已知的数据管线与拍摄链路缺陷，需更新后使用。",
+                                text = "当前版本过低，存在已知的数据管线与拍摄链路缺陷，建议尽快更新。",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.error
@@ -1118,24 +1119,15 @@ fun MainApp(
                     }
                 },
                 dismissButton = {
-                    // 强更时无"稍后"按钮（slot 渲染空），用户只能"立即更新"
-                    if (!isForceUpdate) {
-                        androidx.compose.material3.TextButton(
-                            onClick = { showUpdateDialog = null }
-                        ) {
-                            Text(
-                                "稍后",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                    androidx.compose.material3.TextButton(
+                        onClick = { showUpdateDialog = null }
+                    ) {
+                        Text(
+                            "稍后",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 },
-                // 【v1.8.10 强制提醒热更新】强更弹窗禁用 back 与外部点击关闭；
-                // 非强更保持默认可关闭行为
-                properties = androidx.compose.ui.window.DialogProperties(
-                    dismissOnBackPress = !isForceUpdate,
-                    dismissOnClickOutside = !isForceUpdate
-                ),
                 containerColor = MaterialTheme.colorScheme.surface,
                 titleContentColor = MaterialTheme.colorScheme.onSurface,
                 textContentColor = MaterialTheme.colorScheme.onSurfaceVariant

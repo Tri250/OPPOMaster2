@@ -48,14 +48,14 @@ object UpdateChecker {
         val downloadUrl: String,
         val releaseNotes: String,
         val isNewer: Boolean,
-        /** 强制提醒热更新（【v1.8.10】远端版本达到 [FORCE_UPDATE_MIN] 基线且高于本地）：
-         *  弹窗不可关闭（back/外部点击无效）、无"稍后"按钮，仅"立即更新"；
-         *  点击更新即关闭弹窗，下载渠道故障时不会锁死用户 */
+        /** 提醒热更新标识（【v1.8.10】远端版本达到 [FORCE_UPDATE_MIN] 基线且高于本地）：
+         *  弹窗保持可关闭（back/外部点击/稍后均可用），仅正文顶部追加警示文案，
+         *  且不受"自动检查更新"开关门控（runAutoUpdateCheck 分流） */
         val forceUpdate: Boolean = false
     )
 
     /**
-     * 强制提醒热更新基线：低于此版本的存量用户必须收到强提醒。
+     * 提醒热更新基线：低于此版本的存量用户必收到提醒（警示文案）。
      * 背景：v1.8.10 的订阅全源强制刷新与 POP 即拍数据管线修复（快门分数解析
      * 曝光 3 倍错算、EV 后缀写法静默丢失等）均为关键修复，旧版本预设数据与
      * 拍摄链路存在已知缺陷且无自行修复渠道。
@@ -63,8 +63,8 @@ object UpdateChecker {
     const val FORCE_UPDATE_MIN = "1.8.10"
 
     /**
-     * 强更判定（纯函数，供单测锁定）：远端版本高于本地 且 达到强制基线。
-     * 基线以上（如未来 v1.8.11+）仍走普通软提醒，不锁定用户。
+     * 提醒判定（纯函数，供单测锁定）：远端版本高于本地 且 达到基线。
+     * 基线以上（如未来 v1.8.11+）走普通软提醒（无警示文案）。
      */
     fun shouldForceUpdate(remoteVersionCode: Int, currentVersionCode: Int): Boolean =
         remoteVersionCode > currentVersionCode &&
