@@ -55,20 +55,39 @@ object UpdateChecker {
     )
 
     /**
-     * 提醒热更新基线：低于此版本的存量用户必收到提醒（警示文案）。
+     * 提醒热更新基线（客户端默认兜底）：低于此版本的存量用户必收到提醒（警示文案）。
      * 背景：v1.8.10 的订阅全源强制刷新与 POP 即拍数据管线修复（快门分数解析
      * 曝光 3 倍错算、EV 后缀写法静默丢失等）均为关键修复，旧版本预设数据与
      * 拍摄链路存在已知缺陷且无自行修复渠道。
+     *
+     * 【服务端下发】基线可由最新 Release 正文动态调整（无需发版）：正文写入
+     * `force-update-baseline: 1.8.10`（或 HTML 注释 `<!-- force-update-baseline: 1.8.10 -->`，
+     * GitHub 渲染不可见）；无标记时回退本常量。写超高版本号（如 99.0.0）等效关闭提醒。
      */
     const val FORCE_UPDATE_MIN = "1.8.10"
 
+    /** Release 正文中的基线下发标记（HTML 注释或裸文本，大小写不敏感） */
+    private val FORCE_BASELINE_REGEX =
+        Regex("""force-update-baseline:\s*v?(\d+\.\d+\.\d+)""", RegexOption.IGNORE_CASE)
+
+    /**
+     * 从最新 Release 正文解析服务端下发的提醒基线，无标记或格式异常回退客户端默认。
+     */
+    fun parseForceUpdateBaseline(releaseNotes: String?): String =
+        releaseNotes?.let { FORCE_BASELINE_REGEX.find(it)?.groupValues?.get(1) }
+            ?: FORCE_UPDATE_MIN
+
     /**
      * 提醒判定（纯函数，供单测锁定）：远端版本高于本地 且 达到基线。
-     * 基线以上（如未来 v1.8.11+）走普通软提醒（无警示文案）。
+     * 基线可经 [parseForceUpdateBaseline] 由服务端下发，默认客户端常量。
      */
-    fun shouldForceUpdate(remoteVersionCode: Int, currentVersionCode: Int): Boolean =
+    fun shouldForceUpdate(
+        remoteVersionCode: Int,
+        currentVersionCode: Int,
+        baseline: String = FORCE_UPDATE_MIN
+    ): Boolean =
         remoteVersionCode > currentVersionCode &&
-            remoteVersionCode >= VersionInfo.parseVersionCode(FORCE_UPDATE_MIN)
+            remoteVersionCode >= VersionInfo.parseVersionCode(baseline)
 
     /**
      * 检查更新（根据渠道选择）
@@ -164,7 +183,8 @@ object UpdateChecker {
                 }
 
                 val releaseNotes = json.optString("body", context.getString(R.string.no_release_notes))
-                // 【v1.8.10 强制提醒热更新】远端达到强制基线且高于本地 → 强更弹窗
+                // 【v1.8.10 提醒热更新 · 服务端下发】基线从最新 Release 正文解析
+                // （force-update-baseline 标记），无标记回退客户端默认 FORCE_UPDATE_MIN
                 val isNewer = versionCode > currentVersionCode && downloadUrl.isNotEmpty()
 
                 UpdateInfo(
@@ -173,7 +193,9 @@ object UpdateChecker {
                     downloadUrl = downloadUrl,
                     releaseNotes = releaseNotes,
                     isNewer = isNewer,
-                    forceUpdate = isNewer && shouldForceUpdate(versionCode, currentVersionCode)
+                    forceUpdate = isNewer && shouldForceUpdate(
+                        versionCode, currentVersionCode, parseForceUpdateBaseline(releaseNotes)
+                    )
                 )
             } else {
                 Log.e(TAG, "检查更新失败，HTTP 状态码: ${conn.responseCode}")
