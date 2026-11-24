@@ -71,6 +71,13 @@ android {
                     it.systemProperty("http.proxyPort", port)
                 }
             }
+            // 【v1.5.6 CI 修复】Robolectric 的 android-all SDK 从 repo1.maven.org 拉取，
+            // CI 高频拉取触发 HTTP 限流（run #191 实测 5 个 Robolectric 测试类初始化失败），
+            // 下载源改指向腾讯云 Maven 镜像（限流宽松，国内外均可达）
+            it.systemProperty(
+                "robolectric.dependency.repo.url",
+                "https://mirrors.cloud.tencent.com/nexus/repository/maven-public/"
+            )
         }
     }
 
