@@ -110,6 +110,41 @@
 
 ---
 
+## 🧱 自行构建（Fork 编译）
+
+Fork 本仓库后**无需配置任何 Secrets** 即可自动构建出可安装的 Release APK（未配置签名密钥时 CI 会自动生成一次性自签名密钥）。
+
+### CI 自动构建（推荐）
+
+1. Fork 本仓库
+2. 进入你 Fork 的仓库 → **Actions** 页签 → 点击 **I understand my workflows, go ahead and enable them**（Fork 默认禁用 Actions）
+3. 触发构建，任选其一：
+   - **打 tag 发布**：确认 `app/build.gradle.kts` 中 `versionName` 与 tag 一致（如 `versionName = "1.5.6"` 对应 `v1.5.6`），然后执行：
+
+     ```bash
+     git tag v1.5.6 && git push origin v1.5.6
+     ```
+
+     CI 会自动构建签名 Release APK 并创建 Release
+   - **手动触发**：Actions → 发布工作流 → **Run workflow**（可选择 debug 构建或不发布）
+4. 构建完成后在对应 Run 或 Releases 页下载 APK
+
+### 本地构建
+
+```bash
+git clone https://github.com/<你的用户名>/OPPOMaster2.git
+cd OPPOMaster2
+./gradlew assembleGithubDebug        # debug 包（无需签名配置）
+./gradlew assembleGithubRelease      # release 包（需配置签名环境变量，未配置时产出未签名 APK）
+# 产物位于 app/build/outputs/apk/github/<debug|release>/
+```
+
+> - 渠道说明：`github` 渠道保留应用内自更新；`store` 渠道面向应用商店上架（`./gradlew assembleStoreRelease`）
+> - 自签名/未签名 APK 安装时需允许"安装未知来源应用"；签名与主仓库不同，覆盖安装主仓库版本时需先卸载
+> - CI 会校验 tag 与 `versionName` 一致性，不匹配会直接构建失败并提示修正
+
+---
+
 ## 📋 参数说明
 
 OMaster 支持的大师模式参数包括但不限于：
