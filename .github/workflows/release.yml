@@ -22,6 +22,11 @@ on:
         description: 'Release 标签 (例如: v1.7.0，必须与 app/build.gradle.kts 的 versionName 一致)'
         required: false
         type: string
+      simulate_fork:
+        description: '模拟 fork 构建（忽略签名 Secrets，走自签名兜底，用于验证 fork 编译链路）'
+        required: false
+        default: false
+        type: boolean
       release_name:
         description: 'Release 名称 (留空则使用标签)'
         required: false
@@ -112,7 +117,15 @@ jobs:
       # 配置了官方 Secrets 的仓库（如主仓库）继续使用正式签名。
       - name: Prepare signing key (official or self-signed)
         if: steps.variant.outputs.IS_RELEASE == 'true'
+        env:
+          SIMULATE_FORK: ${{ github.event.inputs.simulate_fork == 'true' }}
         run: |
+          # simulate_fork=true 时清空官方密钥变量，强制走兜底分支（fork 场景验证）
+          if [ "$SIMULATE_FORK" = "true" ]; then
+            echo "::notice::simulate_fork=true：忽略签名 Secrets，验证自签名兜底"
+            OMASTER_KEYSTORE_BASE64=""
+            OMASTER_KEYSTORE_PASSWORD=""
+          fi
           if [ -n "$OMASTER_KEYSTORE_BASE64" ] && [ -n "$OMASTER_KEYSTORE_PASSWORD" ]; then
             echo "✅ 使用官方签名密钥"
             exit 0
