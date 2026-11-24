@@ -699,7 +699,7 @@ private fun SettingsUpdateSection(
     }
 
     val checkForUpdate = {
-        // 【v1.8.10 上架合规】商店渠道禁止应用内自更新（REQUEST_INSTALL_PACKAGES 已移除）
+        // 【v1.5.6 上架合规】商店渠道禁止应用内自更新（REQUEST_INSTALL_PACKAGES 已移除）
         if (BuildConfig.STORE_BUILD) {
             Toast.makeText(context, "商店版本请前往应用商店更新", Toast.LENGTH_SHORT).show()
         }

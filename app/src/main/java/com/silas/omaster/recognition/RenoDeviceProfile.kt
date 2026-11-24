@@ -3,7 +3,7 @@ package com.silas.omaster.recognition
 import android.os.Build
 
 /**
- * 【v1.8.10 Reno15/16/17 机型适配】Reno 机型档案 — POP 即拍质感调校。
+ * 【v1.5.6 Reno15/16/17 机型适配】Reno 机型档案 — POP 即拍质感调校。
  *
  * 设计原则与 [CameraCapabilityProbe] 一致：设备真实能力一律以 Camera2 探测为准，
  * 机型档案不伪造能力值，只提供两类**已知确定**的校准信息：

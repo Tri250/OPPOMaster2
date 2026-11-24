@@ -229,7 +229,7 @@ class PresetColorTransformTest {
 
     @Test
     fun `EV单位后缀与前缀符号宽容解析`() {
-        // 【v1.8.10 三轮审计】截图 OCR 与订阅源沿用相机界面 "±0.5EV" 原文写法，
+        // 【v1.5.6 三轮审计】截图 OCR 与订阅源沿用相机界面 "±0.5EV" 原文写法，
         // 此前解析失败静默归零（EV 效果丢失且无归因）——与 parseIso("ISO 100")/
         // parseShutterNs("1/60s") 的单位后缀宽容度对齐
         assertEquals(0.5f, PresetColorTransform.parseExposureEv("+0.5EV"), 1e-4f)

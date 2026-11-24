@@ -123,7 +123,7 @@ class CameraCapabilityProbeTest {
 
     @Test
     fun 画质模式默认NONE且支持透传() {
-        // 【v1.8.10 Reno15/16/17 机型适配】未探测（旧调用方）默认 NONE——写入层不写
+        // 【v1.5.6 Reno15/16/17 机型适配】未探测（旧调用方）默认 NONE——写入层不写
         // 任何画质请求键，与旧版行为一致；探测到可用项时原样透传供择优写入
         val noModes = CameraCapabilityProbe.capabilityFromLevel(
             CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED, 3, null

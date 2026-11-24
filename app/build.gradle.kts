@@ -27,12 +27,12 @@ android {
         // versionCode 由 CI 在发布构建时通过 -PciVersionCode 注入（基于提交数单调递增，ED-02）；
         // 本地开发缺省 13，禁止手填递增
         versionCode = (project.findProperty("ciVersionCode") as String?)?.toInt() ?: 13
-        versionName = "1.8.10"
+        versionName = "1.5.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // 【v1.8.10 上架合规】渠道分离：
+    // 【v1.5.6 上架合规】渠道分离：
     // github flavor——GitHub Releases 分发，保留应用内自更新（REQUEST_INSTALL_PACKAGES）。
     // store flavor——应用商店（华为/小米/OV/应用宝）分发，商店条款禁止应用内自更新 APK：
     //   1. app/src/store/AndroidManifest.xml 移除 REQUEST_INSTALL_PACKAGES 权限；
@@ -54,7 +54,7 @@ android {
         baseline = file("lint-baseline.xml")
     }
 
-    // 【v1.8.10 上架审计】Robolectric 测试（ED-03）运行时需联网下载 android-all SDK jar，
+    // 【v1.5.6 上架审计】Robolectric 测试（ED-03）运行时需联网下载 android-all SDK jar，
     // 但测试 JVM 不继承 Gradle daemon 的代理配置，在代理环境下初始化直接 ConnectException。
     // 从环境变量透传代理到测试 JVM；CI/无代理环境（env 未设置）不受影响。
     testOptions {

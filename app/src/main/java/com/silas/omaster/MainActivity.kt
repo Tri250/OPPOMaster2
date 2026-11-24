@@ -551,13 +551,13 @@ fun MainApp(
     // 上次自动检查时刻（elapsedRealtime）：组合时初始化为"现在"，避免启动瞬间与冷启动检查重复请求
     val lastAutoCheckAt = remember { longArrayOf(android.os.SystemClock.elapsedRealtime()) }
     fun runAutoUpdateCheck() {
-        // 【v1.8.10 上架合规】商店渠道禁止应用内自更新：不触发检查，更新入口走应用商店
+        // 【v1.5.6 上架合规】商店渠道禁止应用内自更新：不触发检查，更新入口走应用商店
         if (BuildConfig.STORE_BUILD) return
         autoCheckScope.launch {
             try {
                 val result = UpdateChecker.checkUpdate(context, VersionInfo.VERSION_CODE, updateChannel)
                 if (result != null && result.isNewer) {
-                    // 【v1.8.10 提醒热更新】基线警示提醒不受 autoCheckUpdate 开关门控——
+                    // 【v1.5.6 提醒热更新】基线警示提醒不受 autoCheckUpdate 开关门控——
                     // 低于基线（FORCE_UPDATE_MIN）的存量用户即使关闭自动检查更新，
                     // 也收到本次提醒（轻量 JSON 请求，冷启动 + 6h 节流，可接受）；
                     // 普通软提醒仍尊重用户开关
@@ -572,7 +572,7 @@ fun MainApp(
         }
     }
     LaunchedEffect(Unit) {
-        // 【v1.8.10 提醒热更新】无条件执行检查（含基线判定），开关分流在
+        // 【v1.5.6 提醒热更新】无条件执行检查（含基线判定），开关分流在
         // runAutoUpdateCheck 内部处理——冷启动延迟 2s 保持原状
         delay(2000)
         lastAutoCheckAt[0] = android.os.SystemClock.elapsedRealtime()
@@ -582,7 +582,7 @@ fun MainApp(
     DisposableEffect(resumeLifecycleOwner, autoCheckUpdate) {
         val observer = LifecycleEventObserver { _, event ->
             // 回前台再检查：距上次 ≥6 小时才发起，避免频繁网络访问。
-            // 【v1.8.10】无条件监听（含基线判定），开关分流在检查内部处理
+            // 【v1.5.6】无条件监听（含基线判定），开关分流在检查内部处理
             if (event == Lifecycle.Event.ON_RESUME) {
                 val now = android.os.SystemClock.elapsedRealtime()
                 if (now - lastAutoCheckAt[0] >= 6L * 3600_000L) {
@@ -995,7 +995,7 @@ fun MainApp(
 
         // 自动检查更新弹窗
         showUpdateDialog?.let { updateInfo ->
-            // 【v1.8.10 提醒热更新】低于基线（UpdateChecker.FORCE_UPDATE_MIN）的存量用户：
+            // 【v1.5.6 提醒热更新】低于基线（UpdateChecker.FORCE_UPDATE_MIN）的存量用户：
             // 普通可关闭提醒（back/外部点击/稍后均可用），仅正文顶部追加警示文案；
             // 即使关闭"自动检查更新"开关也会收到本次提醒（runAutoUpdateCheck 内
             // forceUpdate || autoCheckUpdate 分流）——旧版本存在已知数据管线缺陷，

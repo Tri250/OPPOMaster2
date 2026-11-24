@@ -219,7 +219,7 @@ class PresetRepository(
      * 根据名称获取预设
      * 先查找默认预设，再查找自定义预设
      *
-     * 【v1.8.10 审计修复】与 [getPresetById] 同款遗漏：suspend 但未指定
+     * 【v1.5.6 审计修复】与 [getPresetById] 同款遗漏：suspend 但未指定
      * Dispatchers.IO，loadPresets（磁盘 IO + JSON 反序列化）会跑在调用方
      * 调度器上（UI 调用即卡主线程）。当前无 main 源码调用方，仍按公开
      * API 契约修正，防止后续调用踩坑。

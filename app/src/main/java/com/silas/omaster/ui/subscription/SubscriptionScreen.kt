@@ -74,7 +74,7 @@ fun SubscriptionScreen(
     val updateFailMsg = stringResource(R.string.sub_update_fail)
     // 刷新结果文案模板：无参 stringResource 取原始占位符串，回调内 String.format 格式化
     val refreshFailedMsg = stringResource(R.string.refresh_failed)
-    // 【v1.8.10 订阅管理】全源强制刷新结果文案（组合期预取，回调内格式化）
+    // 【v1.5.6 订阅管理】全源强制刷新结果文案（组合期预取，回调内格式化）
     val refreshForcedSuccessTpl = stringResource(R.string.refresh_forced_success)
     val refreshForcedPartialTpl = stringResource(R.string.refresh_forced_partial)
     val autoUpdateEnabled by config.autoUpdateSubscriptionFlow.collectAsState()
@@ -83,7 +83,7 @@ fun SubscriptionScreen(
     var showBottomSheet by remember { mutableStateOf(false) }
 
     /**
-     * 【v1.8.10 订阅管理】全源强制刷新（下拉刷新与顶栏刷新按钮共用）。
+     * 【v1.5.6 订阅管理】全源强制刷新（下拉刷新与顶栏刷新按钮共用）。
      *
      * 与旧版"按 build 号跳过"的增量刷新不同：所有启用的订阅 JSON 一律
      * forceUpdate = true 重新下载 → 重新校验解析 → 落盘 → 重载预设，

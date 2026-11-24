@@ -101,7 +101,7 @@ class FrameViewModel(
                         ratio = s.outputRatio
                     )
                 )
-                // 【v1.8.10 审计修复】旧位图回收与 Compose 绘制竞态：
+                // 【v1.5.6 审计修复】旧位图回收与 Compose 绘制竞态：
                 // _state 更新前 Compose 可能仍在绘制上一帧 renderedBitmap，
                 // 此时 recycle 会触发 "Canvas: trying to use a recycled bitmap" 崩溃。
                 // Android 8.0(API 26) 起 Bitmap 像素内存由 GC 统一管理，显式 recycle

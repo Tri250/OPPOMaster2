@@ -24,7 +24,7 @@ object CameraCapabilityProbe {
     enum class Level { L1, L2, L3 }
 
     /**
-     * 【v1.8.10 Reno15/16/17 机型适配】HAL 画质模式可用性（探测纯数据）。
+     * 【v1.5.6 Reno15/16/17 机型适配】HAL 画质模式可用性（探测纯数据）。
      *
      * HIGH_QUALITY 语义 = HAL 使用该模块的最高质量实现（多帧降噪 / 边缘增强 /
      * 色散校正 / 高质量色调映射）。ColorOS 档位静态出片通常可用——写入层
@@ -53,7 +53,7 @@ object CameraCapabilityProbe {
         val manualRanges: ManualRanges = ManualRanges.NONE,
         /** 探测到的后置主摄 id（多后摄机型用于让 CameraX 绑定与能力探测对齐） */
         val cameraId: String? = null,
-        /** 【v1.8.10】HAL 画质模式可用性（拍摄请求择优写入的依据） */
+        /** 【v1.5.6】HAL 画质模式可用性（拍摄请求择优写入的依据） */
         val qualityModes: QualityModes = QualityModes.NONE
     ) {
         val isManualExposure: Boolean get() = supportsManualIso && supportsManualShutter
@@ -99,7 +99,7 @@ object CameraCapabilityProbe {
                 aeModeOffSupported = manualIso
             )
             val cameraCount = runCatching { manager.cameraIdList.size }.getOrDefault(0)
-            // 【v1.8.10 Reno15/16/17 机型适配】探测 HAL 画质模式可用性（缺失即 false，不虚报）
+            // 【v1.5.6 Reno15/16/17 机型适配】探测 HAL 画质模式可用性（缺失即 false，不虚报）
             val qualityModes = QualityModes(
                 noiseReduction = chars.get(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)
                     ?.contains(CameraMetadata.NOISE_REDUCTION_MODE_HIGH_QUALITY) == true,

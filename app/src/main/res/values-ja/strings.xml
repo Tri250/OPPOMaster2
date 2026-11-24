@@ -656,7 +656,7 @@
     <string name="refresh_partial">%1$d 件更新、%2$d 件は最新です</string>
     <string name="refresh_up_to_date">すべての購読は最新です</string>
     <string name="refresh_failed">更新に失敗しました。ネットワークを確認してください</string>
-    <!-- v1.8.10 購読管理：全ソース強制更新（バージョンスキップ無視、再取得・再解析） -->
+    <!-- v1.5.6 購読管理：全ソース強制更新（バージョンスキップ無視、再取得・再解析） -->
     <string name="refresh_forced_success">%1$d 件の購読を強制更新しました</string>
     <string name="refresh_forced_partial">%1$d 件を強制更新、%2$d 件失敗</string>
     <!-- ═══════════════ v1.7.0 ホーム 2.0 ═══════════════ -->
@@ -922,7 +922,7 @@
     <string name="pop_capture_failed">撮影に失敗しました。再試行してください</string>
     <string name="pop_retake">撮り直す</string>
     <string name="pop_system_camera">システムカメラ</string>
-    <!-- v1.8.10 Reno15/16/17 機種対応：低速シャッターの手ブレ注意（%1$s は適用シャッター値） -->
+    <!-- v1.5.6 Reno15/16/17 機種対応：低速シャッターの手ブレ注意（%1$s は適用シャッター値） -->
     <string name="pop_steady_hint">シャッターが遅い（%1$s）：手ブレ防止のためスマホをしっかり保持するか、固定したものに置いて撮影してください</string>
     <string name="pop_preset_missing">プリセットが存在しないか削除されました</string>
     <!-- 認識スタイルカタログ名 -->

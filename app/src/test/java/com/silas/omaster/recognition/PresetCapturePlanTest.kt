@@ -159,7 +159,7 @@ class PresetCapturePlanTest {
 
     @Test
     fun `EV纯乱码文本如实归因不再静默`() {
-        // 【v1.8.10 三轮审计】不含数字的乱码 EV（此前静默当作 0EV、无任何提示）
+        // 【v1.5.6 三轮审计】不含数字的乱码 EV（此前静默当作 0EV、无任何提示）
         // 与 ISO/快门口径一致归因 VALUE_UNPARSEABLE
         val plan = PresetCapturePlan.build(preset(ev = "自动补偿"), renoRanges)
         assertEquals(ApplyStatus.UNSUPPORTED, plan.statusOf(ParamKey.EV)?.status)
@@ -168,7 +168,7 @@ class PresetCapturePlanTest {
 
     @Test
     fun `EV单位后缀写法正常写入拍摄`() {
-        // 【v1.8.10 三轮审计】相机界面原文 "±0.5EV" 类写法（OCR/订阅源常见）
+        // 【v1.5.6 三轮审计】相机界面原文 "±0.5EV" 类写法（OCR/订阅源常见）
         // 经宽容解析后正常换算步数写入，不再静默丢失
         val plan = PresetCapturePlan.build(preset(ev = "+0.5EV"), renoRanges)
         assertEquals(ApplyStatus.WRITTEN, plan.statusOf(ParamKey.EV)?.status)
@@ -284,7 +284,7 @@ class PresetCapturePlanTest {
 
     @Test
     fun `快门分数分子参与解析不被忽略`() {
-        // 【v1.8.10 审计修复】此前忽略分子只取分母，"3/4" 被错解析成 1/4s
+        // 【v1.5.6 审计修复】此前忽略分子只取分母，"3/4" 被错解析成 1/4s
         // （曝光量偏差 3 倍，成片过暗）；修复后按 分子/分母 真实分数换算
         assertEquals(750_000_000L, PresetCapturePlan.parseShutterNs("3/4"))
         assertEquals(16_000_000L, PresetCapturePlan.parseShutterNs("2/125"))

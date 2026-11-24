@@ -150,7 +150,7 @@ fun ProfileScreen(
     var pendingUpdate by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
 
     val checkForUpdate: () -> Unit = {
-        // 【v1.8.10 上架合规】商店渠道禁止应用内自更新（REQUEST_INSTALL_PACKAGES 已移除），
+        // 【v1.5.6 上架合规】商店渠道禁止应用内自更新（REQUEST_INSTALL_PACKAGES 已移除），
         // 版本号点击与显性入口共用本 lambda，统一在此拦截
         if (BuildConfig.STORE_BUILD) {
             Toast.makeText(context, "商店版本请前往应用商店更新", Toast.LENGTH_SHORT).show()

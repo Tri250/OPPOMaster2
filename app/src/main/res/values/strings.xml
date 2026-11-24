@@ -906,7 +906,7 @@
     <string name="refresh_partial">成功更新 %1$d 个，%2$d 个已是最新</string>
     <string name="refresh_up_to_date">所有订阅均已是最新</string>
     <string name="refresh_failed">更新失败，请检查网络</string>
-    <!-- v1.8.10 订阅管理：全源强制刷新（忽略版本跳过，重新下载并解析） -->
+    <!-- v1.5.6 订阅管理：全源强制刷新（忽略版本跳过，重新下载并解析） -->
     <string name="refresh_forced_success">已强制刷新 %1$d 个订阅</string>
     <string name="refresh_forced_partial">已强制刷新 %1$d 个，%2$d 个失败</string>
     <!-- ═══════════════ v1.7.0 主页 2.0 · 搜索历史 / 场景分区 / 硬件 Banner ═══════════════ -->
@@ -1144,7 +1144,7 @@
     <string name="pop_capture_failed">拍摄失败，请重试</string>
     <string name="pop_retake">重新拍摄</string>
     <string name="pop_system_camera">系统相机</string>
-    <!-- v1.8.10 Reno15/16/17 机型适配：慢快门稳拍提示（%1$s 为实际写入快门值） -->
+    <!-- v1.5.6 Reno15/16/17 机型适配：慢快门稳拍提示（%1$s 为实际写入快门值） -->
     <string name="pop_steady_hint">快门较慢（%1$s）：手持请稳住手机或依托固定支撑，避免抖动糊片</string>
     <!-- 识别风格目录名称 -->
     <string name="style_clear">清透</string>

@@ -90,7 +90,7 @@ class FilteredPreviewAnalyzer(
             src.recycle()
             return
         }
-        // 【v1.8.10 审计修复】退出竞态兜底：onDispose 的 release 可能在本帧处理
+        // 【v1.5.6 审计修复】退出竞态兜底：onDispose 的 release 可能在本帧处理
         // 进行中回收缓冲（setBitmap/drawBitmap 抛 "recycled bitmap"）——预览帧
         // 丢失无害，吞异常不崩溃；image.close 已在上方 finally 保证
         runCatching {
@@ -127,7 +127,7 @@ class FilteredPreviewAnalyzer(
     private fun obtainBuffer(front: Boolean, w: Int, h: Int): Bitmap? {
         val slot = if (front) 0 else 1
         val existing = buffers[slot]
-        // 【v1.8.10 审计修复】延后回收的退役缓冲若被重新启用（同 slot 尺寸变回原值），
+        // 【v1.5.6 审计修复】延后回收的退役缓冲若被重新启用（同 slot 尺寸变回原值），
         // 必须先取消其回收资格——否则下一次替换时 retired.recycle() 会误回收
         // 活跃缓冲，造成画面撕裂 / "recycled bitmap" 崩溃
         if (retired !== null && (retired === existing || retired?.isRecycled == true)) {
