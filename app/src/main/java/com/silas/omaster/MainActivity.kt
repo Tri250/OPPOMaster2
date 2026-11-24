@@ -551,6 +551,8 @@ fun MainApp(
     // 上次自动检查时刻（elapsedRealtime）：组合时初始化为"现在"，避免启动瞬间与冷启动检查重复请求
     val lastAutoCheckAt = remember { longArrayOf(android.os.SystemClock.elapsedRealtime()) }
     fun runAutoUpdateCheck() {
+        // 【v1.8.10 上架合规】商店渠道禁止应用内自更新：不触发检查，更新入口走应用商店
+        if (BuildConfig.STORE_BUILD) return
         autoCheckScope.launch {
             try {
                 val result = UpdateChecker.checkUpdate(context, VersionInfo.VERSION_CODE, updateChannel)

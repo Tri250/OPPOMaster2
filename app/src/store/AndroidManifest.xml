@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   【v1.8.10 上架合规】商店渠道 manifest 覆盖：
+   应用内下载 APK 自更新违反国内应用商店审核条款（华为/小米/OV/应用宝均明确禁止
+   非应用商店渠道的分发更新行为），商店包必须移除 REQUEST_INSTALL_PACKAGES 权限。
+   配合 BuildConfig.STORE_BUILD 在代码层隐藏全部更新触发点（UpdateChecker 调用处）。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission
+        android:name="android.permission.REQUEST_INSTALL_PACKAGES"
+        tools:node="remove" />
+
+</manifest>

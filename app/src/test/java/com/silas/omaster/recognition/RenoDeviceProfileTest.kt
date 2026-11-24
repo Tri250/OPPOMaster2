@@ -32,7 +32,7 @@ class RenoDeviceProfileTest {
     }
 
     @Test
-    fun `机型名直接识别（全球版Build.MODEL含营销名）`() {
+    fun `机型名直接识别_全球版Build_MODEL含营销名`() {
         assertEquals(
             RenoDeviceProfile.Family.RENO15,
             RenoDeviceProfile.detectFamily("OPPO", "OPPO Reno15 Pro 5G", null)

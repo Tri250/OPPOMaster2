@@ -42,9 +42,10 @@ class UpdateCheckerTest {
     }
 
     @Test
-    fun `远端低于基线时即使更高也不强更`() {
-        // 远端 v1.8.9（10809）> 本地 v1.8.5（10805）：有更新但低于基线，软提醒
-        assertFalse(UpdateChecker.shouldForceUpdate(10809, 10805))
+    fun `存量低版本用户远端有更新即强更_无论远端是否达到原基线`() {
+        // 远端 v1.8.9（10809）> 本地 v1.8.5（10805）：本地低于基线（存量），
+        // 只要有可用更新就提醒（v1.8.10 的管线修复对更旧版本同样关键）
+        assertTrue(UpdateChecker.shouldForceUpdate(10809, 10805))
     }
 
     @Test
@@ -61,15 +62,15 @@ class UpdateCheckerTest {
         // 无标记 / 空正文 → 回退客户端默认
         assertEquals("1.8.10", UpdateChecker.parseForceUpdateBaseline("## v1.8.10\n\n- 修复若干问题"))
         assertEquals("1.8.10", UpdateChecker.parseForceUpdateBaseline(null))
-        // 服务端关闭提醒：写超高基线
-        assertEquals("99.0.0", UpdateChecker.parseForceUpdateBaseline("<!-- force-update-baseline: 99.0.0 -->"))
+        // 服务端关闭提醒：下调基线至极低版本（本地 < 基线恒不成立 → 永不命中）
+        assertEquals("0.0.0", UpdateChecker.parseForceUpdateBaseline("<!-- force-update-baseline: 0.0.0 -->"))
     }
 
     @Test
     fun `下发基线参与判定`() {
         // 服务端下调基线到 1.8.9：v1.8.9 > 本地 v1.8.5 → 命中（客户端默认时不命中）
         assertTrue(UpdateChecker.shouldForceUpdate(10809, 10805, "1.8.9"))
-        // 服务端上调基线到 1.9.0：远端 v1.8.10 不再命中（等效关闭提醒）
-        assertFalse(UpdateChecker.shouldForceUpdate(10810, 10809, "1.9.0"))
+        // 服务端上调基线到 1.9.0：扩大覆盖面——v1.8.9 存量用户也纳入提醒
+        assertTrue(UpdateChecker.shouldForceUpdate(10810, 10809, "1.9.0"))
     }
 }

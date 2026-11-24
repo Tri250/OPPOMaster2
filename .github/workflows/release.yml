@@ -60,7 +60,8 @@ jobs:
         run: chmod +x gradlew
 
       - name: Quality gate (unit tests + lint)
-        run: ./gradlew testDebugUnitTest lint --no-daemon
+        # 【v1.8.10 上架合规】flavor 化后任务名带渠道前缀（github 为默认分发渠道）
+        run: ./gradlew testGithubDebugUnitTest lintGithubRelease --no-daemon
 
       - name: Upload test & lint reports
         uses: actions/upload-artifact@v7
@@ -93,13 +94,15 @@ jobs:
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]] || [[ "${{ github.event.inputs.create_release }}" == "true" ]]; then
             echo "IS_RELEASE=true" >> "$GITHUB_OUTPUT"
-            echo "BUILD_TASK=assembleRelease" >> "$GITHUB_ENV"
-            echo "APK_PATH=app/build/outputs/apk/release" >> "$GITHUB_ENV"
+            # 【v1.8.10 上架合规】GitHub Releases 分发走 github 渠道（保留应用内自更新）；
+            # 商店包后续用 assembleStoreRelease 手动/独立工作流出包
+            echo "BUILD_TASK=assembleGithubRelease" >> "$GITHUB_ENV"
+            echo "APK_PATH=app/build/outputs/apk/github/release" >> "$GITHUB_ENV"
             echo "ARTIFACT_NAME=release-apk" >> "$GITHUB_ENV"
           else
             echo "IS_RELEASE=false" >> "$GITHUB_OUTPUT"
-            echo "BUILD_TASK=assembleDebug" >> "$GITHUB_ENV"
-            echo "APK_PATH=app/build/outputs/apk/debug" >> "$GITHUB_ENV"
+            echo "BUILD_TASK=assembleGithubDebug" >> "$GITHUB_ENV"
+            echo "APK_PATH=app/build/outputs/apk/github/debug" >> "$GITHUB_ENV"
             echo "ARTIFACT_NAME=debug-apk" >> "$GITHUB_ENV"
           fi
 

@@ -48,7 +48,7 @@ object UpdateChecker {
         val downloadUrl: String,
         val releaseNotes: String,
         val isNewer: Boolean,
-        /** 提醒热更新标识（【v1.8.10】远端版本达到 [FORCE_UPDATE_MIN] 基线且高于本地）：
+        /** 提醒热更新标识（【v1.8.10】本地低于基线的存量版本且远端有可用更新）：
          *  弹窗保持可关闭（back/外部点击/稍后均可用），仅正文顶部追加警示文案，
          *  且不受"自动检查更新"开关门控（runAutoUpdateCheck 分流） */
         val forceUpdate: Boolean = false
@@ -62,7 +62,8 @@ object UpdateChecker {
      *
      * 【服务端下发】基线可由最新 Release 正文动态调整（无需发版）：正文写入
      * `force-update-baseline: 1.8.10`（或 HTML 注释 `<!-- force-update-baseline: 1.8.10 -->`，
-     * GitHub 渲染不可见）；无标记时回退本常量。写超高版本号（如 99.0.0）等效关闭提醒。
+     * GitHub 渲染不可见）；无标记时回退本常量。写极低版本号（如 0.0.0）等效关闭提醒，
+     * 上调基线则扩大强更覆盖面（如 1.9.0 → v1.8.9 存量用户也纳入提醒）。
      */
     const val FORCE_UPDATE_MIN = "1.8.10"
 
@@ -78,8 +79,12 @@ object UpdateChecker {
             ?: FORCE_UPDATE_MIN
 
     /**
-     * 提醒判定（纯函数，供单测锁定）：远端版本高于本地 且 达到基线。
-     * 基线可经 [parseForceUpdateBaseline] 由服务端下发，默认客户端常量。
+     * 提醒判定（纯函数，供单测锁定）：本地低于基线（v1.8.10 以下存量用户）且远端有可用更新。
+     * 【v1.8.10 上架审计语义修正】此前误用"远端 >= 基线"——远端发布 v1.9.0 时会把
+     * 已升级到 v1.8.10 的用户也标记为强更提醒，与"基线以下存量用户"定义矛盾；
+     * 修正后以本地版本判定存量身份，远端仅要求"有可用更新"。
+     * 服务端下发语义随之明确：下调基线（如 0.0.0）等效关闭提醒，上调基线扩大覆盖面
+     * （如 1.9.0 → v1.8.9 存量用户也纳入）。基线可经 [parseForceUpdateBaseline] 下发。
      */
     fun shouldForceUpdate(
         remoteVersionCode: Int,
@@ -87,7 +92,7 @@ object UpdateChecker {
         baseline: String = FORCE_UPDATE_MIN
     ): Boolean =
         remoteVersionCode > currentVersionCode &&
-            remoteVersionCode >= VersionInfo.parseVersionCode(baseline)
+            currentVersionCode < VersionInfo.parseVersionCode(baseline)
 
     /**
      * 检查更新（根据渠道选择）

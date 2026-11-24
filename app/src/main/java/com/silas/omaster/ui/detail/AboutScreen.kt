@@ -83,6 +83,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import com.silas.omaster.BuildConfig
 import com.silas.omaster.ui.components.FluidExpandable
 import com.silas.omaster.R
 import com.silas.omaster.data.config.ConfigCenter
@@ -149,7 +150,12 @@ fun ProfileScreen(
     var pendingUpdate by remember { mutableStateOf<UpdateChecker.UpdateInfo?>(null) }
 
     val checkForUpdate: () -> Unit = {
-        if (!isCheckingUpdate) {
+        // 【v1.8.10 上架合规】商店渠道禁止应用内自更新（REQUEST_INSTALL_PACKAGES 已移除），
+        // 版本号点击与显性入口共用本 lambda，统一在此拦截
+        if (BuildConfig.STORE_BUILD) {
+            Toast.makeText(context, "商店版本请前往应用商店更新", Toast.LENGTH_SHORT).show()
+        }
+        if (!isCheckingUpdate && !BuildConfig.STORE_BUILD) {
             scope.launch {
                 isCheckingUpdate = true
                 haptic.perform(HapticFeedbackType.TextHandleMove)
