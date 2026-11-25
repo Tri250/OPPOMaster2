@@ -75,7 +75,7 @@ jobs:
           name: quality-reports
           path: |
             app/build/reports/tests/
-            app/build/reports/lint-results-debug.*
+            app/build/reports/lint-results*.*
           retention-days: 14
 
   build:
