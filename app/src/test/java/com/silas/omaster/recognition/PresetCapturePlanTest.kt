@@ -3,6 +3,7 @@ package com.silas.omaster.recognition
 import com.silas.omaster.model.MasterPreset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -157,6 +158,24 @@ class PresetCapturePlanTest {
     }
 
     @Test
+    fun `EV纯乱码文本如实归因不再静默`() {
+        // 【v1.5.6 三轮审计】不含数字的乱码 EV（此前静默当作 0EV、无任何提示）
+        // 与 ISO/快门口径一致归因 VALUE_UNPARSEABLE
+        val plan = PresetCapturePlan.build(preset(ev = "自动补偿"), renoRanges)
+        assertEquals(ApplyStatus.UNSUPPORTED, plan.statusOf(ParamKey.EV)?.status)
+        assertEquals(UnsupportedReason.VALUE_UNPARSEABLE, plan.statusOf(ParamKey.EV)?.reason)
+    }
+
+    @Test
+    fun `EV单位后缀写法正常写入拍摄`() {
+        // 【v1.5.6 三轮审计】相机界面原文 "±0.5EV" 类写法（OCR/订阅源常见）
+        // 经宽容解析后正常换算步数写入，不再静默丢失
+        val plan = PresetCapturePlan.build(preset(ev = "+0.5EV"), renoRanges)
+        assertEquals(ApplyStatus.WRITTEN, plan.statusOf(ParamKey.EV)?.status)
+        assertNotNull(plan.evSteps)
+    }
+
+    @Test
     fun `调色参数恒为拍后套用`() {
         val plan = PresetCapturePlan.build(
             preset(filter = "胶片", saturation = -14, colorTemperature = 4300), renoRanges
@@ -261,6 +280,27 @@ class PresetCapturePlanTest {
     fun `快门带不等号前缀仍按分数解析`() {
         // 【v1.8.3 审计】内置"清新人文"真实写法 "<1/100"（下限语义）→ 1/100s
         assertEquals(10_000_000L, PresetCapturePlan.parseShutterNs("<1/100"))
+    }
+
+    @Test
+    fun `快门分数分子参与解析不被忽略`() {
+        // 【v1.5.6 审计修复】此前忽略分子只取分母，"3/4" 被错解析成 1/4s
+        // （曝光量偏差 3 倍，成片过暗）；修复后按 分子/分母 真实分数换算
+        assertEquals(750_000_000L, PresetCapturePlan.parseShutterNs("3/4"))
+        assertEquals(16_000_000L, PresetCapturePlan.parseShutterNs("2/125"))
+        assertEquals(500_000_000L, PresetCapturePlan.parseShutterNs("1/2"))
+        assertEquals(8_000_000L, PresetCapturePlan.parseShutterNs("1/125s"))
+        // 分母非法（0/负数/缺失）→ 无法解析
+        assertNull(PresetCapturePlan.parseShutterNs("1/0"))
+        assertNull(PresetCapturePlan.parseShutterNs("1/-60"))
+        assertNull(PresetCapturePlan.parseShutterNs("1/"))
+    }
+
+    @Test
+    fun `快门前缀写法分子取数字部分`() {
+        // "<x/y" 是快门上限描述语义：分子取数字部分，分母照常
+        assertEquals(10_000_000L, PresetCapturePlan.parseShutterNs("<1/100"))
+        assertEquals(4_000_000L, PresetCapturePlan.parseShutterNs("≤1/250"))
     }
 
     @Test

@@ -22,6 +22,11 @@ on:
         description: 'Release 标签 (例如: v1.7.0，必须与 app/build.gradle.kts 的 versionName 一致)'
         required: false
         type: string
+      simulate_fork:
+        description: '模拟 fork 构建（忽略签名 Secrets，走自签名兜底，用于验证 fork 编译链路）'
+        required: false
+        default: false
+        type: boolean
       release_name:
         description: 'Release 名称 (留空则使用标签)'
         required: false
@@ -60,7 +65,8 @@ jobs:
         run: chmod +x gradlew
 
       - name: Quality gate (unit tests + lint)
-        run: ./gradlew testDebugUnitTest lint --no-daemon
+        # 【v1.8.10 上架合规】flavor 化后任务名带渠道前缀（github 为默认分发渠道）
+        run: ./gradlew testGithubDebugUnitTest lintGithubRelease --no-daemon
 
       - name: Upload test & lint reports
         uses: actions/upload-artifact@v7
@@ -69,7 +75,7 @@ jobs:
           name: quality-reports
           path: |
             app/build/reports/tests/
-            app/build/reports/lint-results-debug.*
+            app/build/reports/lint-results*.*
           retention-days: 14
 
   build:
@@ -93,25 +99,49 @@ jobs:
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]] || [[ "${{ github.event.inputs.create_release }}" == "true" ]]; then
             echo "IS_RELEASE=true" >> "$GITHUB_OUTPUT"
-            echo "BUILD_TASK=assembleRelease" >> "$GITHUB_ENV"
-            echo "APK_PATH=app/build/outputs/apk/release" >> "$GITHUB_ENV"
+            # 【v1.8.10 上架合规】GitHub Releases 分发走 github 渠道（保留应用内自更新）；
+            # 商店包后续用 assembleStoreRelease 手动/独立工作流出包
+            echo "BUILD_TASK=assembleGithubRelease" >> "$GITHUB_ENV"
+            echo "APK_PATH=app/build/outputs/apk/github/release" >> "$GITHUB_ENV"
             echo "ARTIFACT_NAME=release-apk" >> "$GITHUB_ENV"
           else
             echo "IS_RELEASE=false" >> "$GITHUB_OUTPUT"
-            echo "BUILD_TASK=assembleDebug" >> "$GITHUB_ENV"
-            echo "APK_PATH=app/build/outputs/apk/debug" >> "$GITHUB_ENV"
+            echo "BUILD_TASK=assembleGithubDebug" >> "$GITHUB_ENV"
+            echo "APK_PATH=app/build/outputs/apk/github/debug" >> "$GITHUB_ENV"
             echo "ARTIFACT_NAME=debug-apk" >> "$GITHUB_ENV"
           fi
 
-      # G-2：正式构建必须可签名。密钥未配置时直接失败，杜绝产出不可安装的 Release APK。
-      - name: Verify signing secrets (release only)
+      # G-2：release 构建签名保障。
+      # 【v1.5.6 fork 友好】官方 Secrets 缺失时不再失败，改为现场生成一次性自签名密钥
+      # （fork 用户无需任何 Secrets 即可产出可安装的 Release APK）；
+      # 配置了官方 Secrets 的仓库（如主仓库）继续使用正式签名。
+      - name: Prepare signing key (official or self-signed)
         if: steps.variant.outputs.IS_RELEASE == 'true'
+        env:
+          SIMULATE_FORK: ${{ github.event.inputs.simulate_fork == 'true' }}
         run: |
-          if [ -z "$OMASTER_KEYSTORE_BASE64" ] || [ -z "$OMASTER_KEYSTORE_PASSWORD" ]; then
-            echo "❌ 缺少签名密钥 Secrets：OMASTER_KEYSTORE_BASE64 / OMASTER_KEYSTORE_PASSWORD"
-            echo "   请在仓库 Settings → Secrets → Actions 配置（见 CONTRIBUTING.md 发布章节，ED-01）。"
-            exit 1
+          # simulate_fork=true 时清空官方密钥变量，强制走兜底分支（fork 场景验证）
+          if [ "$SIMULATE_FORK" = "true" ]; then
+            echo "::notice::simulate_fork=true：忽略签名 Secrets，验证自签名兜底"
+            OMASTER_KEYSTORE_BASE64=""
+            OMASTER_KEYSTORE_PASSWORD=""
           fi
+          if [ -n "$OMASTER_KEYSTORE_BASE64" ] && [ -n "$OMASTER_KEYSTORE_PASSWORD" ]; then
+            echo "✅ 使用官方签名密钥"
+            exit 0
+          fi
+          echo "::notice::未配置签名 Secrets，生成一次性自签名密钥（fork 友好构建）"
+          mkdir -p .signing
+          keytool -genkeypair -v \
+            -keystore .signing/omaster-release.keystore \
+            -alias omaster -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass omaster-fork-key -keypass omaster-fork-key \
+            -dname "CN=OMaster Fork Build, OU=Fork, O=Fork, L=Internet, ST=Internet, C=CN" \
+            >/dev/null 2>&1
+          echo "OMASTER_KEYSTORE_BASE64=$(base64 -w0 .signing/omaster-release.keystore)" >> "$GITHUB_ENV"
+          echo "OMASTER_KEYSTORE_PASSWORD=omaster-fork-key" >> "$GITHUB_ENV"
+          echo "OMASTER_KEYSTORE_ALIAS=omaster" >> "$GITHUB_ENV"
+          echo "OMASTER_KEY_PASSWORD=omaster-fork-key" >> "$GITHUB_ENV"
 
       # G-3：tag 必须与 versionName 一致（五者一致性由本检查 + git-cliff + Release 说明保障）
       # 【v1.7.0 修复】原实现仅在 tag push 路径生效，workflow_dispatch 手动触发时被绕过——

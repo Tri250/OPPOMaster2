@@ -47,8 +47,52 @@ object UpdateChecker {
         val versionCode: Int,
         val downloadUrl: String,
         val releaseNotes: String,
-        val isNewer: Boolean
+        val isNewer: Boolean,
+        /** 提醒热更新标识（【v1.5.6】本地低于基线的存量版本且远端有可用更新）：
+         *  弹窗保持可关闭（back/外部点击/稍后均可用），仅正文顶部追加警示文案，
+         *  且不受"自动检查更新"开关门控（runAutoUpdateCheck 分流） */
+        val forceUpdate: Boolean = false
     )
+
+    /**
+     * 提醒热更新基线（客户端默认兜底）：低于此版本的存量用户必收到提醒（警示文案）。
+     * 背景：v1.5.6 的订阅全源强制刷新与 POP 即拍数据管线修复（快门分数解析
+     * 曝光 3 倍错算、EV 后缀写法静默丢失等）均为关键修复，旧版本预设数据与
+     * 拍摄链路存在已知缺陷且无自行修复渠道。
+     *
+     * 【服务端下发】基线可由最新 Release 正文动态调整（无需发版）：正文写入
+     * `force-update-baseline: 1.5.6`（或 HTML 注释 `<!-- force-update-baseline: 1.5.6 -->`，
+     * GitHub 渲染不可见）；无标记时回退本常量。写极低版本号（如 0.0.0）等效关闭提醒，
+     * 上调基线则扩大强更覆盖面（如 1.9.0 → v1.8.9 存量用户也纳入提醒）。
+     */
+    const val FORCE_UPDATE_MIN = "1.5.6"
+
+    /** Release 正文中的基线下发标记（HTML 注释或裸文本，大小写不敏感） */
+    private val FORCE_BASELINE_REGEX =
+        Regex("""force-update-baseline:\s*v?(\d+\.\d+\.\d+)""", RegexOption.IGNORE_CASE)
+
+    /**
+     * 从最新 Release 正文解析服务端下发的提醒基线，无标记或格式异常回退客户端默认。
+     */
+    fun parseForceUpdateBaseline(releaseNotes: String?): String =
+        releaseNotes?.let { FORCE_BASELINE_REGEX.find(it)?.groupValues?.get(1) }
+            ?: FORCE_UPDATE_MIN
+
+    /**
+     * 提醒判定（纯函数，供单测锁定）：本地低于基线（v1.5.6 以下存量用户）且远端有可用更新。
+     * 【v1.5.6 上架审计语义修正】此前误用"远端 >= 基线"——远端发布 v1.9.0 时会把
+     * 已升级到 v1.5.6 的用户也标记为强更提醒，与"基线以下存量用户"定义矛盾；
+     * 修正后以本地版本判定存量身份，远端仅要求"有可用更新"。
+     * 服务端下发语义随之明确：下调基线（如 0.0.0）等效关闭提醒，上调基线扩大覆盖面
+     * （如 1.9.0 → v1.8.9 存量用户也纳入）。基线可经 [parseForceUpdateBaseline] 下发。
+     */
+    fun shouldForceUpdate(
+        remoteVersionCode: Int,
+        currentVersionCode: Int,
+        baseline: String = FORCE_UPDATE_MIN
+    ): Boolean =
+        remoteVersionCode > currentVersionCode &&
+            currentVersionCode < VersionInfo.parseVersionCode(baseline)
 
     /**
      * 检查更新（根据渠道选择）
@@ -144,13 +188,19 @@ object UpdateChecker {
                 }
 
                 val releaseNotes = json.optString("body", context.getString(R.string.no_release_notes))
+                // 【v1.5.6 提醒热更新 · 服务端下发】基线从最新 Release 正文解析
+                // （force-update-baseline 标记），无标记回退客户端默认 FORCE_UPDATE_MIN
+                val isNewer = versionCode > currentVersionCode && downloadUrl.isNotEmpty()
 
                 UpdateInfo(
                     versionName = versionName,
                     versionCode = versionCode,
                     downloadUrl = downloadUrl,
                     releaseNotes = releaseNotes,
-                    isNewer = versionCode > currentVersionCode && downloadUrl.isNotEmpty()
+                    isNewer = isNewer,
+                    forceUpdate = isNewer && shouldForceUpdate(
+                        versionCode, currentVersionCode, parseForceUpdateBaseline(releaseNotes)
+                    )
                 )
             } else {
                 Log.e(TAG, "检查更新失败，HTTP 状态码: ${conn.responseCode}")
@@ -240,7 +290,7 @@ object UpdateChecker {
      * @return Pair(下载状态, 进度百分比) 状态：1=等待中, 2=下载中, 4=完成, 8=失败, 16=暂停；查询异常返回 (-1, 0)
      */
     fun queryDownloadProgress(context: Context, downloadId: Long): Pair<Int, Int> {
-        // 【v1.8.10 审计修复】DownloadManager.query 在部分 ROM 可能返回 null cursor，
+        // 【v1.5.6 审计修复】DownloadManager.query 在部分 ROM 可能返回 null cursor，
         // 且列索引缺失时 getColumnIndexOrThrow 直接抛异常（调用方多为 UI 轮询，
         // 一崩即更新对话框闪退）。整体兜底为 (-1, 0)，由调用方按"查询失败"处理。
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager

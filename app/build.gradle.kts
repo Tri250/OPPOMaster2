@@ -27,13 +27,58 @@ android {
         // versionCode 由 CI 在发布构建时通过 -PciVersionCode 注入（基于提交数单调递增，ED-02）；
         // 本地开发缺省 13，禁止手填递增
         versionCode = (project.findProperty("ciVersionCode") as String?)?.toInt() ?: 13
-        versionName = "1.8.10"
+        versionName = "1.5.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // 【v1.5.6 上架合规】渠道分离：
+    // github flavor——GitHub Releases 分发，保留应用内自更新（REQUEST_INSTALL_PACKAGES）。
+    // store flavor——应用商店（华为/小米/OV/应用宝）分发，商店条款禁止应用内自更新 APK：
+    //   1. app/src/store/AndroidManifest.xml 移除 REQUEST_INSTALL_PACKAGES 权限；
+    //   2. BuildConfig.STORE_BUILD 门控全部更新触发点（自动检查 + 设置页 + 关于页），
+    //      商店版本提示用户前往商店更新。
+    flavorDimensions += listOf("channel")
+    productFlavors {
+        create("github") {
+            dimension = "channel"
+            buildConfigField("boolean", "STORE_BUILD", "false")
+        }
+        create("store") {
+            dimension = "channel"
+            buildConfigField("boolean", "STORE_BUILD", "true")
+        }
+    }
+
     lint {
         baseline = file("lint-baseline.xml")
+    }
+
+    // 【v1.5.6 上架审计】Robolectric 测试（ED-03）运行时需联网下载 android-all SDK jar，
+    // 但测试 JVM 不继承 Gradle daemon 的代理配置，在代理环境下初始化直接 ConnectException。
+    // 从环境变量透传代理到测试 JVM；CI/无代理环境（env 未设置）不受影响。
+    testOptions {
+        unitTests.all {
+            val proxyUrl = System.getenv("HTTPS_PROXY") ?: System.getenv("https_proxy")
+            if (!proxyUrl.isNullOrBlank()) {
+                val cleaned = proxyUrl.removePrefix("http://").removePrefix("https://").trimEnd('/')
+                val host = cleaned.substringBefore(":")
+                val port = cleaned.substringAfter(":", "8080")
+                if (host.isNotBlank()) {
+                    it.systemProperty("https.proxyHost", host)
+                    it.systemProperty("https.proxyPort", port)
+                    it.systemProperty("http.proxyHost", host)
+                    it.systemProperty("http.proxyPort", port)
+                }
+            }
+            // 【v1.5.6 CI 修复】Robolectric 的 android-all SDK 从 repo1.maven.org 拉取，
+            // CI 高频拉取触发 HTTP 限流（run #191 实测 5 个 Robolectric 测试类初始化失败），
+            // 下载源改指向腾讯云 Maven 镜像（限流宽松，国内外均可达）
+            it.systemProperty(
+                "robolectric.dependency.repo.url",
+                "https://mirrors.cloud.tencent.com/nexus/repository/maven-public/"
+            )
+        }
     }
 
     // ED-01 签名体系：CI 通过环境变量注入 keystore（见 .github/workflows/release.yml）。

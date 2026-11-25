@@ -118,6 +118,9 @@ fun PopCaptureScreen(
     val accent = HasselbladOrange
     val capability = remember { CameraCapabilityProbe.probe(context) }
     val plan = remember(preset, capability) { PresetCapturePlan.build(preset, capability.manualRanges) }
+    // 【v1.5.6 Reno15/16/17 机型适配】机型档：拍摄画质模式择优 + 拍后锐化降权
+    // 调校（识别失败为 null → 通用调校，与旧版行为一致）
+    val deviceFamily = remember { RenoDeviceProfile.currentFamily() }
     // 【v1.8.3 Reno17 适配】多后摄机型（主摄/超广角/长焦）下，能力探测选的是
     // 感光面积最大的后置主摄；CameraX 默认后摄可能与它不一致（写入的 ISO/快门
     // 范围来自主摄，实际绑定的却是超广角 → 手动参数被拒或画面非预期）。
@@ -152,7 +155,7 @@ fun PopCaptureScreen(
     var cameraGranted by remember {
         mutableStateOf(hasCameraPermission(context))
     }
-    // 【v1.8.10 审计修复】权限状态此前只在首帧求值：用户在系统设置里授予
+    // 【v1.5.6 审计修复】权限状态此前只在首帧求值：用户在系统设置里授予
     // 权限后返回本页，cameraGranted 不会刷新，画面停留在"未授权"引导页
     // （须退出重进才恢复）。ON_RESUME 重新求值，下方 DisposableEffect 以
     // cameraGranted 为键，自动重新绑定相机，无需手动干预。
@@ -191,7 +194,10 @@ fun PopCaptureScreen(
     }
 
     // ── 自研相机管线：ImageAnalysis 实时滤镜取景 + 按拍摄计划配置 ImageCapture ──
-    val imageCapture = remember(plan) { buildImageCapture(plan) }
+    // 【v1.5.6 Reno15/16/17 机型适配】画质模式来自能力探测（HAL 可用才写入）
+    val imageCapture = remember(plan, capability.qualityModes) {
+        buildImageCapture(plan, capability.qualityModes)
+    }
     val providerFuture = remember { ProcessCameraProvider.getInstance(context) }
     var boundProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var cameraBound by remember { mutableStateOf(false) }
@@ -239,10 +245,20 @@ fun PopCaptureScreen(
     LaunchedEffect(appliedBitmap) { analyzer.enabled = appliedBitmap == null }
     DisposableEffect(Unit) {
         onDispose {
+            // 【v1.5.6 审计修复】退出顺序：先解除新帧来源（clearAnalyzer），
+            // 再停用并回收缓冲（release）——此前 release 先行，executor 中已排队
+            // 的 analyze 任务可能在缓冲回收后仍执行 setBitmap，触发
+            // "Canvas: trying to use a recycled bitmap" 崩溃；配合 analyze 内
+            // runCatching 兜底（预览帧丢失无害）
+            imageAnalysis.clearAnalyzer()
             analyzer.enabled = false
             analyzer.release()
-            imageAnalysis.clearAnalyzer()
             analyzerExecutor.shutdown()
+            // 【v1.5.6 四轮审计】系统相机临时照片兜底清理：loadBitmap 读取中
+            // 退出页面（协程取消）或发起拍摄后直接返回时，回调内 cleanupTempPhoto
+            // 不会执行，cache 目录残留临时照片文件
+            photoFile?.delete()
+            photoFile = null
         }
     }
 
@@ -288,15 +304,24 @@ fun PopCaptureScreen(
      *
      * @param raw 原始位图（调用方交出所有权，内部按需回收）
      * @param jpegBytes 相机原始 JPEG 字节（仅相机路径非空；无效果时保存直通）
+     * @param xdr 本张成片的 XDR 套色开关：相机路径传"按下快门瞬间"的开关快照——
+     *        拍摄进行中（约 0.3~1s）用户切换开关时，保证传感器写入意图与
+     *        拍后套色判定用的是同一份状态（【v1.5.6 审计修复】此前回读实时值，
+     *        存在写入用旧值、套色用新值的窗口）；系统相机/相册路径传当前值
+     *        （无传感器写入概念，以用户最新意图为准）
      */
-    fun stylePhoto(raw: Bitmap, preset: MasterPreset, jpegBytes: ByteArray? = null) {
+    fun stylePhoto(raw: Bitmap, preset: MasterPreset, jpegBytes: ByteArray? = null, xdr: Boolean) {
         scope.launch {
             // Pro XDR 开启时视为"确有可见效果"：无参数预设也走套色管线（否则直通原图）
-            val hasEffect = PresetColorTransform.hasVisibleEffect(preset) || xdrEnabled
+            val hasEffect = PresetColorTransform.hasVisibleEffect(preset) || xdr
             val styled = if (hasEffect) {
                 withContext(Dispatchers.Default) {
                     PopImageProcessor.process(
-                        raw, preset, Runtime.getRuntime().maxMemory(), xdr = xdrEnabled
+                        raw, preset, Runtime.getRuntime().maxMemory(),
+                        xdr = xdr,
+                        // 【v1.5.6 Reno15/16/17 机型适配】ColorOS 出片自带 HAL 锐化，
+                        // Reno 档 App 侧降权防双重锐化光晕（识别失败 → 1.0 逐位一致）
+                        sharpeningScale = RenoDeviceProfile.sharpeningMultiplier(deviceFamily)
                     )
                 }
             } else {
@@ -315,6 +340,9 @@ fun PopCaptureScreen(
     fun captureWithPreset() {
         if (isCapturing || !cameraBound) return
         isCapturing = true
+        // 拍摄发起瞬间锁定套色状态：回调完成时若用户已切换 XDR 开关，
+        // 仍按按下快门那一刻的意图套色（与本次拍摄写入的传感器参数同源）
+        val xdrAtCapture = xdrEnabled
         imageCapture.takePicture(
             ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageCapturedCallback() {
@@ -343,7 +371,7 @@ fun PopCaptureScreen(
                         toast = msgCaptureFailed
                         return
                     }
-                    stylePhoto(bmp, preset, jpegBytes)
+                    stylePhoto(bmp, preset, jpegBytes, xdr = xdrAtCapture)
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -370,7 +398,7 @@ fun PopCaptureScreen(
                     val bmp = loadBitmap(context, uri)
                     cleanupTempPhoto()
                     if (bmp != null) {
-                        stylePhoto(bmp, preset)
+                        stylePhoto(bmp, preset, xdr = xdrEnabled)
                     } else {
                         toast = msgReadFailed
                         isCapturing = false
@@ -395,7 +423,7 @@ fun PopCaptureScreen(
             scope.launch {
                 val bmp = loadBitmap(context, uri)
                 if (bmp != null) {
-                    stylePhoto(bmp, preset)
+                    stylePhoto(bmp, preset, xdr = xdrEnabled)
                 } else {
                     toast = msgReadFailed
                     isCapturing = false
@@ -472,7 +500,13 @@ fun PopCaptureScreen(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                     }
-                    Switch(checked = xdrEnabled, onCheckedChange = { xdrEnabled = it })
+                    // 【v1.5.6 审计修复】成片态禁用：套色按拍摄瞬间快照完成、原图
+                    // 已回收，无法重套——可点却无反应会误导用户；开关只影响下一张
+                    Switch(
+                        checked = xdrEnabled,
+                        onCheckedChange = { xdrEnabled = it },
+                        enabled = appliedBitmap == null
+                    )
                 }
             }
 
@@ -554,10 +588,63 @@ fun PopCaptureScreen(
                         PreviewMode.Placeholder -> ViewfinderPlaceholder(accent)
                     }
                 }
+
+                // 【v1.5.6 Reno15/16/17】取景期稳拍提示（参数卡提示的预览区前置）：
+                // 慢快门预设下用户取景时视线集中于预览画面，参数卡（预览下方）提示易漏看；
+                // 在预览画面上直接给出稳拍预期与当前快门值，按下快门前即可调整姿势/依托，
+                // 减少抖动糊片（更易出片）。仅 Live 态展示：成片/占位/错误态无取景行为
+                if (mode == PreviewMode.Live) {
+                    plan.shutterNs?.takeIf { RenoDeviceProfile.needsSteadyHint(it) }?.let { shutterNs ->
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = WarningYellow.copy(alpha = 0.12f)
+                            ),
+                            shape = AppDesign.CardShape,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(AppDesign.ContentPadding)
+                        ) {
+                            Text(
+                                stringResource(
+                                    R.string.pop_steady_hint,
+                                    PresetCapturePlan.formatShutterNs(shutterNs)
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(
+                                    horizontal = AppDesign.ContentPadding,
+                                    vertical = 6.dp
+                                )
+                            )
+                        }
+                    }
+                }
             }
 
             // 参数应用状态卡（已写入拍摄 / 取景与成片已套用 / 无法套用+原因）
             ParamStatusCard(plan, accent)
+
+            // 【v1.5.6 Reno15/16/17 机型适配】慢快门稳拍提示（部分 Reno 档无 OIS）：
+            // 手动快门慢于 1/30s 时给出明确稳拍预期，减少抖动糊片（更易出片）
+            plan.shutterNs?.let { shutterNs ->
+                if (RenoDeviceProfile.needsSteadyHint(shutterNs)) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = WarningYellow.copy(alpha = 0.12f)
+                        ),
+                        shape = AppDesign.CardShape,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string.pop_steady_hint,
+                                PresetCapturePlan.formatShutterNs(shutterNs)
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(AppDesign.ContentPadding)
+                        )
+                    }
+                }
+            }
 
             // 相机权限引导（未授权时提供授权入口，同时保留降级路径说明）
             if (!cameraGranted) {
@@ -572,7 +659,7 @@ fun PopCaptureScreen(
                         OutlinedButton(onClick = { permissionLauncher.launch(requestPermissions) }) {
                             Text(stringResource(R.string.pop_camera_permission_button))
                         }
-                        // 【v1.8.10 审计修复】"不再询问"永久拒绝后，系统权限弹窗不再展示，
+                        // 【v1.5.6 审计修复】"不再询问"永久拒绝后，系统权限弹窗不再展示，
                         // 重试按钮只能得到瞬时拒绝——此前无任何恢复路径（用户被卡死）。
                         // 已请求过仍未授权时，提供系统应用设置直达入口。
                         if (permissionRequested && !cameraGranted) {
@@ -701,7 +788,7 @@ fun PopCaptureScreen(
     }
 }
 
-/** 【v1.8.10 审计修复】权限状态求值抽为顶层纯函数：首帧与 ON_RESUME 共用同一判据 */
+/** 【v1.5.6 审计修复】权限状态求值抽为顶层纯函数：首帧与 ON_RESUME 共用同一判据 */
 private fun hasCameraPermission(context: Context): Boolean =
     ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
             PackageManager.PERMISSION_GRANTED
@@ -721,14 +808,42 @@ private fun openAppDetailsSettings(context: Context) {
 /** 按拍摄计划构造 ImageCapture：手动曝光设备关闭 AE 并写入 ISO/快门，其余按步进写 EV */
 @androidx.annotation.OptIn(markerClass = [ExperimentalCamera2Interop::class])
 @SuppressLint("UnsafeOptInUsageError")
-private fun buildImageCapture(plan: CapturePlan): ImageCapture {
+private fun buildImageCapture(
+    plan: CapturePlan,
+    qualityModes: CameraCapabilityProbe.QualityModes
+): ImageCapture {
     // 【v1.7.8 画质】MAXIMIZE_QUALITY：关闭零快门延迟，换取厂商全链路后处理
     // （多帧合成 / HDR / 降噪）与最高输出分辨率；MINIMIZE_LATENCY 会跳过这些管线，
     // 是 v1.7.7 及以前"POP 即拍画质非常差"的主因之一。
     val builder = ImageCapture.Builder()
         .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+    val extender = Camera2Interop.Extender(builder)
+    // 【v1.5.6 Reno15/16/17 机型适配】HAL 画质模式探测择优：HIGH_QUALITY 语义下
+    // HAL 用该模块最高质量实现（多帧降噪 / 边缘增强 / 色散校正 / 高质量色调映射），
+    // 与 MAXIMIZE_QUALITY 的厂商后处理链路叠加，成片噪点与通透度更接近原生相机质感。
+    // 仅写探测可用的键——能力之外的键不写，绝不虚报。
+    if (qualityModes.noiseReduction) {
+        extender.setCaptureRequestOption(
+            CaptureRequest.NOISE_REDUCTION_MODE, CameraMetadata.NOISE_REDUCTION_MODE_HIGH_QUALITY
+        )
+    }
+    if (qualityModes.edge) {
+        extender.setCaptureRequestOption(
+            CaptureRequest.EDGE_MODE, CameraMetadata.EDGE_MODE_HIGH_QUALITY
+        )
+    }
+    if (qualityModes.aberration) {
+        extender.setCaptureRequestOption(
+            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+            CameraMetadata.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY
+        )
+    }
+    if (qualityModes.tonemap) {
+        extender.setCaptureRequestOption(
+            CaptureRequest.TONEMAP_MODE, CameraMetadata.TONEMAP_MODE_HIGH_QUALITY
+        )
+    }
     if (plan.manualExposure) {
-        val extender = Camera2Interop.Extender(builder)
         extender.setCaptureRequestOption(
             CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF
         )
@@ -748,7 +863,6 @@ private fun buildImageCapture(plan: CapturePlan): ImageCapture {
         }
     } else {
         plan.evSteps?.let { steps ->
-            val extender = Camera2Interop.Extender(builder)
             extender.setCaptureRequestOption(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, steps)
         }
     }

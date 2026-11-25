@@ -857,6 +857,9 @@
     <string name="refresh_partial">Updated %1$d, %2$d already up to date</string>
     <string name="refresh_up_to_date">All subscriptions are up to date</string>
     <string name="refresh_failed">Update failed, check your network</string>
+    <!-- v1.5.6 subscription management: force-refresh all sources (ignore version skip, re-download & re-parse) -->
+    <string name="refresh_forced_success">Force-refreshed %1$d subscriptions</string>
+    <string name="refresh_forced_partial">Force-refreshed %1$d, %2$d failed</string>
     <!-- ═══════════════ v1.7.0 Home 2.0 ═══════════════ -->
     <string name="search_history_title">Recent searches</string>
     <string name="search_history_clear">Clear</string>
@@ -1120,6 +1123,8 @@
     <string name="pop_capture_failed">Capture failed, please retry</string>
     <string name="pop_retake">Retake</string>
     <string name="pop_system_camera">System camera</string>
+    <!-- v1.5.6 Reno15/16/17 adaptation: slow-shutter steady hint (%1$s = applied shutter) -->
+    <string name="pop_steady_hint">Slow shutter (%1$s): hold the phone steady or rest it on firm support to avoid motion blur</string>
     <string name="pop_preset_missing">Preset not found or deleted</string>
     <!-- Recognition style catalog names -->
     <string name="style_clear">Clear</string>

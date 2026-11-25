@@ -3,6 +3,7 @@ package com.silas.omaster.recognition
 import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata
 import android.os.Build
 import androidx.annotation.StringRes
 import com.silas.omaster.R
@@ -22,6 +23,24 @@ object CameraCapabilityProbe {
 
     enum class Level { L1, L2, L3 }
 
+    /**
+     * 【v1.5.6 Reno15/16/17 机型适配】HAL 画质模式可用性（探测纯数据）。
+     *
+     * HIGH_QUALITY 语义 = HAL 使用该模块的最高质量实现（多帧降噪 / 边缘增强 /
+     * 色散校正 / 高质量色调映射）。ColorOS 档位静态出片通常可用——写入层
+     * （PopCaptureScreen.buildImageCapture）按探测结果择优写入，与
+     * MAXIMIZE_QUALITY 的厂商后处理链路叠加，成片噪点/通透度更接近原生相机质感。
+     * 未探测到可用项时全 false（NONE），不写对应请求键——绝不虚报。
+     */
+    data class QualityModes(
+        val noiseReduction: Boolean = false,
+        val edge: Boolean = false,
+        val aberration: Boolean = false,
+        val tonemap: Boolean = false
+    ) {
+        companion object { val NONE = QualityModes() }
+    }
+
     data class Capability(
         val level: Level,
         val hardwareLevelString: String,
@@ -33,7 +52,9 @@ object CameraCapabilityProbe {
         /** 设备手动范围（POP 即拍写入拍摄参数的裁剪依据） */
         val manualRanges: ManualRanges = ManualRanges.NONE,
         /** 探测到的后置主摄 id（多后摄机型用于让 CameraX 绑定与能力探测对齐） */
-        val cameraId: String? = null
+        val cameraId: String? = null,
+        /** 【v1.5.6】HAL 画质模式可用性（拍摄请求择优写入的依据） */
+        val qualityModes: QualityModes = QualityModes.NONE
     ) {
         val isManualExposure: Boolean get() = supportsManualIso && supportsManualShutter
 
@@ -78,7 +99,18 @@ object CameraCapabilityProbe {
                 aeModeOffSupported = manualIso
             )
             val cameraCount = runCatching { manager.cameraIdList.size }.getOrDefault(0)
-            capabilityFromLevel(level, cameraCount, evRange, manualIso, manualRanges, picked.first)
+            // 【v1.5.6 Reno15/16/17 机型适配】探测 HAL 画质模式可用性（缺失即 false，不虚报）
+            val qualityModes = QualityModes(
+                noiseReduction = chars.get(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)
+                    ?.contains(CameraMetadata.NOISE_REDUCTION_MODE_HIGH_QUALITY) == true,
+                edge = chars.get(CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES)
+                    ?.contains(CameraMetadata.EDGE_MODE_HIGH_QUALITY) == true,
+                aberration = chars.get(CameraCharacteristics.COLOR_CORRECTION_AVAILABLE_ABERRATION_MODES)
+                    ?.contains(CameraMetadata.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY) == true,
+                tonemap = chars.get(CameraCharacteristics.TONEMAP_AVAILABLE_TONE_MAP_MODES)
+                    ?.contains(CameraMetadata.TONEMAP_MODE_HIGH_QUALITY) == true
+            )
+            capabilityFromLevel(level, cameraCount, evRange, manualIso, manualRanges, picked.first, qualityModes)
         } catch (e: Exception) {
             capabilityFromLevel(-1, 0, null)
         }
@@ -142,7 +174,8 @@ object CameraCapabilityProbe {
         evRange: Pair<Float, Float>?,
         manualIsoOverride: Boolean? = null,
         manualRanges: ManualRanges = ManualRanges.NONE,
-        cameraId: String? = null
+        cameraId: String? = null,
+        qualityModes: QualityModes = QualityModes.NONE
     ): Capability {
         val (level, supportsIso, supportsShutter, supportsEv) = when (hardwareLevel) {
             CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
@@ -173,7 +206,8 @@ object CameraCapabilityProbe {
             evRange = evRange,
             cameraCount = cameraCount,
             manualRanges = manualRanges,
-            cameraId = cameraId
+            cameraId = cameraId,
+            qualityModes = qualityModes
         )
     }
 

@@ -151,18 +151,26 @@ object PresetCapturePlan {
             }
         }
 
-        // 曝光补偿：手动曝光已包含曝光控制，AE 开启时按步进写入；EV=0 视为无需套用
+        // 曝光补偿：手动曝光已包含曝光控制，AE 开启时按步进写入；EV=0 视为无需套用。
+        // 【v1.5.6 三轮审计】纯乱码文本（不含任何数字）如实归因 VALUE_UNPARSEABLE，
+        // 与 ISO/快门口径一致，不再静默当作 0EV 丢失无提示；含数字文本经
+        // parseExposureEv 宽容解析（"+0.5EV"/"±0.3" 等后缀写法），解析为 0 的
+        // （"0"/"0.0"）维持"无需套用、不产生芯片"既有契约
         val evRaw = preset.exposureCompensation
-        if (evRaw != null && evValue != 0f) {
-            params += when {
-                captureEv != null -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.WRITTEN)
-                // 手动曝光下 EV 由 ISO/快门接管：如实标记"不适用"且归因正确，不再误报设备能力缺失
-                wantManual -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
-                    UnsupportedReason.MANUAL_EXPOSURE_OVERRIDES)
-                steps == null -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
-                    UnsupportedReason.EV_UNAVAILABLE)
-                else -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
+        if (evRaw != null && !isAutoValue(evRaw)) {
+            if (!evRaw.any { it.isDigit() }) {
+                params += ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
                     UnsupportedReason.VALUE_UNPARSEABLE)
+            } else if (evValue != 0f) {
+                params += when {
+                    captureEv != null -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.WRITTEN)
+                    // 手动曝光下 EV 由 ISO/快门接管：如实标记"不适用"且归因正确，不再误报设备能力缺失
+                    wantManual -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
+                        UnsupportedReason.MANUAL_EXPOSURE_OVERRIDES)
+                    // 设备无步进信息/步进非法（解析失败已前置归因）
+                    else -> ParamStatus(ParamKey.EV, evRaw, ApplyStatus.UNSUPPORTED,
+                        UnsupportedReason.EV_UNAVAILABLE)
+                }
             }
         }
 
@@ -263,7 +271,9 @@ object PresetCapturePlan {
 
     /**
      * "1/125" / "1/125s" / "2s" / "0.5" / "125" → 纳秒。
-     * 约定：带斜杠按分数快门；纯小数按秒；纯整数优先按秒（如 "2" 表示 2 秒长曝光）。
+     * 约定：带斜杠按分数快门（分子/分母，"3/4"=0.75s——【v1.5.6 审计修复】
+     * 此前忽略分子把 "3/4" 错解析成 1/4s，曝光量偏差 3 倍）；纯小数按秒；
+     * 纯整数优先按秒（如 "2" 表示 2 秒长曝光）。
      */
     fun parseShutterNs(value: String?): Long? {
         val v = value?.trim()?.replace(Regex("s$", RegexOption.IGNORE_CASE), "")
@@ -272,9 +282,11 @@ object PresetCapturePlan {
         if (v.contains('/')) {
             val parts = v.split('/')
             if (parts.size != 2) return null
+            // 分子容忍不等号前缀（"<1/100" 表示快门上限描述，取 1/100）
+            val num = Regex("[\\d.]+").find(parts[0])?.value?.toDoubleOrNull() ?: return null
             val den = parts[1].trim().toDoubleOrNull() ?: return null
-            if (den <= 0.0) return null
-            val seconds = 1.0 / den
+            if (num <= 0.0 || den <= 0.0) return null
+            val seconds = num / den
             return (seconds * 1_000_000_000).toLong().takeIf { it > 0 }
         }
         val seconds = v.toDoubleOrNull() ?: return null
