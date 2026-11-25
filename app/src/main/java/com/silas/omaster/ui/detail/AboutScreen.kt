@@ -277,7 +277,7 @@ fun ProfileScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        UpdateChecker.downloadAndInstall(context, info.downloadUrl, info.versionName)
+                        UpdateChecker.downloadAndInstall(context, info.downloadUrl, info.versionName, info.sha256)
                         pendingUpdate = null
                     }) {
                         Text(stringResource(R.string.version_download_btn))

@@ -128,9 +128,13 @@
         </provider>
 
         <!-- 下载完成广播接收器 -->
+        <!-- 【P1-1 组件安全】exported=false：DownloadManager 的 ACTION_DOWNLOAD_COMPLETE
+             是 setPackage 定向本包广播（DownloadManager 源码保证），non-exported receiver
+             可正常收到；exported=true 反而暴露给任意应用伪造下载广播（内部已有归属校验，
+             双保险后暴露面归零） -->
         <receiver
             android:name=".util.DownloadCompleteReceiver"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
             </intent-filter>

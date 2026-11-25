@@ -74,4 +74,21 @@ class UpdateCheckerTest {
         // 服务端上调基线到 1.6.0：扩大覆盖面——v1.5.5 存量用户也纳入提醒
         assertTrue(UpdateChecker.shouldForceUpdate(10506, 10505, "1.6.0"))
     }
+
+    @Test
+    fun `update-sha256标记从Release正文下发解析`() {
+        // 【P0-3 更新链路加固】HTML 注释形式（GitHub 渲染不可见，与 force-update-baseline 同款通道）
+        val hex64 = "a1b2c3d4".repeat(8) // 64 位十六进制
+        assertEquals(hex64, UpdateChecker.parseUpdateSha256("<!-- update-sha256: $hex64 -->"))
+        // 裸文本形式 + 归一小写
+        assertEquals(hex64, UpdateChecker.parseUpdateSha256("Update-SHA256: ${hex64.uppercase()}"))
+        // 多行正文中的标记行
+        assertEquals(hex64, UpdateChecker.parseUpdateSha256("## v1.6.0\n\n<!-- update-sha256: $hex64 -->\n\n- 修复"))
+        // 无标记 / 空正文 → null（跳过哈希校验，签名一致性校验仍强制执行）
+        assertEquals(null, UpdateChecker.parseUpdateSha256("## v1.6.0\n\n- 常规更新"))
+        assertEquals(null, UpdateChecker.parseUpdateSha256(null))
+        // 非 64 位十六进制（截断/非法字符）不匹配 → null
+        assertEquals(null, UpdateChecker.parseUpdateSha256("update-sha256: deadbeef"))
+        assertEquals(null, UpdateChecker.parseUpdateSha256("update-sha256: ${"zz".repeat(32)}"))
+    }
 }

@@ -4,19 +4,24 @@ import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
+import androidx.core.content.pm.PackageInfoCompat
 import com.silas.omaster.data.local.UpdateChannel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
+import java.io.FileInputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 import com.silas.omaster.R
 
 /**
@@ -29,6 +34,10 @@ object UpdateChecker {
 
     /** 更新 APK 固定文件名（与 CI 产物名、下载目标目录一致，用于下载完成校验） */
     const val UPDATE_APK_NAME = "app-universal-release.apk"
+
+    // ---- P0-3 更新链路加固：预期 APK 哈希经本地持久化传递给下载完成接收器 ----
+    private const val UPDATE_PREFS = "update_checker"
+    private const val KEY_PENDING_APK_SHA256 = "pending_apk_sha256"
 
     // GitHub 配置
     // 必须与本仓库 CI 发布 Release 的仓库一致（.github/workflows/release.yml 将签名 APK
@@ -51,7 +60,12 @@ object UpdateChecker {
         /** 提醒热更新标识（【v1.5.6】本地低于基线的存量版本且远端有可用更新）：
          *  弹窗保持可关闭（back/外部点击/稍后均可用），仅正文顶部追加警示文案，
          *  且不受"自动检查更新"开关门控（runAutoUpdateCheck 分流） */
-        val forceUpdate: Boolean = false
+        val forceUpdate: Boolean = false,
+        /** 【P0-3 更新链路加固】更新 APK 的 SHA-256（Release 正文 update-sha256 标记下发，
+         *  经 [parseUpdateSha256] 解析）。下载开始时写入本地，下载完成后由
+         *  DownloadCompleteReceiver 做内容哈希比对，一致才允许安装。
+         *  可空：旧 Release 未携带标记时跳过哈希校验（签名一致性校验仍强制执行）。 */
+        val sha256: String? = null
     )
 
     /**
@@ -77,6 +91,17 @@ object UpdateChecker {
     fun parseForceUpdateBaseline(releaseNotes: String?): String =
         releaseNotes?.let { FORCE_BASELINE_REGEX.find(it)?.groupValues?.get(1) }
             ?: FORCE_UPDATE_MIN
+
+    /** Release 正文中的 APK SHA-256 下发标记（HTML 注释或裸文本，大小写不敏感） */
+    private val UPDATE_SHA256_REGEX =
+        Regex("""update-sha256:\s*([a-fA-F0-9]{64})""", RegexOption.IGNORE_CASE)
+
+    /**
+     * 从最新 Release 正文解析更新 APK 的 SHA-256（update-sha256 标记），无标记返回 null。
+     * 供下载开始时记录预期值、下载完成后做内容哈希校验（P0-3 更新链路加固）。
+     */
+    fun parseUpdateSha256(releaseNotes: String?): String? =
+        releaseNotes?.let { UPDATE_SHA256_REGEX.find(it)?.groupValues?.get(1)?.lowercase() }
 
     /**
      * 提醒判定（纯函数，供单测锁定）：本地低于基线（v1.5.6 以下存量用户）且远端有可用更新。
@@ -180,8 +205,10 @@ object UpdateChecker {
                 for (i in 0 until assets.length()) {
                     val asset = assets.getJSONObject(i)
                     val assetName = asset.getString("name")
-                    // 两个渠道都使用固定文件名
-                    if (assetName == "app-universal-release.apk") {
+                    // 【v1.5.6 修复】flavor 化（github/store 渠道分离）后 CI 产物名变为
+                    // app-github-universal-release.apk，此处仍精确匹配旧名导致 downloadUrl
+                    // 恒为空、应用内更新链路失效；改为通用后缀匹配，兼容旧命名与渠道变体。
+                    if (assetName == UPDATE_APK_NAME || assetName.endsWith("-universal-release.apk")) {
                         downloadUrl = asset.getString("browser_download_url")
                         break
                     }
@@ -200,7 +227,8 @@ object UpdateChecker {
                     isNewer = isNewer,
                     forceUpdate = isNewer && shouldForceUpdate(
                         versionCode, currentVersionCode, parseForceUpdateBaseline(releaseNotes)
-                    )
+                    ),
+                    sha256 = parseUpdateSha256(releaseNotes)
                 )
             } else {
                 Log.e(TAG, "检查更新失败，HTTP 状态码: ${conn.responseCode}")
@@ -243,16 +271,40 @@ object UpdateChecker {
         }.onFailure { Log.e(TAG, "打开安装未知应用设置失败", it) }
     }
 
+    /** 记录本次下载应校验的 APK SHA-256（传 null 清除残留值，防误校验后续下载） */
+    internal fun setPendingApkSha256(context: Context, sha256: String?) {
+        context.getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_PENDING_APK_SHA256, sha256?.lowercase())
+            .apply()
+    }
+
+    /** 读取并清除待校验哈希（one-shot：仅本次下载完成校验生效） */
+    internal fun readAndClearPendingApkSha256(context: Context): String? {
+        val prefs = context.getSharedPreferences(UPDATE_PREFS, Context.MODE_PRIVATE)
+        val value = prefs.getString(KEY_PENDING_APK_SHA256, null)
+        if (value != null) prefs.edit().remove(KEY_PENDING_APK_SHA256).apply()
+        return value
+    }
+
     /**
      * 使用系统 DownloadManager 下载并安装
+     * @param sha256 预期 APK 哈希（Release 正文 update-sha256 标记，可空）
      * @return 下载任务 ID，用于查询进度
      */
-    fun downloadAndInstall(context: Context, downloadUrl: String, versionName: String): Long {
+    fun downloadAndInstall(
+        context: Context,
+        downloadUrl: String,
+        versionName: String,
+        sha256: String? = null
+    ): Long {
         // 【v1.6.13 安全加固】仅允许 https 下载源，防止外部传入明文链接导致 APK 被中间人替换
         if (!downloadUrl.startsWith("https://", ignoreCase = true)) {
             Log.e(TAG, "拒绝非 https 下载地址: $downloadUrl")
             return -1L
         }
+
+        // 【P0-3 更新链路加固】记录预期 APK 哈希（null 也写入以清除上次残留，防误校验）
+        setPendingApkSha256(context, sha256)
 
         val fileName = UPDATE_APK_NAME
 
@@ -389,8 +441,11 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
                     File(downloadDir, UpdateChecker.UPDATE_APK_NAME)
                 }
 
-                // 归属校验：仅安装本应用的更新 APK，避免响应其他 App 下载完成广播而误装任意文件
-                if (apkFile != null && apkFile.exists() && isOurUpdateApk(context, apkFile)) {
+                // 归属校验 + 内容级完整性校验（P0-3）：仅安装包名/版本/签名/哈希（若有）均匹配的更新 APK
+                if (apkFile != null && apkFile.exists() &&
+                    isOurUpdateApk(context, apkFile) &&
+                    verifyApkIntegrity(context, apkFile)
+                ) {
                     installApk(context, apkFile)
                 } else {
                     Log.d("DownloadReceiver", "忽略非本应用更新下载: ${apkFile?.absolutePath}")
@@ -444,6 +499,118 @@ class DownloadCompleteReceiver : BroadcastReceiver() {
         } else {
             // 无法解析目录时退化为文件名匹配
             true
+        }
+    }
+
+    /**
+     * 【P0-3 更新链路加固】内容级完整性校验（文件名/目录归属之后的第二道防线，fail-closed）：
+     * 1) 包名必须与本应用一致（防任意 APK 误装）；
+     * 2) versionCode 不得低于当前已装版本（防降级攻击）；
+     * 3) 签名证书与已安装应用存在交集（防替换包；签名不一致时系统安装器也会拒绝，
+     *    此处提前拦截，避免向用户展示注定失败的安装页）；
+     * 4) 若本次下载携带预期 SHA-256（update-sha256 标记经 SP 传递），则对流式哈希比对，
+     *    防下载损坏或传输中被替换；校验为一次性（读后即清）。
+     * 任一环节失败均拒绝安装。
+     */
+    private fun verifyApkIntegrity(context: Context, apkFile: File): Boolean {
+        return try {
+            val pm = context.packageManager
+
+            // 解析 APK 包元数据（API 28+ 携带签名信息；低版本走 GET_SIGNATURES 回退）
+            val archiveInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pm.getPackageArchiveInfo(apkFile.absolutePath, PackageManager.GET_SIGNING_CERTIFICATES)
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageArchiveInfo(apkFile.absolutePath, PackageManager.GET_SIGNATURES)
+            }
+            if (archiveInfo == null) {
+                Log.e("DownloadReceiver", "更新 APK 元数据解析失败，拒绝安装: ${apkFile.name}")
+                return false
+            }
+
+            // 1) 包名一致性
+            if (archiveInfo.packageName != context.packageName) {
+                Log.e("DownloadReceiver", "更新 APK 包名不匹配: ${archiveInfo.packageName}")
+                return false
+            }
+
+            // 2) 防降级：以当前已装版本为基准（重装同版本允许，低版本拒绝）
+            val installedInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES)
+            }
+            if (PackageInfoCompat.getLongVersionCode(archiveInfo) <
+                PackageInfoCompat.getLongVersionCode(installedInfo)
+            ) {
+                Log.e(
+                    "DownloadReceiver",
+                    "更新 APK 版本(${PackageInfoCompat.getLongVersionCode(archiveInfo)})低于当前已装版本，拒绝降级安装"
+                )
+                return false
+            }
+
+            // 3) 签名一致性：与已安装应用证书集合存在交集（兼容签名轮换场景）
+            val installedCerts = signatureDigests(installedInfo)
+            if (installedCerts.isNullOrEmpty()) {
+                Log.e("DownloadReceiver", "无法读取已安装应用签名，拒绝安装")
+                return false
+            }
+            val archiveCerts = signatureDigests(archiveInfo)
+            if (archiveCerts == null || archiveCerts.intersect(installedCerts).isEmpty()) {
+                Log.e("DownloadReceiver", "更新 APK 签名与当前应用不匹配，疑似替换包，拒绝安装")
+                return false
+            }
+
+            // 4) 预期哈希校验（一次性；有值才校验，向后兼容未携带标记的旧发布渠道）
+            val expectedSha256 = UpdateChecker.readAndClearPendingApkSha256(context)
+            if (expectedSha256 != null) {
+                val actual = fileSha256(apkFile)
+                if (actual == null || !actual.equals(expectedSha256, ignoreCase = true)) {
+                    Log.e("DownloadReceiver", "更新 APK SHA-256 校验失败（预期 $expectedSha256，实际 $actual）")
+                    return false
+                }
+                Log.d("DownloadReceiver", "更新 APK SHA-256 校验通过")
+            }
+
+            true
+        } catch (e: Exception) {
+            Log.e("DownloadReceiver", "更新 APK 完整性校验异常，拒绝安装", e)
+            false
+        }
+    }
+
+    /** 提取 APK 签名证书的 SHA-256 摘要集合；无签名信息返回 null */
+    private fun signatureDigests(info: PackageInfo): Set<String>? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            info.signingInfo?.apkContentsSigners?.map { sha256Hex(it.toByteArray()) }?.toSet()
+        } else {
+            @Suppress("DEPRECATION")
+            info.signatures?.map { sha256Hex(it.toByteArray()) }?.toSet()
+        }
+    }
+
+    private fun sha256Hex(bytes: ByteArray): String =
+        MessageDigest.getInstance("SHA-256").digest(bytes)
+            .joinToString("") { "%02x".format(it) }
+
+    /** 流式计算文件 SHA-256（更新包数十 MB，避免整块载入内存） */
+    private fun fileSha256(file: File): String? {
+        return try {
+            val md = MessageDigest.getInstance("SHA-256")
+            FileInputStream(file).use { input ->
+                val buffer = ByteArray(8192)
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read <= 0) break
+                    md.update(buffer, 0, read)
+                }
+            }
+            md.digest().joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            Log.e("DownloadReceiver", "计算 APK 哈希失败", e)
+            null
         }
     }
 
