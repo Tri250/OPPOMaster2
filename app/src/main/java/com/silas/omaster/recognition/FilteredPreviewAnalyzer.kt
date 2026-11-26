@@ -34,8 +34,9 @@ import androidx.camera.core.ImageProxy
 class FilteredPreviewAnalyzer(
     colorMatrix: FloatArray,
     private val vignetteStrength: Float,
-    /** Pro XDR 全局影调强度（0=关闭，1=开启；预览仅全局项，清晰度为拍后专属） */
-    private val xdrStrength: Float,
+    /** Pro XDR 全局影调初始强度（0=关闭，1=开启；预览仅全局项，清晰度为拍后专属）。
+     *  运行期可由 [setXdrStrength] 更新，无需重建实例 */
+    xdrStrength: Float,
     private val onFrame: (Bitmap) -> Unit
 ) : ImageAnalysis.Analyzer {
 
@@ -51,10 +52,29 @@ class FilteredPreviewAnalyzer(
     private var vignetteWidth = 0
     private var vignetteHeight = 0
 
-    /** XDR 全局影调查找表（与拍后同源，单一事实来源）；强度 ≤0 为全零表 */
-    private val xdrLut: FloatArray = PresetPixelEffects.buildXdrToneLut(xdrStrength)
-    private val doXdr: Boolean = xdrStrength > 0.01f
+    /**
+     * XDR 全局影调查找表（与拍后同源，单一事实来源）；强度 ≤0 为全零表。
+     * 【v1.5.6 P1 修复】改为可运行时更新的 var：XDR 开关切换只重建 LUT，
+     * 不重建分析器实例——原实现把 xdrEnabled 放进 analyzer 的 remember key，
+     * 切换时生成新实例却从未重新 setAnalyzer（绑定 effect 的 key 不含 analyzer），
+     * 导致取景仍用旧强度、成片用新强度，违反"所见即所得"。
+     * @Volatile 保证主线程写入、分析线程读取的可见性；整表引用一次性替换，无撕裂。
+     */
+    @Volatile
+    private var xdrLut: FloatArray = PresetPixelEffects.buildXdrToneLut(xdrStrength)
+    @Volatile
+    private var doXdr: Boolean = xdrStrength > 0.01f
     private var lutScratch: IntArray? = null
+
+    /**
+     * 运行时更新 XDR 强度（取景期开关切换）。重建 LUT 但不重建实例，
+     * 相机绑定引用保持稳定，预览下一帧即反映新强度，与成片一致。
+     */
+    fun setXdrStrength(strength: Float) {
+        // 先构建完整新表再整体替换，分析线程读到的是旧表或新表，不会读到半成品
+        xdrLut = PresetPixelEffects.buildXdrToneLut(strength)
+        doXdr = strength > 0.01f
+    }
 
     // 双缓冲输出位图交替写入，避免 Compose 读取时撕裂
     private var buffers = arrayOfNulls<Bitmap>(2)

@@ -102,6 +102,32 @@ class PresetCapturePlanTest {
     }
 
     @Test
+    fun `快门越界时反向解ISO保持曝光量守恒`() {
+        // 【v1.5.6 P2 回归】ISO50 被钳到下限 100，1/8000s 本应缩到 1/16000s，
+        // 但设备快门下限 1/8000s 无法再短——旧实现硬钳快门导致曝光量翻倍偏亮。
+        // 新实现把快门钳到 1/8000s 后反向把 ISO 解回 50（设备下限即 100 时取 100），
+        // 在设备物理极限内最大化守恒。这里设备 ISO 下限设为 25，使 ISO 可被解回 50。
+        val wideIso = ManualRanges(
+            isoRange = 25..6400,
+            exposureTimeRange = 125_000L..1_000_000_000L, // 1/8000s 下限
+            evStepRange = -12..12,
+            evStepEv = 1f / 6f,
+            aeModeOffSupported = true
+        )
+        // 目标曝光量 = 50 × 125000ns；ISO 保留 50 → 快门 125000ns 正好在下限，守恒
+        val exact = PresetCapturePlan.build(preset(iso = "50", shutter = "1/8000"), wideIso)
+        assertEquals(50, exact.iso)
+        assertEquals(125_000L, exact.shutterNs)
+
+        // ISO 800 + 1/32000s：设备快门下限 1/8000s（4 倍长），
+        // 反向解 ISO = 800/4 = 200，快门回到下限 1/8000s，曝光量守恒
+        val fast = PresetCapturePlan.build(preset(iso = "800", shutter = "1/32000"), wideIso)
+        assertEquals(200, fast.iso)
+        assertEquals(125_000L, fast.shutterNs)
+        assertEquals("800", fast.statusOf(ParamKey.ISO)?.value?.substringBefore("→"))
+    }
+
+    @Test
     fun `设备不支持手动曝光时ISO快门标记无法套用`() {
         val plan = PresetCapturePlan.build(preset(iso = "100", shutter = "1/125"), ManualRanges.NONE)
         assertNull(plan.iso)

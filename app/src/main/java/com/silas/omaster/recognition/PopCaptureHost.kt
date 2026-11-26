@@ -11,6 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
@@ -49,7 +51,9 @@ fun PopCaptureHost(presetId: String, onBack: () -> Unit) {
         modifier = Modifier.fillMaxSize()
     ) { state ->
         when (state) {
-            PopHostState.Loading -> Surface(modifier = Modifier.fillMaxSize()) {
+            PopHostState.Loading -> Surface(
+                modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars)
+            ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = HasselbladOrange)
                 }
@@ -60,7 +64,9 @@ fun PopCaptureHost(presetId: String, onBack: () -> Unit) {
                     PopCaptureScreen(preset = p, onBack = onBack)
                 }
             }
-            PopHostState.Missing -> Surface(modifier = Modifier.fillMaxSize()) {
+            PopHostState.Missing -> Surface(
+                modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars)
+            ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(stringResource(R.string.pop_preset_missing))

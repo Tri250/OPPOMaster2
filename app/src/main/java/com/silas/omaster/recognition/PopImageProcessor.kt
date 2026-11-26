@@ -33,6 +33,10 @@ object PopImageProcessor {
      *        【v1.5.6 Reno15/16/17 机型适配】ColorOS 静态出片自带 HAL 锐化，
      *        该档位传 0.8 降权防双重锐化光晕（RenoDeviceProfile.sharpeningMultiplier）；
      *        默认 1.0 与既有引擎输出逐位一致
+     * @param applyExposureEv 是否在拍后矩阵施加预设曝光补偿（默认 true）。
+     *        【v1.5.6 P1 修复】相机路径传感器 AE 已写入 EV 时须传 false，
+     *        避免"传感器 + 拍后矩阵"双重施加使净曝光翻倍；相册/系统相机路径
+     *        无传感器写入，保持 true
      * @return 处理后的新 Bitmap；尺寸过小（<3px）无法做邻域运算时返回 src 本身
      */
     fun process(
@@ -40,13 +44,14 @@ object PopImageProcessor {
         preset: MasterPreset,
         maxMemoryBytes: Long,
         xdr: Boolean = false,
-        sharpeningScale: Float = 1f
+        sharpeningScale: Float = 1f,
+        applyExposureEv: Boolean = true
     ): Bitmap {
         val w = src.width
         val h = src.height
         if (w < 3 || h < 3) return src
 
-        val matrix = PresetColorTransform.buildColorMatrix(preset)
+        val matrix = PresetColorTransform.buildColorMatrix(preset, applyExposureEv)
         val sharpen = PresetColorTransform.sharpnessAmount(preset) * sharpeningScale
         val vignette = PresetColorTransform.vignetteStrength(preset)
         val iso = PresetCapturePlan.parseIso(preset.iso) ?: 0

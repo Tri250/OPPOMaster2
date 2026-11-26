@@ -108,8 +108,11 @@ object PhotoRecognitionEngine {
     /** EXIF 色温(冷暖)与像素冷暖矛盾检测（口径冲突），返回结构化警告 */
     private fun detectConflict(input: RecognitionInput, top: StylePreset): RecognitionWarning? {
         val exifTemp = input.colorTemperature ?: return null
-        // 色温越高越暖（K 大偏暖是拍摄常见的"高色温补偿"语义，这里用相对中性 5500K 判断）
-        val exifWarm = exifTemp > 6000
+        // 【v1.5.6 P2 修复】与拍后调色引擎 PresetColorTransform.colorTempWarmDelta 统一物理语义：
+        // 低色温（K 小，如烛光 3000K）偏暖 → delta>0；高色温（K 大，如阴天 7500K）偏冷 → delta<0。
+        // 此前判断 "exifTemp > 6000 为偏暖" 与调色引擎方向相反，导致 7500K 冷光
+        // 配清透冷调风格被误报冲突，且测试固化了这个反语义。单一事实来源取调色引擎公式符号。
+        val exifWarm = PresetColorTransform.colorTempWarmDelta(exifTemp) > 0f
         val styleWarm = top.target.warmth > 0.55f
         return if (exifWarm != styleWarm) {
             RecognitionWarning(WarningType.TEMP_CONFLICT, exifTemp)

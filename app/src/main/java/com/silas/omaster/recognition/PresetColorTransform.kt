@@ -163,11 +163,21 @@ object PresetColorTransform {
     fun colorHueCyanMagentaDelta(hue: Int?): Float =
         if (hue == null) 0f else (hue / 150f * 0.3f).coerceIn(-0.3f, 0.3f)
 
-    /** 20 项 4x5 颜色矩阵（行主序），null 参数按中性处理 */
-    fun buildColorMatrix(preset: MasterPreset): FloatArray {
+    /**
+     * 20 项 4x5 颜色矩阵（行主序），null 参数按中性处理。
+     *
+     * 【v1.5.6 P1 修复】EV 施加责任单一化：曝光补偿要么由传感器 AE 写入
+     * （[PresetCapturePlan] 的 evSteps → CONTROL_AE_EXPOSURE_COMPENSATION），
+     * 要么由本拍后矩阵以 2^ev 施加，二者不得同时生效，否则净曝光翻倍。
+     * @param applyExposureEv true（默认，兼容无传感器写入的相册/系统相机路径）时
+     *        把 preset.exposureCompensation 计入矩阵；false 时仅保留滤镜自带
+     *        [FilterAdjust.ev]（滤镜定义的一部分，不属于曝光补偿，任何路径都须施加）。
+     */
+    fun buildColorMatrix(preset: MasterPreset, applyExposureEv: Boolean = true): FloatArray {
         val adj = filterAdjustment(preset.filter)
         val fade = parseSoftLight(preset.softLight)
-        val ev = (parseExposureEv(preset.exposureCompensation) + adj.ev).coerceIn(-3f, 3f)
+        val presetEv = if (applyExposureEv) parseExposureEv(preset.exposureCompensation) else 0f
+        val ev = (presetEv + adj.ev).coerceIn(-3f, 3f)
 
         val saturation = ((preset.saturation ?: 0).coerceIn(-100, 100) / 100f + adj.saturation)
             .coerceIn(-1f, 1f)
@@ -226,8 +236,12 @@ object PresetColorTransform {
         return m
     }
 
-    /** 该预设是否会产生可见效果（色彩矩阵、像素效果任一非中性） */
-    fun hasVisibleEffect(preset: MasterPreset): Boolean {
+    /**
+     * 该预设是否会产生可见效果（色彩矩阵、像素效果任一非中性）。
+     * @param applyExposureEv 与 [buildColorMatrix] 同语义：false 时不把曝光补偿
+     *        视为"拍后可见效果"（其效果已由传感器 AE 写入，不得重复计数）。
+     */
+    fun hasVisibleEffect(preset: MasterPreset, applyExposureEv: Boolean = true): Boolean {
         if (listOf(preset.saturation, preset.warmCool, preset.cyanMagenta, preset.tone)
                 .any { it != null && it != 0 }) return true
         if (filterAdjustment(preset.filter) != NEUTRAL) return true
@@ -235,7 +249,7 @@ object PresetColorTransform {
         // 矩阵增量，按"无可见效果"处理，与 POST 芯片门控口径一致
         if (colorTempWarmDelta(preset.colorTemperature) != 0f) return true
         if (colorHueCyanMagentaDelta(preset.colorHue) != 0f) return true
-        if (parseExposureEv(preset.exposureCompensation) != 0f) return true
+        if (applyExposureEv && parseExposureEv(preset.exposureCompensation) != 0f) return true
         if (parseSoftLight(preset.softLight) > 0f) return true
         if (vignetteStrength(preset) > 0f || sharpnessAmount(preset) > 0f) return true
         return false

@@ -29,7 +29,13 @@ class ShortcutBroadcastReceiver : BroadcastReceiver() {
         // ColorOS 17 ≥ API 36 全覆盖；低版本无校验能力，维持原行为（无可用性损失）。
         // 防御场景：第三方应用伪造 ACTION_SHOW_FLOATING_WINDOW 反复触发悬浮窗骚扰。
         if (android.os.Build.VERSION.SDK_INT >= 34) {
-            val uid = intent.getSentFromUid()
+            // 【编译修复】getSentFromUid() 是 BroadcastReceiver 的实例方法（API 34+），
+            // 而非 Intent 方法；误写 intent.getSentFromUid() 会因隐藏 API 不存在导致
+            // :app:compileGithubReleaseKotlin 编译失败、整个 release 流水线阻断。
+            // 语义：发送方未 opt-in 共享身份时返回 Process.INVALID_UID(-1)，
+            // -1 < FIRST_APPLICATION_UID(10000) 故放行走原行为；仅当明确是第三方
+            // 应用 uid (>=10000 且非本进程) 时拒绝，避免误伤 ColorOS 侧边键系统广播。
+            val uid = getSentFromUid()
             if (uid != android.os.Process.myUid() && uid >= android.os.Process.FIRST_APPLICATION_UID) {
                 android.util.Log.w("ShortcutBroadcast", "拒绝非可信来源的悬浮窗广播 uid=$uid")
                 return

@@ -210,6 +210,31 @@ class PresetColorTransformTest {
     }
 
     @Test
+    fun `曝光补偿单一施加_传感器已写入EV时矩阵不再叠加`() {
+        // 【v1.5.6 P1 回归】相机路径 plan.evSteps != null → 传感器 AE 已写 EV，
+        // 拍后矩阵必须 applyExposureEv=false，否则净曝光 2 倍（4/25 内置预设受影响）
+        val p = preset(exposureCompensation = "+1.0")
+        val base = PresetColorTransform.buildColorMatrix(preset())
+        val post = PresetColorTransform.buildColorMatrix(p, applyExposureEv = true)
+        val sensor = PresetColorTransform.buildColorMatrix(p, applyExposureEv = false)
+        assertEquals("拍后路径应保留 2^ev", base[6] * 2f, post[6], 0.01f)
+        assertEquals("传感器路径不得重复施加", base[6], sensor[6], 0.01f)
+        // hasVisibleEffect 同口径：传感器已写 EV 时不把 EV 算作拍后效果
+        assertTrue(PresetColorTransform.hasVisibleEffect(p, applyExposureEv = true))
+        assertFalse(PresetColorTransform.hasVisibleEffect(p, applyExposureEv = false))
+    }
+
+    @Test
+    fun `滤镜自带EV在任何路径都施加`() {
+        // 滤镜定义里的 ev（如"夜景" -0.2EV）不是曝光补偿，不属于双重施加，
+        // 相册/相机两条路径都必须保留，否则滤镜观感丢失
+        val p = preset(filter = "夜景")
+        val a = PresetColorTransform.buildColorMatrix(p, applyExposureEv = true)
+        val b = PresetColorTransform.buildColorMatrix(p, applyExposureEv = false)
+        for (i in a.indices) assertEquals("滤镜自带 EV 被误删 @$i", a[i], b[i], 1e-4f)
+    }
+
+    @Test
     fun `EV字符串解析`() {
         assertEquals(0.7f, PresetColorTransform.parseExposureEv("+0.7"), 1e-4f)
         assertEquals(-1f, PresetColorTransform.parseExposureEv("-1.0"), 1e-4f)

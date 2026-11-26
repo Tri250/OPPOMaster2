@@ -118,6 +118,12 @@ fun PopCaptureScreen(
     val accent = HasselbladOrange
     val capability = remember { CameraCapabilityProbe.probe(context) }
     val plan = remember(preset, capability) { PresetCapturePlan.build(preset, capability.manualRanges) }
+    // 【v1.5.6 P1 修复】曝光补偿单一施加点：plan.evSteps != null 表示传感器 AE 已真实
+    // 写入 EV，此时拍后矩阵不得再次施加 2^ev，否则 4/25 内置预设净曝光翻倍。
+    // 只在这两种情形才由拍后矩阵承担 EV：① AE 未开启（手动曝光，EV 由 ISO/快门接管，
+    // 本就不该进矩阵——hasVisibleEffect 会据 applyExposureEv 一并排除）；② 设备/解析
+    // 不支持传感器写入（evSteps==null 且非手动），EV 效果才回落到拍后矩阵。
+    val applyPostExposureEv = !plan.manualExposure && plan.evSteps == null
     // 【v1.5.6 Reno15/16/17 机型适配】机型档：拍摄画质模式择优 + 拍后锐化降权
     // 调校（识别失败为 null → 通用调校，与旧版行为一致）
     val deviceFamily = remember { RenoDeviceProfile.currentFamily() }
@@ -210,7 +216,11 @@ fun PopCaptureScreen(
     var xdrEnabled by remember { mutableStateOf(true) }
 
     // 实时滤镜取景：与拍后套色同源的色彩矩阵，取景即成片观感
-    val colorMatrix = remember(preset) { PresetColorTransform.buildColorMatrix(preset) }
+    // 【v1.5.6 P1 修复】取景矩阵与相机成片使用同一 EV 归属判定（applyPostExposureEv），
+    // 保证"所见即所得"——传感器已写入 EV 时预览矩阵不再叠加 2^ev
+    val colorMatrix = remember(preset, applyPostExposureEv) {
+        PresetColorTransform.buildColorMatrix(preset, applyExposureEv = applyPostExposureEv)
+    }
     val vignetteStrength = remember(preset) { PresetColorTransform.vignetteStrength(preset) }
     val filteredFrame = remember { mutableStateOf<Bitmap?>(null) }
     // 守护线程执行器：页面退出时 shutdown，异常场景也不阻塞进程退出
@@ -219,10 +229,18 @@ fun PopCaptureScreen(
             Thread(r, "pop-filter-preview").apply { isDaemon = true }
         }
     }
-    val analyzer = remember(colorMatrix, vignetteStrength, xdrEnabled) {
+    // 【v1.5.6 P1 修复】xdrEnabled 不再进入 analyzer 的 remember key：
+    // 原实现切换 XDR 会重建实例，但下方绑定 effect 的 key 不含 analyzer，
+    // 新实例从未 setAnalyzer → 预览沿用旧强度、成片用新强度。
+    // 现在实例稳定，开关切换经 setXdrStrength 只重建 LUT，绑定引用始终有效。
+    val analyzer = remember(colorMatrix, vignetteStrength) {
         FilteredPreviewAnalyzer(colorMatrix, vignetteStrength, if (xdrEnabled) 1f else 0f) { bmp ->
             filteredFrame.value = bmp
         }
+    }
+    // XDR 开关变化时把新强度同步进现有分析器（下一帧生效，所见即所得）
+    LaunchedEffect(xdrEnabled) {
+        analyzer.setXdrStrength(if (xdrEnabled) 1f else 0f)
     }
     val imageAnalysis = remember {
         // 【v1.8.0 画质】取景目标 1280x720（默认 640x480 拉伸到预览框观感模糊）；
@@ -250,6 +268,8 @@ fun PopCaptureScreen(
             // 的 analyze 任务可能在缓冲回收后仍执行 setBitmap，触发
             // "Canvas: trying to use a recycled bitmap" 崩溃；配合 analyze 内
             // runCatching 兜底（预览帧丢失无害）
+            // analyzer 实例在页面生命周期内稳定（XDR 切换不再重建，见上），
+            // 此处捕获的就是唯一活跃实例
             imageAnalysis.clearAnalyzer()
             analyzer.enabled = false
             analyzer.release()
@@ -262,7 +282,10 @@ fun PopCaptureScreen(
         }
     }
 
-    DisposableEffect(cameraGranted, imageCapture, cameraSelector) {
+    // 【v1.5.6 P1 修复】绑定 key 纳入 analyzer：保证"当前绑定的实例"与
+    // "正在产帧的实例"永远是同一个。XDR 切换不再重建 analyzer（见上），
+    // 因此不会因开关切换而重绑相机；仅 preset 等真正变化时才重新绑定。
+    DisposableEffect(cameraGranted, imageCapture, cameraSelector, analyzer) {
         if (cameraGranted) {
             val listener = Runnable {
                 cameraError = false
@@ -309,11 +332,23 @@ fun PopCaptureScreen(
      *        拍后套色判定用的是同一份状态（【v1.5.6 审计修复】此前回读实时值，
      *        存在写入用旧值、套色用新值的窗口）；系统相机/相册路径传当前值
      *        （无传感器写入概念，以用户最新意图为准）
+     * @param applyExposureEv 本张是否在拍后矩阵施加曝光补偿：
+     *        【v1.5.6 P1 修复】相机路径传 [applyPostExposureEv]（与取景矩阵同源，
+     *        传感器 AE 已写入 EV 时不得重复施加）；系统相机/相册路径无传感器写入，
+     *        传 true（默认值，沿用拍后施加）
      */
-    fun stylePhoto(raw: Bitmap, preset: MasterPreset, jpegBytes: ByteArray? = null, xdr: Boolean) {
+    fun stylePhoto(
+        raw: Bitmap,
+        preset: MasterPreset,
+        jpegBytes: ByteArray? = null,
+        xdr: Boolean,
+        applyExposureEv: Boolean = true
+    ) {
         scope.launch {
             // Pro XDR 开启时视为"确有可见效果"：无参数预设也走套色管线（否则直通原图）
-            val hasEffect = PresetColorTransform.hasVisibleEffect(preset) || xdr
+            // 【v1.5.6 P1 修复】hasVisibleEffect 与矩阵同口径：传感器已写入 EV 时不把
+            // 曝光补偿算作拍后效果，避免"只写 EV"的预设被误判为需重编码
+            val hasEffect = PresetColorTransform.hasVisibleEffect(preset, applyExposureEv) || xdr
             val styled = if (hasEffect) {
                 withContext(Dispatchers.Default) {
                     PopImageProcessor.process(
@@ -321,7 +356,8 @@ fun PopCaptureScreen(
                         xdr = xdr,
                         // 【v1.5.6 Reno15/16/17 机型适配】ColorOS 出片自带 HAL 锐化，
                         // Reno 档 App 侧降权防双重锐化光晕（识别失败 → 1.0 逐位一致）
-                        sharpeningScale = RenoDeviceProfile.sharpeningMultiplier(deviceFamily)
+                        sharpeningScale = RenoDeviceProfile.sharpeningMultiplier(deviceFamily),
+                        applyExposureEv = applyExposureEv
                     )
                 }
             } else {
@@ -371,7 +407,13 @@ fun PopCaptureScreen(
                         toast = msgCaptureFailed
                         return
                     }
-                    stylePhoto(bmp, preset, jpegBytes, xdr = xdrAtCapture)
+                    // 【v1.5.6 P1 修复】相机成片传 EV 归属判定：传感器 AE 已写入时
+                    // 拍后矩阵不重复施加，与取景预览逐位一致
+                    stylePhoto(
+                        bmp, preset, jpegBytes,
+                        xdr = xdrAtCapture,
+                        applyExposureEv = applyPostExposureEv
+                    )
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -441,7 +483,10 @@ fun PopCaptureScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.pop_back))
                     }
-                }
+                },
+                // 【v1.5.6 P2 修复】edge-to-edge 下标题/返回键避让状态栏，
+                // 与项目其他页面（DetailScreen 等）口径一致
+                modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)
             )
         }
     ) { padding ->

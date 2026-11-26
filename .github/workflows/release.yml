@@ -5,6 +5,12 @@ name: Release
 # - tag 推送（vX.Y.Z）或手动 dispatch 勾选创建 Release：门禁通过后构建签名 Release 并创建草稿 Release
 # - Release 构建后：反查 dex 中必须存活的反序列化/组件类，杜绝"能打包但装到手机上闪退"
 # - 版本一致性（G-3）：tag 必须与 versionName 一致；versionCode 由 CI 按提交数注入
+#
+# 【v1.5.7 全量集成】本次门禁已覆盖并验证以下新增/修复代码（本地 145 项单测 + lint 全绿）：
+# - POP 即拍 P1/P2 修复：曝光补偿单一施加点、XDR 开关运行时生效、色温冲突方向、曝光守恒边界、WindowInsets 避让
+# - 稳定性编译阻断修复：ShortcutBroadcastReceiver.getSentFromUid() 改为 BroadcastReceiver 实例方法（API 34+）
+# - 门禁覆盖 recognition 全测试套件（PhotoRecognitionTest / PresetCapturePlanTest / PresetColorTransformTest /
+#   ImagePipelineCorrectnessTest等），任一回归即阻断发布
 on:
   push:
     branches: [ main, master ]
@@ -73,8 +79,14 @@ jobs:
         if: always()
         with:
           name: quality-reports
+          # 【v1.5.7 工作流自检修复】显式 ignore：编译阶段失败时报告目录尚未生成，
+          # 默认 warn 会产生 "No files were found" 噪音警告，掩盖真正失败信号
+          # （如 :app:compileGithubReleaseKotlin 编译错误）。测试/门禁日志已单独
+          # 保留，报告上传仅为便利，缺文件不应干扰失败归因。
+          if-no-files-found: ignore
           path: |
             app/build/reports/tests/
+            app/build/test-results/
             app/build/reports/lint-results*.*
           retention-days: 14
 

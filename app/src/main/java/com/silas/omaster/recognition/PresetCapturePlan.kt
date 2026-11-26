@@ -96,18 +96,42 @@ object PresetCapturePlan {
             ranges.isoRange != null && ranges.exposureTimeRange != null
         val wantManual = canManual && isoValue != null && shutterValue != null
 
-        val captureIso = if (wantManual) isoValue.coerceIn(ranges.isoRange) else null
-        // 【v1.8.3 Reno17 适配】设备 ISO 范围可能不含预设值（如 Reno17 主摄下限 ISO 100，
-        // 而内置"人文/清新人文"指定 ISO 50）。直接钳制会让曝光量翻倍（+1EV 过曝）；
-        // 此处按 ISO 钳制比例等比调整快门，保持 ISO×快门（曝光量）不变后再落设备快门
-        // 范围，确保成片亮度符合预设意图（快门变化 1 档以内，不影响构图与主体）。
-        val captureShutter = if (wantManual) {
-            val requestedShutter = shutterValue
-            // 曝光量 ISO×t 守恒：ISO 被抬高（如 50→100）则快门缩短，被压低则快门延长
-            val compensation = isoValue.toDouble() / captureIso!!.toDouble()
-            Math.round(requestedShutter * compensation)
-                .coerceIn(ranges.exposureTimeRange)
-        } else null
+        // 【v1.8.3 Reno17 适配 + v1.5.6 P2 修复】设备 ISO 范围可能不含预设值
+        // （如 Reno17 主摄下限 ISO 100，而内置"人文"指定 ISO 50）。设计目标是"成片
+        // 亮度符合预设意图"，即曝光量 ISO×t 守恒，而不仅是把每个值单独钳进范围。
+        // 旧实现只按 ISO 钳制比例等比调快门：当补偿后快门落到设备快门范围之外
+        // （如 ISO50+1/8000s 要求 1/16000s 但设备下限 1/8000s）时被硬钳制，
+        // 曝光量不再守恒（实测偏差可达数 EV）。现在做二维守恒：
+        //   ① 优先保留预设 ISO（仅设备钳制），由此反解所需快门；
+        //   ② 快门越界时把快门钳到设备边界，反向再解 ISO 以恢复曝光量；
+        //   ③ 若 ISO 也到设备边界仍无法守恒 → 设备物理极限，如实展示实际写入值。
+        // 所有"原值→实际值"由下方 appliedLabel 如实呈现，不做"假装套用"。
+        val captureIso: Int?
+        val captureShutter: Long?
+        if (wantManual) {
+            val isoRange = ranges.isoRange!!
+            val expRange = ranges.exposureTimeRange!!
+            val targetExposure = isoValue.toDouble() * shutterValue.toDouble()
+            // ① 保留预设 ISO（设备钳制内），反解曝光守恒所需快门
+            val isoCandidate = isoValue.coerceIn(isoRange)
+            var shutterCandidate = Math.round(targetExposure / isoCandidate)
+            val resolvedIso: Int
+            if (shutterCandidate !in expRange) {
+                // ② 快门越界：钳到设备边界，反向解 ISO 恢复曝光量
+                val shutterClamped = shutterCandidate.coerceIn(expRange).toDouble()
+                val isoFromShutter = Math.round(targetExposure / shutterClamped).toInt()
+                resolvedIso = isoFromShutter.coerceIn(isoRange)
+                // ③ 用最终 ISO 再算一次快门；若仍越界则为设备物理极限，接受钳制值
+                shutterCandidate = Math.round(targetExposure / resolvedIso.toDouble()).coerceIn(expRange)
+            } else {
+                resolvedIso = isoCandidate
+            }
+            captureIso = resolvedIso
+            captureShutter = shutterCandidate
+        } else {
+            captureIso = null
+            captureShutter = null
+        }
 
         val evValue = PresetColorTransform.parseExposureEv(preset.exposureCompensation)
         val steps = evToSteps(evValue, ranges)

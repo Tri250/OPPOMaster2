@@ -62,7 +62,9 @@ fun PhotoRecognitionScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.recog_back))
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors()
+                colors = TopAppBarDefaults.topAppBarColors(),
+                // 【v1.5.6 P2 修复】edge-to-edge 下标题/返回键避让状态栏
+                modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)
             )
         }
     ) { padding ->

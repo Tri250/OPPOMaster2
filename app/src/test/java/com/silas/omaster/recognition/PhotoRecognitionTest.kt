@@ -122,18 +122,29 @@ class PhotoRecognitionTest {
 
     @Test
     fun recognize_conflict_detectsWarmthMismatch() {
-        // EXIF 高色温(偏暖)但风格冷调(clear) → 应产生冲突 warning
+        // 【v1.5.6 P2 修复】统一物理语义：低色温(K 小)偏暖、高色温(K 大)偏冷，
+        // 与 PresetColorTransform.colorTempWarmDelta 一致。
+        // clear 是冷调风格(warmth=0.42<0.55)：
+        //   暖光 3000K（偏暖）+ 冷调风格 → 矛盾，应报冲突；
+        //   冷光 7500K（偏冷）+ 冷调风格 → 一致，不应误报（旧实现方向反了会误报）。
         val analysis = StyleAnalyzer.Analysis(
             vector = StyleCatalog.byKey("clear")!!.target, sampleCount = 1024, compressed = false,
             matches = StyleAnalyzer.matchCatalog(StyleCatalog.byKey("clear")!!.target, 3)
         )
-        val input = RecognitionInput(
+        val warmInput = RecognitionInput(
+            hasExif = true, colorTemperature = 3000, styleAnalysis = analysis
+        )
+        val warmResult = PhotoRecognitionEngine.recognize(warmInput)
+        val conflict = warmResult.warnings.firstOrNull { it.type == WarningType.TEMP_CONFLICT }
+        assertNotNull(conflict)
+        assertEquals(3000, conflict!!.value)   // 附带色温 K，供 UI 本地化展示
+
+        val coolInput = RecognitionInput(
             hasExif = true, colorTemperature = 7500, styleAnalysis = analysis
         )
-        val result = PhotoRecognitionEngine.recognize(input)
-        val conflict = result.warnings.firstOrNull { it.type == WarningType.TEMP_CONFLICT }
-        assertNotNull(conflict)
-        assertEquals(7500, conflict!!.value)   // 附带色温 K，供 UI 本地化展示
+        val coolResult = PhotoRecognitionEngine.recognize(coolInput)
+        assertNull("7500K 冷光配冷调风格不应误报冲突",
+            coolResult.warnings.firstOrNull { it.type == WarningType.TEMP_CONFLICT })
     }
 
     @Test
