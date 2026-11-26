@@ -10,9 +10,11 @@ plugins {
 android {
     namespace = "com.silas.omaster"
     compileSdk {
-        // ED-08：compileSdk 升至 37（Android 17 API 面，ColorOS 17 / Find X10 适配基线）；
-        // targetSdk 维持 36，运行时行为变更延后到 M2/M3 评估
-        version = release(37)
+        // 【v1.5.6 安装兼容修复】compileSdk 从 37（Android 17 预览平台）回落至 36（Android 16 稳定版）。
+        // 37 为尚未正式发布的预览 API 面，用其编译的 APK 在部分国产 ROM（如 ColorOS）安装时
+        // 触发"解析失败/系统错误"；36 为稳定平台，与 targetSdk 36 对齐，兼顾安装兼容与
+        // Android 15/16 运行适配。源码无 API 37 专属调用，降级不影响功能。
+        version = release(36)
     }
 
     defaultConfig {
