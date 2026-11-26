@@ -384,6 +384,50 @@ jobs:
           path: ./apk
           merge-multiple: true
 
+      # P0-2 发布资产校验：为每个 APK 生成 SHA-256 与签名证书指纹，
+      # 产出 CHECKSUMS.txt（随 Release 附带）+ Release notes 校验表；
+      # 并向 Release 正文注入 `<!-- update-sha256: ... -->` 隐藏标记——
+      # 应用内更新链路（P0-3）下载完成后据此做内容哈希校验，
+      # 与 force-update-baseline 同款下发通道，GitHub 渲染不可见。
+      - name: Generate checksums & cert fingerprints
+        env:
+          APK_DIR: ./apk
+        run: |
+          APK_SIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          shopt -s nullglob
+          set -e
+
+          > CHECKSUMS.txt
+          {
+            echo ""
+            echo "## 🔐 产物校验（SHA-256 / 签名证书）"
+            echo ""
+            echo "| 文件 | 大小 | SHA-256 | 签名证书 SHA-256 |"
+            echo "| --- | --- | --- | --- |"
+          } > VERIFY_INFO.md
+
+          UNIVERSAL_SHA256=""
+          for apk in "$APK_DIR"/*.apk; do
+            fname=$(basename "$apk")
+            sha=$(sha256sum "$apk" | awk '{print $1}')
+            size=$(numfmt --to=iec --suffix=B "$(stat -c%s "$apk")")
+            cert=$("$APK_SIGNER" verify --print-certs "$apk" 2>/dev/null | grep -m1 'certificate SHA-256 digest' | awk '{print $NF}')
+            echo "$sha  $fname" >> CHECKSUMS.txt
+            echo "| $fname | $size | \`$sha\` | ${cert:+\`$cert\`} |" >> VERIFY_INFO.md
+            if [[ "$fname" == *-universal-*.apk ]]; then UNIVERSAL_SHA256="$sha"; fi
+            echo "  ✅ $fname sha256=$sha cert=${cert:-N/A}"
+          done
+
+          if [ -z "$UNIVERSAL_SHA256" ]; then
+            echo "❌ 未找到 universal APK，无法注入 update-sha256 标记"; exit 1
+          fi
+          cat VERIFY_INFO.md >> RELEASE_NOTES.md
+          {
+            echo ""
+            echo "<!-- update-sha256: $UNIVERSAL_SHA256 -->"
+          } >> RELEASE_NOTES.md
+          echo "📋 CHECKSUMS.txt + 校验表已生成，update-sha256 标记已注入 Release 正文"
+
       # 重复构建守护：同一 tag 重推/重跑时，先删除旧 Release（保留 tag 本身），
       # 避免 softprops 更新旧条目时把已发布版重置回草稿、资产名冲突等问题
       - name: Delete stale release for this tag (if any)
@@ -409,7 +453,9 @@ jobs:
           # 防御：产物缺失时立即失败，避免发布空 Release
           fail_on_unmatched_files: true
           prerelease: ${{ github.event.inputs.prerelease == 'true' || contains(steps.tag.outputs.TAG, 'beta') }}
-          files: ./apk/**/*.apk
+          files: |
+            ./apk/**/*.apk
+            CHECKSUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

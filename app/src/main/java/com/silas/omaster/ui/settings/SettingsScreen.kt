@@ -935,7 +935,7 @@ private fun SettingsUpdateSection(
                             Button(
                                 onClick = {
                                     updateInfo?.let { info ->
-                                        downloadId = UpdateChecker.downloadAndInstall(context, info.downloadUrl, info.versionName)
+                                        downloadId = UpdateChecker.downloadAndInstall(context, info.downloadUrl, info.versionName, info.sha256)
                                         isDownloading = true
                                         downloadProgress = 0
                                     }

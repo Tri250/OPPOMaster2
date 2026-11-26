@@ -1109,7 +1109,7 @@ fun MainApp(
                 confirmButton = {
                     androidx.compose.material3.Button(
                         onClick = {
-                            UpdateChecker.downloadAndInstall(context, updateInfo.downloadUrl, updateInfo.versionName)
+                            UpdateChecker.downloadAndInstall(context, updateInfo.downloadUrl, updateInfo.versionName, updateInfo.sha256)
                             showUpdateDialog = null
                         },
                         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
