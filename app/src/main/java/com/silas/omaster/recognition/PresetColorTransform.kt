@@ -60,20 +60,27 @@ object PresetColorTransform {
         val key = raw.split(Regex("\\s+")).firstOrNull() ?: return NEUTRAL
         val base = when (key) {
             "黑白", "单色" -> NEUTRAL.copy(grayscale = true, contrastDelta = 0.06f)
-            "胶片" -> NEUTRAL.copy(saturation = -0.14f, lift = 10f, contrastDelta = -0.08f, warmCool = 0.10f, cyanMagenta = 0.04f)
-            "复古" -> NEUTRAL.copy(saturation = -0.12f, lift = 8f, contrastDelta = -0.06f, warmCool = 0.08f)
-            "高级灰" -> NEUTRAL.copy(saturation = -0.22f, lift = 6f, contrastDelta = -0.04f)
+            // 【v1.5.7 饱和度调校】去饱和型滤镜（胶片/复古/高级灰/清新/人文/柔光/童话）
+            // 的负向饱和度估计值折半：滤镜估计值与用户显式滑杆是相加关系，旧值下
+            // 复古 −0.12 会把富士胶片的 +19 滑杆吃到只剩 +0.03（成片与原图几乎
+            // 无色差，即 v1.5.6 用户反馈"饱和度不够"在胶片系预设上的直接成因）。
+            // 折半后富士胶片净 +0.13、理光绿 +0.08，用户滑杆意图重新可感知；
+            // 无滑杆的预设（日系人像 −0.04、莫兰迪 −0.07）仍保持各自的灰调身份。
+            // 正向增饱和滤镜不动（不与用户意图冲突）。真机校准留待设备比对迭代。
+            "胶片" -> NEUTRAL.copy(saturation = -0.07f, lift = 10f, contrastDelta = -0.08f, warmCool = 0.10f, cyanMagenta = 0.04f)
+            "复古" -> NEUTRAL.copy(saturation = -0.06f, lift = 8f, contrastDelta = -0.06f, warmCool = 0.08f)
+            "高级灰" -> NEUTRAL.copy(saturation = -0.11f, lift = 6f, contrastDelta = -0.04f)
             "鲜明", "明艳" -> NEUTRAL.copy(saturation = 0.18f, contrastDelta = 0.10f)
             "浓郁" -> NEUTRAL.copy(saturation = 0.20f, contrastDelta = 0.08f, tone = -0.05f)
             "夜景" -> NEUTRAL.copy(tone = -0.10f, contrastDelta = 0.10f, warmCool = -0.05f, ev = -0.2f)
-            "柔光" -> NEUTRAL.copy(contrastDelta = -0.10f, lift = 8f, saturation = -0.04f)
-            "童话" -> NEUTRAL.copy(contrastDelta = -0.10f, lift = 10f, saturation = -0.02f, warmCool = 0.02f)
+            "柔光" -> NEUTRAL.copy(contrastDelta = -0.10f, lift = 8f, saturation = -0.02f)
+            "童话" -> NEUTRAL.copy(contrastDelta = -0.10f, lift = 10f, saturation = -0.01f, warmCool = 0.02f)
             "暖调" -> NEUTRAL.copy(warmCool = 0.12f)
             "冷调" -> NEUTRAL.copy(warmCool = -0.12f)
             "琥珀" -> NEUTRAL.copy(warmCool = 0.12f, saturation = 0.06f)
-            "清新" -> NEUTRAL.copy(saturation = -0.08f, lift = 5f, warmCool = -0.06f)
+            "清新" -> NEUTRAL.copy(saturation = -0.04f, lift = 5f, warmCool = -0.06f)
             "通透", "清透" -> NEUTRAL.copy(contrastDelta = 0.08f, lift = 4f, saturation = 0.04f)
-            "人文" -> NEUTRAL.copy(saturation = -0.06f, warmCool = 0.04f, contrastDelta = 0.05f)
+            "人文" -> NEUTRAL.copy(saturation = -0.03f, warmCool = 0.04f, contrastDelta = 0.05f)
             "美味" -> NEUTRAL.copy(saturation = 0.10f, warmCool = 0.06f)
             "霓虹" -> NEUTRAL.copy(saturation = 0.14f, cyanMagenta = 0.10f, contrastDelta = 0.08f)
             "赛博朋克" -> NEUTRAL.copy(saturation = 0.14f, cyanMagenta = 0.12f, contrastDelta = 0.10f, warmCool = -0.06f)
@@ -188,12 +195,18 @@ object PresetColorTransform {
         val tone = ((preset.tone ?: 0).coerceIn(-100, 100) / 100f + adj.tone).coerceIn(-1f, 1f)
 
         // 【v1.8.8 调色盘百分比真实化】灰度强度化：a=1 完全去色（与旧布尔行为逐位一致），
-        // a=0 无灰度滤镜，0<a<1 部分灰度——统一公式 (1-a)×(1+sat×0.8) 在两端点
-        // 精确退化为旧路径（a=1 → 0；a=0 → 1+sat×0.8），内置预设 0%/100% 契约不变。
+        // a=0 无灰度滤镜，0<a<1 部分灰度——统一公式 (1-a)×(1+sat) 在两端点
+        // 精确退化为旧路径（a=1 → 0；a=0 → 1+sat），内置预设 0%/100% 契约不变。
         // 部分灰度时冷暖/青品按 (1-a) 保留（满灰度仍强制归零，不受冷暖/青品影响）。
+        // 【v1.5.7 饱和度 1:1】sat 阻尼 0.8→1.0：v1.5.6 用户反馈"饱和度不够"——
+        // 滑杆/预设里的饱和度取值被偷偷打八折再进矩阵（+20 只当 +16 生效），
+        // 与 v1.8.8 自己确立的"滑杆拖到多少，出片就缩放多少"契约自相矛盾；
+        // 且滤镜表自带负向饱和度（复古 −0.12 等）叠加八折后，内置预设净饱和度
+        // 普遍趋近 0（富士胶片：滤镜 −0.12 + 滑杆 +19×0.8=+0.152 → 净 +0.03），
+        // 成片与原图几乎无色差。现值 = 用户取值原样进矩阵。
         val grayAmount = if (adj.grayscale) adj.grayscaleAmount else 0f
         val colorKeep = 1f - grayAmount
-        val satFactor = colorKeep * (1f + saturation * 0.8f)
+        val satFactor = colorKeep * (1f + saturation)
         warmCool *= colorKeep
         cyanMagenta *= colorKeep
 

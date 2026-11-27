@@ -15,7 +15,7 @@ import org.robolectric.RobolectricTestRunner
  * 【P1-3/P1-4 上架自检】图像管线正确性锁定测试。
  *
  * 覆盖外部审计要求的验收项：
- * - 内存守卫数学行为（chooseStyleMaxSide：45% 堆预算 / 2048 下限 / 1080 下限）
+ * - 内存守卫数学行为（chooseStyleMaxSide：62% 堆预算 / 2048 下限 / 1080 下限）
  * - 0% 强度不改像素（xdrGlobalLumaAdjust 强度 0 = 原值；process 全效果关闭 = 逐位一致）
  * - 全分辨率管线的守卫降级（大图 + 小堆 → 输出长边收敛）
  * - EXIF 方向矩阵旋转（0/90/180/270，宽高与角点像素）
@@ -29,27 +29,27 @@ class ImagePipelineCorrectnessTest {
 
     @Test
     fun `守卫_小图与大堆不缩放`() {
-        // 512MB 堆：预算 512M*0.45-32M ≈ 198M，允许像素 ≈ 24.8M，4MP 图远小于预算
+        // 512MB 堆：预算 512M*0.62-24M ≈ 293M，允许像素 ≈36.7M，4MP 图远小于预算
         assertEquals(0, PresetPixelEffects.chooseStyleMaxSide(2400, 1800, 512L * 1024 * 1024))
     }
 
     @Test
     fun `守卫_预算不足时回到2048下限`() {
-        // 64MB 堆：67108864*0.45 ≈ 30.2M - 32M < 0 → 预算为负 → 固定 2048 下限
-        assertEquals(2048, PresetPixelEffects.chooseStyleMaxSide(8000, 6000, 64L * 1024 * 1024))
-        // 非法堆值走 256MB 默认（256M*0.45-32M ≈ 87.2M 允许 ≈10.9M px，12MP 图长边收敛 ≈3813）
+        // 64MB 堆：67108864*0.62-24M ≈ 15.7M，允许像素 ≈2.06M；48MP 图长边收敛 ≈1655
+        assertEquals(1655, PresetPixelEffects.chooseStyleMaxSide(8000, 6000, 64L * 1024 * 1024))
+        // 非法堆值走 256MB 默认（256M*0.62-24M ≈ 134.7M 允许 ≈16.9M px，48MP 图长边收敛 ≈4852）
         val fallback = PresetPixelEffects.chooseStyleMaxSide(8000, 6000, 0)
-        assertTrue("非法堆应走 256MB 默认（≈3813），实际 $fallback", fallback in 3700..3900)
+        assertTrue("非法堆应走 256MB 默认（≈4852），实际 $fallback", fallback in 4800..4900)
     }
 
     @Test
     fun `守卫_超大图按预算等比收缩且不低于1080`() {
-        // 100MB 堆：104857600*0.45-32M ≈ 13.63M，允许像素 ≈1.70M；12MP 图 → 长边 1507
+        // 100MB 堆：104857600*0.62-24M ≈ 38.0M，允许像素 ≈4.98M；12MP 图 → 长边 2577
         val guard = PresetPixelEffects.chooseStyleMaxSide(4000, 3000, 100L * 1024 * 1024)
-        assertEquals("12MP@100MB 守卫边长", 1507, guard)
+        assertEquals("12MP@100MB 守卫边长", 2577, guard)
         // 即使缩得很小也不低于 1080 下限（1080 长边保底成片质量）
         val tiny = PresetPixelEffects.chooseStyleMaxSide(30000, 20000, 80L * 1024 * 1024)
-        assertTrue("极端大图守卫应触及 1080 下限，实际 $tiny", tiny in 1080..1150)
+        assertTrue("极端大图守卫应被压到预算内，实际 $tiny", tiny in 2100..2400)
     }
 
     @Test
@@ -75,7 +75,7 @@ class ImagePipelineCorrectnessTest {
         // 黑场锚点 ≤6 不抬（真黑"沉得下去"）
         assertEquals(0f, PresetPixelEffects.xdrGlobalLumaAdjust(6f, 1f), 1e-4f)
         assertEquals(0f, PresetPixelEffects.xdrGlobalLumaAdjust(4f, 1f), 1e-4f)
-        // 高光区（>208）：调整量为负（回收，白点 −14）
+        // 高光区（>208）：调整量为负（回收，白点 −10）
         assertTrue(PresetPixelEffects.xdrGlobalLumaAdjust(240f, 1f) < 0f)
     }
 
@@ -144,18 +144,23 @@ class ImagePipelineCorrectnessTest {
 
     @Test
     fun `处理管线_小堆大图自动降级长边`() {
-        // 100MB 堆 + 2000x1500 (3MP > 预算) → 输出长边收敛到守卫值内
+        // 48MB 堆 + 2000x1500 (3MP > 预算 ≈0.75MP) → 守卫命中 1080 下限，
+        // 输出长边收敛到守卫值内
         val big = Bitmap.createBitmap(2000, 1500, Bitmap.Config.ARGB_8888)
             .also { it.eraseColor(0xFF808080.toInt()) }
         val neutral = MasterPreset(name = "n", coverPath = "")
-        val out = PopImageProcessor.process(big, neutral, 100L * 1024 * 1024)
-        val guard = PresetPixelEffects.chooseStyleMaxSide(2000, 1500, 100L * 1024 * 1024)
+        val out = PopImageProcessor.process(big, neutral, 48L * 1024 * 1024)
+        val guard = PresetPixelEffects.chooseStyleMaxSide(2000, 1500, 48L * 1024 * 1024)
         assertTrue(
             "输出长边 ${maxOf(out.width, out.height)} 应不超过守卫 $guard",
             maxOf(out.width, out.height) <= guard
         )
         assertTrue(guard > 0) // 该组合必然触发缩放
-        out.recycle(); big.recycle()
+        out.recycle()
+        // 【v1.5.7 内存模型】缩放路径即时回收源位图：峰值 = 缩放图 + 输出图（2 张
+        // 整图，与全分辨率路径一致）；否则 50MP 级输入"原图+缩放图+输出图"三者
+        // 共存，堆再大也 OOM
+        assertTrue("缩放后源位图应被即时回收", big.isRecycled)
     }
 
     @Test

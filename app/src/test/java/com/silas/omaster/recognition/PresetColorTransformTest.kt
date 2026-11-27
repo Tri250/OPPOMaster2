@@ -296,6 +296,53 @@ class PresetColorTransformTest {
         assertFalse(PresetColorTransform.hasVisibleEffect(preset(filter = "原图")))
     }
 
+    @Test
+    fun `饱和度滑杆按原值进矩阵不再打八折`() {
+        // 【v1.5.7】v1.5.6 用户反馈"饱和度不够"：滑杆/预设饱和度取值被 0.8 阻尼
+        // 偷偷缩放（+20 只当 +16 生效），与 v1.8.8 确立的"滑杆拖到多少，出片
+        // 就缩放多少"契约自相矛盾；且叠加滤镜表负向饱和度后内置预设净饱和度
+        // 趋近 0（富士胶片净 +0.03），成片与原图几乎无色差。
+        // 现值：satFactor = 1 + sat，滑杆 +20 → 1.2 原样生效
+        val m = PresetColorTransform.buildColorMatrix(preset(saturation = 20), true)
+        // 亮度保持：行和恒为 1（不破坏曝光/中性灰）
+        assertEquals("饱和度矩阵行和必须为 1", 1f, m[0] + m[1] + m[2], 1e-5f)
+        assertEquals("行和必须为 1（G 行）", 1f, m[5] + m[6] + m[7], 1e-5f)
+        // R 通道增益 = LR + 1.2×(1−LR) ≈ 1.157（旧 0.8 阻尼为 1.126）
+        assertEquals(
+            "satFactor 应 1:1 生效（+20 → 1.2）",
+            0.2126f + 1.2f * 0.7874f, m[0], 1e-5f
+        )
+        // 交叉项随 satFactor 等比下压（色度守恒）
+        assertEquals(0.7152f * (1f - 1.2f), m[1], 1e-5f)
+        // 饱和度不影响偏移项（无冷暖/影调叠加时偏移为 0）
+        assertEquals(0f, m[4], 1e-6f)
+    }
+
+    @Test
+    fun `饱和度滑杆负值同样等比生效`() {
+        // 去饱和滑杆 −50 → satFactor 0.5（旧 0.8 阻尼为 0.6）
+        val m = PresetColorTransform.buildColorMatrix(preset(saturation = -50), true)
+        assertEquals(1f, m[0] + m[1] + m[2], 1e-5f)
+        assertEquals(0.2126f + 0.5f * 0.7874f, m[0], 1e-5f)
+    }
+
+    @Test
+    fun `去饱和滤镜估计值折半避免吞掉用户滑杆`() {
+        // 【v1.5.7】滤镜估计值与用户滑杆是相加关系：旧值复古 −0.12 会把旗舰预设
+        // 富士胶片（复古 100% + 饱和度 +19）的滑杆吃到净 +0.03，成片与原图几乎
+        // 无色差——即"饱和度不够"在胶片系预设上的直接成因。折半后净 +0.13。
+        assertEquals(-0.06f, PresetColorTransform.filterAdjustment("复古").saturation, 1e-6f)
+        assertEquals(-0.04f, PresetColorTransform.filterAdjustment("清新").saturation, 1e-6f)
+        // 净饱和度 = satFactor × contrast；此处 contrast = 1−0.06 = 0.94，satFactor = 1.13
+        val m = PresetColorTransform.buildColorMatrix(preset(filter = "复古 100%", saturation = 19), true)
+        assertEquals(0.94f * (0.2126f + 1.13f * 0.7874f), m[0], 1e-5f)
+        // 行和 = contrast = 0.94（滤镜降对比，与 v1.5.6 行为一致；色度不被额外压扁）
+        assertEquals(0.94f, m[0] + m[1] + m[2], 1e-5f)
+        // 对照：同滑杆无滤镜时 satFactor 全额 1.19（滤镜后净增益从 1.056→1.13）
+        val noFilter = PresetColorTransform.buildColorMatrix(preset(saturation = 19), true)
+        assertEquals(0.2126f + 1.19f * 0.7874f, noFilter[0], 1e-5f)
+    }
+
     private data class Rgb(val r: Float, val g: Float, val b: Float)
 
     /** 4x5 行主序 ColorMatrix 采样：R' = R·m[0]+G·m[1]+B·m[2]+m[4]，逐行同理 */

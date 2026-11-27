@@ -4,12 +4,12 @@ import android.graphics.Bitmap
 import kotlin.math.sqrt
 
 /**
- * 预设像素级效果（锐化 / 暗角）。
+ * 预设像素级效果（锐化 / 暗角 / 降噪 / XDR）。
  *
  * 拍后取景与成片共用；性能敏感，均为纯像素运算。
  * 内存策略：输入为可变 Bitmap 时**原地**处理（不额外分配整图），
- * 与 POP 成片管线的降采样（2048px）配合，把 12MP 原图的套色峰值内存
- * 从 ~300MB 压到 ~75MB。
+ * 与 POP 成片管线的全分辨率条带处理（[PopImageProcessor]）配合，
+ * 把 12MP 原图的套色峰值内存压在堆上限 62% 预算内，低端机不 OOM。
  */
 object PresetPixelEffects {
 
@@ -76,10 +76,10 @@ object PresetPixelEffects {
     // ------------------------------------------------------------------
     // 【v1.7.8】全分辨率画质管线（OPPO Reno17 Pro 级质感）
     //
-    // 旧管线把 12MP 成片降采样到 2048px 再套色，成片细节直接损失 4 倍像素。
+    // v1.7.7 及以前把 12MP 成片降采样到 2048px 再套色，成片细节直接损失 4 倍像素。
     // 新管线按"行带（band）"处理全分辨率位图：每带只分配带内缓冲，
-    // 整图峰值内存从 ~300MB 降到 ~65MB（12MP），低端机不再 OOM，
-    // 同时输出保持传感器全分辨率。
+    // 峰值 = 输入/输出 2 张整图 + ~24MB 瞬态，由内存守卫（62% 堆预算）兜底，
+    // 主流 12MP 成片零降采样且低端机不 OOM。
     //
     // 带内顺序（摄影后期惯例）：
     //   ① 4x5 色彩矩阵（滤镜/饱和度/冷暖/影调/色温/EV/柔光）
@@ -97,32 +97,39 @@ object PresetPixelEffects {
     const val DEFAULT_RADIUS: Int = 2
 
     /** 高频残差低于此值（0-255 亮度单位）视为平坦区/噪点：锐化权重 0，交给降噪 */
-    private const val EDGE_LOW = 6f
+    private const val EDGE_LOW = 4f
 
     /** 高频残差高于此值视为真实边缘：享受满额锐化并免降噪 */
-    private const val EDGE_HIGH = 30f
+    private const val EDGE_HIGH = 26f
 
     // ── Pro XDR 动态范围增强（成片质感核心，luma-only 无色偏）──
     // 影调设计遵循摄影惯例：真黑留黑（黑场锚点防"灰蒙蒙"）、
     // 白点单调肩部收敛（缓出二次曲线，防"高光发灰"且亮部梯度无色带）、
     // 提亮为三角窗平滑过渡；清晰度仅作用于中间调并与锐化分工。
+    // 【v1.5.7 通透度调校】阴影提亮上限 30→18、高光回收 14→10：
+    // v1.5.6 用户反馈成片"不通透"——阴影 +30 / 高光 −14 的双向压缩把
+    // 黑位抬灰、白场压平，中间调对比被抽空（灰蒙蒙的典型成因）。
+    // 收紧为 +18/−10 后：真黑仍沉得下去、白墙/反光保持通透，
+    // 动态范围扩展保留但不再以牺牲对比为代价。
 
-    /** 阴影提亮上限（满额区最大 +30 亮度） */
-    private const val XDR_SHADOW_LIFT = 30f
+    /** 阴影提亮上限（满额区最大 +18 亮度） */
+    private const val XDR_SHADOW_LIFT = 18f
     /** 黑场锚点：亮度低于此值的纯黑不提亮，保证画面有"沉下去"的黑 */
     private const val XDR_BLACK_ANCHOR = 6f
     /** 阴影满额起点：此值以上提亮满额，向下平滑收敛至黑场锚点 */
     private const val XDR_SHADOW_FULL = 34f
     /** 阴影过渡上界：提亮量自此平滑衰减至 0 */
     private const val XDR_SHADOW_END = 112f
-    /** 高光回收上限（白点最大 −14 亮度：肩部收敛防"高光发灰"，保通透） */
-    private const val XDR_HIGHLIGHT_PULL = 14f
+    /** 高光回收上限（白点最大 −10 亮度：肩部收敛防"高光发灰"，保通透） */
+    private const val XDR_HIGHLIGHT_PULL = 10f
     /** 高光过渡起点：亮度高于此值开始沿单调肩部曲线回收 */
     private const val XDR_HIGHLIGHT_START = 208f
     /** 高光区间宽度（208→255）：肩部曲线的归一化分母 */
     private const val XDR_HIGHLIGHT_RANGE = 47f
-    /** 局部对比（清晰度）权重：复用高频残差，强度低于锐化（⑤）避免光晕 */
-    private const val XDR_CLARITY = 0.30f
+    /** 局部对比（清晰度）权重：复用高频残差，强度低于锐化（⑤）避免光晕。
+     *  【v1.5.7】0.30→0.45：局部对比是"通透/清晰"观感的核心来源，
+     *  原权重下成片发糊发平；经中间调掩膜 + edgeW 双门控，不放大噪点 */
+    private const val XDR_CLARITY = 0.45f
     /** 清晰度中间调掩膜：暗部 <24 / 亮部 >208 不增强（护暗部噪点与高光通透） */
     private const val XDR_CLARITY_LO = 24f
     private const val XDR_CLARITY_LO_FULL = 64f
@@ -148,8 +155,8 @@ object PresetPixelEffects {
      *
      * 影调结构（摄影惯例，luma-only 无色偏）：
      * - 黑场锚点 ≤6 不抬（真黑"沉得下去"）；
-     * - 6→34 平滑升至满额 +30，34→112 平滑收敛至 0；
-     * - ≥208 沿单调缓出肩部回收，白点 −14（镜面高光通透不发灰）。
+     * - 6→34 平滑升至满额 +18，34→112 平滑收敛至 0；
+     * - ≥208 沿单调缓出肩部回收，白点 −10（镜面高光通透不发灰）。
      */
     fun xdrGlobalLumaAdjust(luma: Float, xdr: Float): Float {
         var adj = 0f
@@ -206,14 +213,21 @@ object PresetPixelEffects {
     /**
      * 内存守卫：返回"可安全全分辨率处理的最大边长"，0 = 当前尺寸可全分辨率处理。
      *
-     * 全分辨率管线峰值 ≈ 2 张整图（输入+输出，各 4B/px）+ ~32MB 瞬态
-     * （JPEG 解码缓冲 / 条带数组 / 缩放中间图）。预算取堆上限 45%，
+     * 全分辨率管线峰值 = 2 张整图（输入+输出，各 4B/px）+ ~24MB 瞬态
+     * （JPEG 解码缓冲 + 条带 IntArray×5 + Skia 压缩缓冲）。预算取堆上限 62% − 24MB，
      * 超限时按面积等比收缩，保证任何堆大小的设备都不 OOM。
      *
+     * 【v1.5.7 分辨率保证】预算系数 45%→62%（瞬态预估 32MB→24MB，条带数组按
+     * 192 行 × 守卫后宽度封顶后实测 ≤24MB）：v1.5.6 用户反馈"清晰度不够，
+     * 要保证原设备的相机分辨率"——旧预算下 256MB 堆只允许 10.4MP，
+     * 主流 12.2MP（4032×3024）成片被缩到 ~3725px 再保存，成片分辨率
+     * 低于相机输出（且低于"无效果直通"路径的原始 JPEG，同一次拍摄
+     * 两路径分辨率不一致）。新预算下 256MB 堆允许 16.8MP、512MB 堆
+     * 允许 36.7MP，主流手机相机分辨率（≤13MP）不再有任何降采样；
+     * 仅 20MP+ 高像素模式或超小堆设备才按面积收缩（OOM 安全阀）。
+     *
      * 【v1.8.0 画质】应用已声明 largeHeap（AndroidManifest），主流设备堆上限
-     * 提升至 ~512MB，预算 ≈ 198MB → 允许 ≈ 2470 万像素，12MP 成片不再降采样；
-     * 此前无 largeHeap 时 192–256MB 堆会把 12MP 缩到 ~3K 长边（约 3–4 倍像素损失，
-     * 即"画质压缩感"主因）。
+     * 提升至 ~512MB，预算 ≈ 293MB → 允许 ≈ 36.7MP，12MP 成片不再降采样。
      *
      * @param maxMemoryBytes Runtime.getRuntime().maxMemory()；<=0 时按 256MB 保守估计
      */
@@ -221,7 +235,7 @@ object PresetPixelEffects {
         if (w <= 0 || h <= 0) return 0
         val heap = if (maxMemoryBytes > 0) maxMemoryBytes else 256L * 1024 * 1024
         val pixels = w.toLong() * h.toLong()
-        val budget = (heap * 0.45f).toLong() - 32L * 1024 * 1024
+        val budget = (heap * 0.62f).toLong() - 24L * 1024 * 1024
         if (budget <= 0) return 2048
         val allowedPixels = budget / 8
         if (pixels <= allowedPixels) return 0
@@ -325,9 +339,15 @@ object PresetPixelEffects {
                 }
 
                 // ⑤ 亮度域 unsharp：结构增强、色彩零串染；smoothstep 权重保证
-                // 平坦区噪点不被放大（权重 0），强边满额（权重 1）
+                // 平坦区噪点不被放大（权重 0），强边满额（权重 1）。
+                // 【v1.5.7 清晰度】倍率 1.6→2.2：v1.5.6 用户反馈成片"比较模糊"——
+                // 内置预设锐度多为 0~15（sharpnessAmount 0~0.15），旧倍率下锐度 15
+                // 的有效锐化仅 0.24（Reno 档再乘 0.8 机型降权 → 0.19），细节增强
+                // 几乎无感；提倍后锐度 15 有效值 0.33（Reno 档 0.26），纹理与
+                // 边缘重新"立起来"，且 smoothstep 门控 + luma-only 保证噪点不被
+                // 放大、无色偏。
                 if (doSharpen) {
-                    val eff = sharpenAmount * 1.6f * edgeW
+                    val eff = sharpenAmount * 2.2f * edgeW
                     val delta = (lum[i] - blur[i]).toFloat() * eff
                     if (delta > 0.5f || delta < -0.5f) c = addLumaDelta(c, delta)
                 }

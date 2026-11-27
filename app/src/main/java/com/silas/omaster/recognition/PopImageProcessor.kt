@@ -7,14 +7,17 @@ import com.silas.omaster.model.MasterPreset
  * 【v1.7.8】POP 即拍全分辨率画质管线（Bitmap 编排层）。
  *
  * 目标画质对标 OPPO Reno17 Pro：保留传感器全分辨率（不再 2048px 降采样），
- * 条带化处理把峰值内存压在堆上限 45% 内，低端机不 OOM；
+ * 条带化处理把峰值内存压在堆上限 62% 预算内，低端机不 OOM；
  * 高 ISO 手动曝光自动启用保边降噪，压噪点同时保边缘。
  *
  * 处理顺序（条带内，纯像素部分见 [PresetPixelEffects.processBandInto]）：
  * 色彩矩阵 → 保边降噪（ISO≥400）→ 亮度域 unsharp 锐化 → 径向暗角。
  *
- * 调用方持有 src 所有权：返回值为全新 Bitmap（或 src 本身，当尺寸过小无需处理），
- * 由调用方决定是否回收 src。
+ * 调用方持有 src 所有权：返回值为全新 Bitmap（或 src 本身，当尺寸过小无需处理）。
+ * 【v1.5.7 所有权细化】发生内存守卫缩放（或 OOM 兜底再缩放）时，src 已无
+ * 使用价值，由本函数内部即时回收——否则"原图 + 缩放图 + 输出图"三者共存，
+ * 50MP 级输入峰值 3 张整图必 OOM；未缩放时 src 保持有效，仍由调用方回收
+ * （重复 recycle 为幂等 no-op，调用方无需判空，但推荐 isRecycled 守卫）。
  */
 object PopImageProcessor {
 
@@ -65,19 +68,54 @@ object PopImageProcessor {
             val sw = (w * scale).toInt().coerceAtLeast(1)
             val sh = (h * scale).toInt().coerceAtLeast(1)
             work = Bitmap.createScaledBitmap(src, sw, sh, true)
+            // 缩放后立即释放原图：缩放路径峰值 = 缩放图 + 输出图（2 张），
+            // 与全分辨率路径一致（旧实现三者共存，50MP 级输入 3 张整图必 OOM）
+            if (work !== src) src.recycle()
         }
 
-        val out = Bitmap.createBitmap(work.width, work.height, Bitmap.Config.ARGB_8888)
-        var y = 0
-        while (y < work.height) {
-            val y1 = minOf(work.height, y + BAND_ROWS)
-            PresetPixelEffects.processBitmapBand(
-                work, out, y, y1, matrix, sharpen, denoise, vignette,
-                xdr = if (xdr) 1f else 0f
-            )
-            y = y1
+        return try {
+            renderBands(work, matrix, sharpen, denoise, vignette, xdr)
+        } catch (e: OutOfMemoryError) {
+            // 极端设备兜底（厂商 ROM 堆压缩 / Skia 解码缓冲超预估）：缩到 2048
+            // 长边重渲染——宁小不崩，保证成片可保存；work 仍有效（只读）
+            val side = maxOf(work.width, work.height)
+            if (side <= 2048) throw e
+            val scale = 2048f / side
+            val sw = (work.width * scale).toInt().coerceAtLeast(1)
+            val sh = (work.height * scale).toInt().coerceAtLeast(1)
+            val smaller = Bitmap.createScaledBitmap(work, sw, sh, true)
+            work.recycle()
+            renderBands(smaller, matrix, sharpen, denoise, vignette, xdr)
         }
-        if (work !== src) work.recycle()
+    }
+
+    /**
+     * 条带渲染：分配输出位图并按带全效果处理。
+     * OOM 时回收半成品输出再上抛（供 [process] 的 2048 兜底或调用方处理）。
+     */
+    private fun renderBands(
+        work: Bitmap,
+        matrix: FloatArray,
+        sharpen: Float,
+        denoise: Float,
+        vignette: Float,
+        xdr: Boolean
+    ): Bitmap {
+        val out = Bitmap.createBitmap(work.width, work.height, Bitmap.Config.ARGB_8888)
+        try {
+            var y = 0
+            while (y < work.height) {
+                val y1 = minOf(work.height, y + BAND_ROWS)
+                PresetPixelEffects.processBitmapBand(
+                    work, out, y, y1, matrix, sharpen, denoise, vignette,
+                    xdr = if (xdr) 1f else 0f
+                )
+                y = y1
+            }
+        } catch (e: OutOfMemoryError) {
+            out.recycle()
+            throw e
+        }
         return out
     }
 }

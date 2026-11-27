@@ -365,7 +365,9 @@ fun PopCaptureScreen(
             }
             appliedBitmap = styled
             capturedJpegBytes = if (!hasEffect) jpegBytes else null
-            if (styled !== raw) raw.recycle()
+            // 【v1.5.7】缩放路径下 PopImageProcessor 已即时回收 raw（内存守卫/
+            // OOM 兜底），isRecycled 守卫避免二次回收；未缩放时由这里回收
+            if (styled !== raw && !raw.isRecycled) raw.recycle()
             // 如实提示：确有机器可套用的参数才宣称"已套用"，否则明示按原图拍摄
             toast = if (hasEffect) msgApplied else msgNoEffect
             isCapturing = false
@@ -860,6 +862,17 @@ private fun buildImageCapture(
     // 【v1.7.8 画质】MAXIMIZE_QUALITY：关闭零快门延迟，换取厂商全链路后处理
     // （多帧合成 / HDR / 降噪）与最高输出分辨率；MINIMIZE_LATENCY 会跳过这些管线，
     // 是 v1.7.7 及以前"POP 即拍画质非常差"的主因之一。
+    //
+    // 【v1.5.7 分辨率保证】成片分辨率链（相机 → 相册）：
+    // ① 拍摄：CameraX 1.4 ImageCapture 默认 ResolutionSelector 即
+    //    HIGHEST_AVAILABLE_STRATEGY + 4:3-fallback-auto（源码
+    //    ImageCapture.Defaults.DEFAULT_RESOLUTION_SELECTOR），成片取设备标准
+    //    流配置 map 的最高 JPEG 尺寸（即系统相机默认分辨率），无需显式设置；
+    // ② 解码：ImageProxy.toBitmap() 全分辨率解码（BitmapFactory 无 inSampleSize）；
+    // ③ 套色：PopImageProcessor 内存守卫（v1.5.7 起 62% 预算）对 ≤13MP 主流
+    //    相机分辨率零降采样——v1.5.6 的 45% 预算会把 12MP 缩到 ~3725px 再保存，
+    //    是"清晰度不够/低于原设备相机分辨率"的根因；
+    // ④ 保存：ImageExporter 按位图原尺寸 JPEG 98 落相册。
     val builder = ImageCapture.Builder()
         .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
     val extender = Camera2Interop.Extender(builder)

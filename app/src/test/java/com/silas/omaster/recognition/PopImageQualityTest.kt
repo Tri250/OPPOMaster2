@@ -31,7 +31,8 @@ class PopImageQualityTest {
     private fun ch(px: Int, shift: Int) = (px shr shift) and 0xFF
 
     private fun edgeW(residual: Float): Float {
-        val t = ((residual - 6f) / 24f).coerceIn(0f, 1f)
+        // 与实现同步：权重低端 4 / 高端 26（v1.5.7：更低端让真实纹理进入锐化区间）
+        val t = ((residual - 4f) / 22f).coerceIn(0f, 1f)
         return t * t * (3f - 2f * t)
     }
 
@@ -73,7 +74,7 @@ class PopImageQualityTest {
                 }
             }
             if (sharpen > 0.02f) {
-                val eff = sharpen * 1.6f * ew
+                val eff = sharpen * 2.2f * ew
                 val delta = (lumArr[i] - blur[i]).toFloat() * eff
                 if (delta > 0.5f || delta < -0.5f) {
                 c = (0xFF shl 24) or
@@ -341,6 +342,28 @@ class PopImageQualityTest {
     }
 
     @Test
+    fun `内置预设锐度产生可感知边缘增强`() {
+        // 【v1.5.7】内置预设锐度多为 0~15（sharpnessAmount 0~0.15）。v1.5.6
+        // 用户反馈成片"比较模糊"：旧倍率 1.6 × Reno 降权 0.8 下，锐度 15 的
+        // 有效锐化 ≈0.19，细节增强几乎无感。倍率提至 2.2 后，锐度 15 在 80|200
+        // 强边上应产生 >=8 亮度的净增强（实测约 25）
+        val w = 8; val h = 8
+        val src = img(w, h) { x, _ -> if (x < w / 2) rgb(80, 80, 80) else rgb(200, 200, 200) }
+        val out = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            src.copyOf(), out, w, h, 0, h, 0, h, null, 0.15f, 0f, 0f
+        )
+        val left = 3 * w + 3
+        val right = 3 * w + 4
+        val gradBefore = lum(src[right]) - lum(src[left])
+        val gradAfter = lum(out[right]) - lum(out[left])
+        assertTrue(
+            "锐度 15 应产生 >=8 亮度净增强：before=$gradBefore after=$gradAfter",
+            gradAfter - gradBefore >= 8
+        )
+    }
+
+    @Test
     fun `锐化不放大平坦区噪点`() {
         val w = 32; val h = 32
         val rnd = Random(2024)
@@ -412,21 +435,33 @@ class PopImageQualityTest {
 
     @Test
     fun `内存守卫大堆全分辨率不降采样`() {
-        // 512MB 堆：预算 198MB → 允许 24.8MP ≥ 12.2MP
+        // 512MB 堆：预算 = 512×0.62−24 ≈ 293MB → 允许 ≈36.7MP ≥ 12.2MP
         assertEquals(0, PresetPixelEffects.chooseStyleMaxSide(4032, 3024, 512L * 1024 * 1024))
     }
 
     @Test
     fun `内存守卫小堆按面积收缩`() {
-        // 128MB 堆：预算 25.6MB → 允许 3.2MP，12.2MP 需缩到 ~2066px
+        // 128MB 堆：预算 = 128×0.62−24 ≈ 55MB → 允许 ≈6.9MP，12.2MP 需缩到 ~3034px
         val maxSide = PresetPixelEffects.chooseStyleMaxSide(4032, 3024, 128L * 1024 * 1024)
-        assertTrue("应返回正上限：$maxSide", maxSide in 1500..2600)
+        assertTrue("应返回正上限：$maxSide", maxSide in 2900..3200)
     }
 
     @Test
     fun `内存守卫108MP极端分辨率收缩`() {
+        // 512MB 堆：预算 293MB → 允许 36.7MP → 12000×√(36.7/108) ≈ 6994px
         val maxSide = PresetPixelEffects.chooseStyleMaxSide(12000, 9000, 512L * 1024 * 1024)
-        assertTrue("108MP 应收缩到 ~5700px：$maxSide", maxSide in 5000..6500)
+        assertTrue("108MP 应收缩到预算内：$maxSide", maxSide in 6500..7500)
+    }
+
+    @Test
+    fun `内存守卫主流相机分辨率零降采样`() {
+        // 【v1.5.7 核心画质契约】"保证原设备的相机分辨率"：主流手机标准流 map
+        // 最高 JPEG 尺寸（≤13MP）在 256MB 堆（largeHeap 下限机型）也不得降采样。
+        // v1.5.6 旧预算（45%−32MB）只允许 10.4MP → 12.2MP 被缩到 ~3725px 再保存，
+        // 成片分辨率低于相机输出，即用户反馈"清晰度不够"的根因。
+        assertEquals(0, PresetPixelEffects.chooseStyleMaxSide(4032, 3024, 256L * 1024 * 1024))
+        assertEquals(0, PresetPixelEffects.chooseStyleMaxSide(4096, 3072, 256L * 1024 * 1024))
+        assertEquals(0, PresetPixelEffects.chooseStyleMaxSide(3000, 4000, 192L * 1024 * 1024))
     }
 
     @Test
@@ -488,7 +523,7 @@ class PopImageQualityTest {
         )
         // 细节高光回收（208-248 肩部恢复层次）
         assertTrue("细节高光应回收", lum(out[4]) < lum(src[4]))
-        // 白点张力：纯白最多回收 20（≥235），白墙/金属反光保持通透不发灰
+        // 白点张力：纯白最多回收 10（≥245），白墙/金属反光保持通透不发灰
         assertTrue(
             "白点不应发灰：${lum(out[6])}",
             lum(out[6]) >= 235
@@ -571,12 +606,12 @@ class PopImageQualityTest {
         // 黑场锚点：真黑（≤6）不抬
         assertEquals(0f, PresetPixelEffects.xdrGlobalLumaAdjust(0f, 1f), 1e-4f)
         assertEquals(0f, PresetPixelEffects.xdrGlobalLumaAdjust(6f, 1f), 1e-4f)
-        // 阴影三角窗：34 满额 +30，112 收敛回 0
-        assertEquals(30f, PresetPixelEffects.xdrGlobalLumaAdjust(34f, 1f), 1e-4f)
+        // 阴影三角窗：34 满额 +18（v1.5.7 通透度：原 +30 抬灰黑位），112 收敛回 0
+        assertEquals(18f, PresetPixelEffects.xdrGlobalLumaAdjust(34f, 1f), 1e-4f)
         assertEquals(0f, PresetPixelEffects.xdrGlobalLumaAdjust(112f, 1f), 1e-4f)
-        // 高光肩部：208 起点 0，白点 −14
+        // 高光肩部：208 起点 0，白点 −10（v1.5.7：原 −14 压平白场）
         assertEquals(0f, PresetPixelEffects.xdrGlobalLumaAdjust(208f, 1f), 1e-4f)
-        assertEquals(-14f, PresetPixelEffects.xdrGlobalLumaAdjust(255f, 1f), 1e-3f)
+        assertEquals(-10f, PresetPixelEffects.xdrGlobalLumaAdjust(255f, 1f), 1e-3f)
         // 强度 0 = 关闭
         assertEquals(0f, PresetPixelEffects.xdrGlobalLumaAdjust(34f, 0f), 1e-6f)
     }
