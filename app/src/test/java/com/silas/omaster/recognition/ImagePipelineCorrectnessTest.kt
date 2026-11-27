@@ -11,6 +11,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.util.Random
 
 /**
  * 【P1-3/P1-4 上架自检】图像管线正确性锁定测试。
@@ -176,17 +177,34 @@ class ImagePipelineCorrectnessTest {
     }
 
     // ---------- v1.5.8 OPPO 级画质档（process 层门控契约） ----------
+    // 【v1.5.8 自检】harness 6 项 process 层测试已全部落回仓库 Robolectric
+    // （4 项新增 + 2 项既有测试强化为噪声全像素口径），正常 `./gradlew test` 即可覆盖。
+
+    /** 噪声/渐变测试图：IntArray 一次 setPixels（逐像素 setPixel 在 Robolectric 下过慢） */
+    private fun bitmapFrom(w: Int, h: Int, fill: (Int, Int) -> Int): Bitmap =
+        Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { bmp ->
+            val px = IntArray(w * h)
+            for (y in 0 until h) for (x in 0 until w) px[y * w + x] = fill(x, y)
+            bmp.setPixels(px, 0, w, 0, 0, w, h)
+        }
+
+    private fun pxOf(b: Bitmap): IntArray =
+        IntArray(b.width * b.height).also { b.getPixels(it, 0, b.width, 0, 0, b.width, b.height) }
 
     @Test
     fun `画质档_中性预设不进新阶段逐位不变`() {
         // 画质档门控：中性预设（无可见效果且 XDR 关）→ quality=0 → legacy 逐位路径，
-        // 纹理保护降噪 v2 / Vibrance / Filmic / 多频段锐化全部不启用
-        val src = solidBitmap(48, 36, 0xFF808080.toInt())
-        val neutral = MasterPreset(name = "n", coverPath = "")
-        val out = PopImageProcessor.process(src, neutral, 512L * 1024 * 1024)
-        for (y in intArrayOf(0, 17, 35)) for (x in intArrayOf(0, 23, 47)) {
-            assertEquals(src.getPixel(x, y), out.getPixel(x, y))
+        // 纹理保护降噪 v2 / Vibrance / Filmic / 多频段锐化全部不启用。
+        // 随机噪声整图逐位对比（强于纯色抽样：任何新阶段误启用都会被噪声差暴露）
+        val w = 24; val h = 16
+        val rnd = Random(5)
+        val src = bitmapFrom(w, h) { _, _ ->
+            (0xFF shl 24) or (rnd.nextInt(256) shl 16) or (rnd.nextInt(256) shl 8) or rnd.nextInt(256)
         }
+        val neutral = MasterPreset(name = "n", coverPath = "")
+        val before = pxOf(src)
+        val out = PopImageProcessor.process(src, neutral, 512L * 1024 * 1024)
+        assertTrue("中性预设应逐位不变", pxOf(out).contentEquals(before))
         out.recycle(); src.recycle()
     }
 
@@ -202,17 +220,116 @@ class ImagePipelineCorrectnessTest {
     }
 
     @Test
+    fun `画质档_process与同参数条带调用逐位一致`() {
+        val w = 24; val h = 16
+        val rnd = Random(6)
+        val src = bitmapFrom(w, h) { _, y ->
+            val n = rnd.nextInt(61) - 30
+            val base = if (y < h / 2) 110 else 150
+            (0xFF shl 24) or ((base + n) shl 16) or ((base + n / 2) shl 8) or (base + n / 3)
+        }
+        val preset = MasterPreset(
+            name = "胶片", coverPath = "", filter = "胶片",
+            saturation = 20, sharpness = 15, iso = "ISO 800"
+        )
+        val out = PopImageProcessor.process(src, preset, 512L * 1024 * 1024)
+        // 独立参考：矩阵 + 画质档全阶段（场景统计按同图 1/8 下采样取同值；
+        // 小图无守卫缩放，process() 与参考输入逐位同源）
+        val legacy = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            pxOf(src), legacy, w, h, 0, h, 0, h,
+            PresetColorTransform.buildColorMatrix(preset, true),
+            PresetColorTransform.sharpnessAmount(preset),
+            0.55f, // ISO 800 → 画质档分档 0.55
+            0f,
+            xdr = 0f, quality = 1f, scene = PresetPixelEffects.analyzeSceneStats(src),
+            chromaBoost = PresetPixelEffects.VIBRANCE_BASE
+        )
+        assertEquals("process() 应与同参数条带调用逐位一致", legacy.toList(), pxOf(out).toList())
+        out.recycle(); src.recycle()
+    }
+
+    @Test
     fun `画质档_满灰度预设输出保持真灰度`() {
-        // Vibrance 按 (1−灰度强度) 门控：满灰度（黑白 100%）不重新引入色彩
-        val src = solidBitmap(32, 32, 0xFF907860.toInt()) // 彩色输入
+        // Vibrance 按 (1−灰度强度) 门控：满灰度（黑白 100%）不重新引入色彩。
+        // 噪声输入 + 全像素检查（矩阵转灰后色度残差处处为 0，降噪色度分支不会漏色）
+        val w = 24; val h = 16
+        val rnd = Random(7)
+        val src = bitmapFrom(w, h) { _, _ ->
+            val n = rnd.nextInt(61) - 30
+            (0xFF shl 24) or ((140 + n) shl 16) or ((120 + n) shl 8) or (100 + n)
+        }
         val preset = MasterPreset(name = "黑白", coverPath = "", filter = "黑白 100%")
         val out = PopImageProcessor.process(src, preset, 512L * 1024 * 1024)
-        for (y in intArrayOf(0, 15, 31)) for (x in intArrayOf(0, 16, 31)) {
-            val c = out.getPixel(x, y)
+        for (c in pxOf(out)) {
             val r = (c shr 16) and 0xFF; val g = (c shr 8) and 0xFF; val b = c and 0xFF
-            assertEquals("灰度输出三通道应相等：$r/$g/$b", r, g)
-            assertEquals(g, b)
+            assertTrue("满灰度预设输出应保持灰度：$r/$g/$b", r == g && g == b)
         }
         out.recycle(); src.recycle()
+    }
+
+    @Test
+    fun `画质档_场景统计与场景微色彩生效`() {
+        val w = 32; val h = 32
+        // 上半蓝天、下半草地
+        val src = bitmapFrom(w, h) { _, y ->
+            if (y < h / 2) (0xFF shl 24) or (100 shl 16) or (140 shl 8) or 200
+            else (0xFF shl 24) or (90 shl 16) or (160 shl 8) or 90
+        }
+        val stats = PresetPixelEffects.analyzeSceneStats(src)
+        assertTrue("蓝天图应统计到天空占比：${stats.sky}", stats.sky > 0.3f)
+        assertTrue("草地应统计到绿植占比：${stats.green}", stats.green > 0.3f)
+        val preset = MasterPreset(name = "鲜明", coverPath = "", filter = "鲜明", saturation = 10)
+        val out = PopImageProcessor.process(src, preset, 512L * 1024 * 1024)
+        // 蓝天区域蓝色应被增强（场景微色彩）
+        val skyBefore = pxOf(src)[w / 2 + 2]
+        val skyAfter = pxOf(out)[w / 2 + 2]
+        assertTrue(
+            "蓝天蓝色应增强：before=${skyBefore and 0xFF} after=${skyAfter and 0xFF}",
+            (skyAfter and 0xFF) > (skyBefore and 0xFF)
+        )
+        out.recycle(); src.recycle()
+    }
+
+    @Test
+    fun `画质档_ISO分档降噪强度递进`() {
+        val w = 24; val h = 24
+        // sharpness=1 仅用于触发画质档门控（1% 锐化对噪声方差影响可忽略），
+        // 使 ISO 分档走 quality 路径（0.30 / 0.68）而非 legacy 的 ISO≥400 开关
+        fun flatVar(iso: String): Double {
+            val rnd = Random(42)
+            val src = bitmapFrom(w, h) { _, _ ->
+                val n = 128 + rnd.nextInt(13) - 6
+                (0xFF shl 24) or (n shl 16) or (n shl 8) or n
+            }
+            val out = PopImageProcessor.process(
+                src, MasterPreset(name = "p", coverPath = "", sharpness = 1, iso = iso),
+                512L * 1024 * 1024
+            )
+            val px = pxOf(out)
+            var sum = 0.0; var sq = 0.0
+            for (c in px) { val l = ((c shr 16) and 0xFF).toDouble(); sum += l; sq += l * l }
+            out.recycle(); src.recycle()
+            val mean = sum / px.size
+            return sq / px.size - mean * mean
+        }
+        val low = flatVar("ISO 100")
+        val high = flatVar("ISO 3200")
+        assertTrue("高 ISO 降噪应更强：low=$low high=$high", high < low * 0.9)
+    }
+
+    @Test
+    fun `画质档_守卫缩放路径回收原图且2048下限`() {
+        val w = 3000; val h = 2000
+        val src = bitmapFrom(w, h) { x, y -> (0xFF shl 24) or (x / 12 shl 16) or (y / 8 shl 8) or 128 }
+        // 极小堆（1MB）→ 预算为负回到 2048 下限 → 3000 长边被面积收缩到 2048
+        val out = PopImageProcessor.process(
+            src, MasterPreset(name = "p", coverPath = "", sharpness = 15),
+            1024L * 1024
+        )
+        assertTrue("缩放路径应立即回收原图", src.isRecycled)
+        assertEquals("输出长边应为 2048 下限", 2048, maxOf(out.width, out.height))
+        assertFalse("输出应有效", out.isRecycled)
+        out.recycle()
     }
 }
