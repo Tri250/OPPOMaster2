@@ -227,7 +227,10 @@ fun PopCaptureScreen(
     // 影调层（XDR 全局 + Filmic）经合成 LUT 进取景，所见即所得；
     // 细节层（降噪/锐化/清晰度/Vibrance/场景色）仍为拍后专属（邻域/逐像素非线性，
     // Canvas ColorMatrix 无法表达，既有定位不变）
-    val filmicStrength = remember(preset, xdrEnabled) {
+    // 【v1.5.8 自检修复】applyPostExposureEv 必须进 key：切换手动曝光（plan 重建）
+    // 会翻转 EV 归属判定，漏 key 时 filmic 门控沿用旧值，取景影调与成片不一致
+    // （colorMatrix 虽也依赖该值并触发 analyzer 重建，但 analyzer 捕获的是本值）
+    val filmicStrength = remember(preset, xdrEnabled, applyPostExposureEv) {
         if (xdrEnabled || PresetColorTransform.hasVisibleEffect(preset, applyPostExposureEv)) 1f else 0f
     }
     val filteredFrame = remember { mutableStateOf<Bitmap?>(null) }

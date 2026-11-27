@@ -19,7 +19,7 @@
 - **预览细节层**：Vibrance/场景色/降噪/锐化为非线性逐像素/邻域运算，Canvas ColorMatrix 无法表达，与既有"清晰度拍后专属"定位一致为拍后专属；影调层（XDR+Filmic）已实现预览=拍后逐位一致
 
 #### ✅ 发布自检
-- 画质档 17 项新单测（PopImageQualityTest 14 项：降噪方差比/细纹理/边缘梯度/光晕钳制/Vibrance 门控/场景命中/filmic 单调性/肤色阻尼/条带无接缝/独立参考实现一致/预览合成 LUT 同源/像素场景规则 + ImagePipelineCorrectnessTest 3 项 process 层门控）；既有 71 项测试全部逐位通过（legacy 路径零改动）；harness 编译运行 77/77 通过（含 FilteredPreviewAnalyzer 编译验证）
+- 画质档 17 项新单测（PopImageQualityTest 14 项：降噪方差比/细纹理/边缘梯度/光晕钳制/Vibrance 门控/场景命中/filmic 单调性/肤色阻尼/条带无接缝/独立参考实现一致/预览合成 LUT 同源/像素场景规则 + ImagePipelineCorrectnessTest 3 项 process 层门控）；既有 + v1.5.8 新增共 71 项仓库单测（57 既有 + 14 项新管线级）全部逐位通过（legacy 路径零改动）；harness 编译运行 77/77 通过（含 FilteredPreviewAnalyzer 编译验证）
 
 ## v1.5.7 (2026-11-27)
 

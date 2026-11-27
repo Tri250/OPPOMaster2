@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.test.core.app.ApplicationProvider
 import com.silas.omaster.model.MasterPreset
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue

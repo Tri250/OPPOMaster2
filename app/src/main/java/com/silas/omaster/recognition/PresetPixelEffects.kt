@@ -409,19 +409,24 @@ object PresetPixelEffects {
         if (aChroma > 0.002f) {
             val cr = ch(p, 16); val cg = ch(p, 8); val cb = ch(p, 0)
             val y = (cr * 54 + cg * 183 + cb * 19) shr 8
-            fun chromaOf(px: Int, out: IntArray) {
-                val r = ch(px, 16); val g = ch(px, 8); val b = ch(px, 0)
-                val yy = (r * 54 + g * 183 + b * 19) shr 8
-                out[0] = r - yy; out[1] = g - yy; out[2] = b - yy
-            }
-            val cl = IntArray(3); val cn = IntArray(3); val cu = IntArray(3); val cd = IntArray(3)
-            chromaOf(l, cl); chromaOf(r, cn); chromaOf(u, cu); chromaOf(d, cd)
-            val mr = (cl[0] + cn[0] + cu[0] + cd[0]) / 4f
-            val mg = (cl[1] + cn[1] + cu[1] + cd[1]) / 4f
-            val mb = (cl[2] + cn[2] + cu[2] + cd[2]) / 4f
-            val nr = (y + ((cr - y) + (mr - (cr - y)) * aChroma)).toInt().coerceIn(0, 255)
-            val ng = (y + ((cg - y) + (mg - (cg - y)) * aChroma)).toInt().coerceIn(0, 255)
-            val nb = (y + ((cb - y) + (mb - (cb - y)) * aChroma)).toInt().coerceIn(0, 255)
+            val dcr = cr - y; val dcg = cg - y; val dcb = cb - y
+            // 四邻色度残差（r−yy / g−yy / b−yy）标量展开：旧版每像素分配
+            // IntArray(3)×4 + 局部函数，12MP 高 ISO 一次成片 ≈ 数千万短命对象
+            // （GC 抖动直接拖慢成片）；标量化后运算树逐位一致，输出不变
+            val lr = ch(l, 16); val lg = ch(l, 8); val lb = ch(l, 0)
+            val rr = ch(r, 16); val rg = ch(r, 8); val rb = ch(r, 0)
+            val ur = ch(u, 16); val ug = ch(u, 8); val ub = ch(u, 0)
+            val dr = ch(d, 16); val dg = ch(d, 8); val db = ch(d, 0)
+            val ly = (lr * 54 + lg * 183 + lb * 19) shr 8
+            val ry = (rr * 54 + rg * 183 + rb * 19) shr 8
+            val uy = (ur * 54 + ug * 183 + ub * 19) shr 8
+            val dy = (dr * 54 + dg * 183 + db * 19) shr 8
+            val mr = ((lr - ly) + (rr - ry) + (ur - uy) + (dr - dy)) / 4f
+            val mg = ((lg - ly) + (rg - ry) + (ug - uy) + (dg - dy)) / 4f
+            val mb = ((lb - ly) + (rb - ry) + (ub - uy) + (db - dy)) / 4f
+            val nr = (y + (dcr + (mr - dcr) * aChroma)).toInt().coerceIn(0, 255)
+            val ng = (y + (dcg + (mg - dcg) * aChroma)).toInt().coerceIn(0, 255)
+            val nb = (y + (dcb + (mb - dcb) * aChroma)).toInt().coerceIn(0, 255)
             p = (p and 0xFF000000.toInt()) or (nr shl 16) or (ng shl 8) or nb
         }
         // ② 亮度压噪：向**中心排除**的结构感知模糊目标 blend（色度结构不动）
