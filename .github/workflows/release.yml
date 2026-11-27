@@ -202,18 +202,26 @@ jobs:
           echo "构建 ${{ env.BUILD_TASK }}，versionCode=$VERSION_CODE"
           ./gradlew ${{ env.BUILD_TASK }} -PciVersionCode=$VERSION_CODE --no-daemon
 
-      - name: Check release APK signed
+      - name: Check release APK signed (v1/v2/v3 签名方案专项门禁)
         if: steps.variant.outputs.IS_RELEASE == 'true'
         run: |
-          # v2/v3 签名位于 ZIP Signing Block，unzip 不可见，必须用 apksigner 校验
+          # 【v1.5.8 重建专项自检①】"安装没有签名文件" 防线：
+          # - v2/v3 签名位于 ZIP Signing Block，unzip 不可见，必须 apksigner 校验；
+          # - v1(JAR) 签名文件 = META-INF/*.RSA|DSA|EC——部分 ROM/第三方安装器只认它，
+          #   缺失即报「没有签名文件」，故逐 APK 断言（minSdk 23 必须保留 v1）；
+          # - 任一项失败阻断发布，杜绝带病出包
           APK_SIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
           for apk in ${{ env.APK_PATH }}/*.apk; do
-            if "$APK_SIGNER" verify "$apk" >/dev/null 2>&1; then
-              echo "✅ 已签名: $apk"
-            else
-              echo "❌ 未签名或签名校验失败: $apk"
+            if ! "$APK_SIGNER" verify "$apk" >/dev/null 2>&1; then
+              echo "❌ 未签名或签名校验失败: $apk"; exit 1
+            fi
+            echo "✅ apksigner 校验通过: $apk"
+            "$APK_SIGNER" verify --verbose "$apk" 2>&1 | grep -E "scheme.*: (true|false)" || true
+            if ! unzip -l "$apk" | grep -qE "META-INF/.*\.(RSA|DSA|EC)$"; then
+              echo "❌ 缺少 v1(JAR) 签名文件（META-INF/*.RSA）——部分安装器将报『没有签名文件』: $apk"
               exit 1
             fi
+            echo "✅ v1(JAR) 签名文件存在: $apk"
           done
 
       # ED-05：release 产物冒烟门禁 —— 防止 R8 误删运行期反射依赖
@@ -396,6 +404,34 @@ jobs:
           path: ./apk
           merge-multiple: true
 
+      # 【v1.5.8 重建专项自检②】发布前产物终检：ZIP 完整性（防下载/上传截断导致
+      # 安装器报「没有签名文件」）+ versionName 与 tag 一致 + 证书可读 + universal 存在
+      - name: Pre-release artifact self-check
+        run: |
+          TAG="${{ steps.tag.outputs.TAG }}"
+          shopt -s nullglob
+          APKS=(./apk/*.apk)
+          if [ ${#APKS[@]} -lt 5 ]; then
+            echo "❌ 产物数量异常：${#APKS[@]}（期望 ≥5：universal + 4 ABI 拆分）"; exit 1
+          fi
+          APK_SIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          AAPT2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          VER=""
+          for apk in "${APKS[@]}"; do
+            if ! unzip -tqq "$apk" >/dev/null 2>&1; then
+              echo "❌ ZIP 完整性损坏: $apk"; exit 1
+            fi
+            V=$("$AAPT2" dump badging "$apk" | grep -m1 -oE "versionName='[^']+'" | sed "s/versionName='\([^']*\)'/\1/")
+            if [ "v$V" != "$TAG" ]; then
+              echo "❌ versionName($V) 与 tag($TAG) 不一致: $apk"; exit 1
+            fi
+            "$APK_SIGNER" verify --print-certs "$apk" | grep -q "certificate SHA-256 digest" || {
+              echo "❌ 无法读取签名证书: $apk"; exit 1; }
+            VER=$V
+          done
+          ls ./apk/*-universal-*.apk >/dev/null 2>&1 || { echo "❌ 缺少 universal APK"; exit 1; }
+          echo "✅ 发布前专项自检通过：${#APKS[@]} 个 APK 完整可解析、签名证书可读、versionName=v$VER 与 tag 一致"
+
       # P0-2 发布资产校验：为每个 APK 生成 SHA-256 与签名证书指纹，
       # 产出 CHECKSUMS.txt（随 Release 附带）+ Release notes 校验表；
       # 并向 Release 正文注入 `<!-- update-sha256: ... -->` 隐藏标记——
@@ -439,6 +475,20 @@ jobs:
             echo "<!-- update-sha256: $UNIVERSAL_SHA256 -->"
           } >> RELEASE_NOTES.md
           echo "📋 CHECKSUMS.txt + 校验表已生成，update-sha256 标记已注入 Release 正文"
+
+      # 【v1.5.8 重建专项自检③】安装指引随包发布：签名冲突 / 下载截断 / 纯净模式
+      # 三类高频安装失败的用户侧处置（各 APK 证书 SHA-256 见上方校验表）
+      - name: Append install guidance to release notes
+        run: |
+          {
+            echo ""
+            echo "## 📦 安装说明"
+            echo ""
+            echo "- 推荐下载 \`app-github-universal-release.apk\`（全 ABI 通用包，全量功能：保留应用内自更新与全部功能入口）"
+            echo "- 安装报『没有签名文件 / 签名不一致』：多为手机上已装过**不同签名**的历史版本（如早期开发版/其他渠道包），请先卸载旧版再安装"
+            echo "- 安装前建议用 CHECKSUMS.txt 校验 SHA-256，排除下载截断导致的解析失败"
+            echo "- ColorOS 等系统『纯净模式』拦截安装时，请允许对应外部来源后重试"
+          } >> RELEASE_NOTES.md
 
       # 重复构建守护：同一 tag 重推/重跑时，先删除旧 Release（保留 tag 本身），
       # 避免 softprops 更新旧条目时把已发布版重置回草稿、资产名冲突等问题
