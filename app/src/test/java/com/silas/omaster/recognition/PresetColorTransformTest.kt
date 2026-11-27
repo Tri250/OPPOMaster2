@@ -334,8 +334,10 @@ class PresetColorTransformTest {
         assertEquals(-0.06f, PresetColorTransform.filterAdjustment("复古").saturation, 1e-6f)
         assertEquals(-0.04f, PresetColorTransform.filterAdjustment("清新").saturation, 1e-6f)
         // 净饱和度 = satFactor × contrast；此处 contrast = 1−0.06 = 0.94，satFactor = 1.13
+        // 注意 R 行还含复古滤镜自带冷暖 +0.08 的增益项（+0.08×0.12=+0.0096）——
+        // v1.5.7 首版期望公式漏算该项，真机 CI 会挂（期望 1.03622 vs 实际 1.04582）
         val m = PresetColorTransform.buildColorMatrix(preset(filter = "复古 100%", saturation = 19), true)
-        assertEquals(0.94f * (0.2126f + 1.13f * 0.7874f), m[0], 1e-5f)
+        assertEquals(0.94f * (0.2126f + 1.13f * 0.7874f) + 0.08f * 0.12f, m[0], 1e-5f)
         // 行和 = contrast = 0.94（滤镜降对比，与 v1.5.6 行为一致；色度不被额外压扁）
         assertEquals(0.94f, m[0] + m[1] + m[2], 1e-5f)
         // 对照：同滑杆无滤镜时 satFactor 全额 1.19（滤镜后净增益从 1.056→1.13）

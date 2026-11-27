@@ -173,4 +173,45 @@ class ImagePipelineCorrectnessTest {
         assertEquals(0xFF606060.toInt(), src.getPixel(30, 20)) // 源未被就地改写
         out.recycle(); src.recycle()
     }
+
+    // ---------- v1.5.8 OPPO 级画质档（process 层门控契约） ----------
+
+    @Test
+    fun `画质档_中性预设不进新阶段逐位不变`() {
+        // 画质档门控：中性预设（无可见效果且 XDR 关）→ quality=0 → legacy 逐位路径，
+        // 纹理保护降噪 v2 / Vibrance / Filmic / 多频段锐化全部不启用
+        val src = solidBitmap(48, 36, 0xFF808080.toInt())
+        val neutral = MasterPreset(name = "n", coverPath = "")
+        val out = PopImageProcessor.process(src, neutral, 512L * 1024 * 1024)
+        for (y in intArrayOf(0, 17, 35)) for (x in intArrayOf(0, 23, 47)) {
+            assertEquals(src.getPixel(x, y), out.getPixel(x, y))
+        }
+        out.recycle(); src.recycle()
+    }
+
+    @Test
+    fun `画质档_有可见效果时启用且输出为新位图`() {
+        val src = solidBitmap(64, 48, 0xFF707070.toInt())
+        val preset = MasterPreset(name = "胶片", coverPath = "", filter = "胶片", sharpness = 15)
+        val out = PopImageProcessor.process(src, preset, 512L * 1024 * 1024)
+        assertNotSame(src, out)
+        assertEquals(64, out.width)
+        assertFalse(out.isRecycled)
+        out.recycle(); src.recycle()
+    }
+
+    @Test
+    fun `画质档_满灰度预设输出保持真灰度`() {
+        // Vibrance 按 (1−灰度强度) 门控：满灰度（黑白 100%）不重新引入色彩
+        val src = solidBitmap(32, 32, 0xFF907860.toInt()) // 彩色输入
+        val preset = MasterPreset(name = "黑白", coverPath = "", filter = "黑白 100%")
+        val out = PopImageProcessor.process(src, preset, 512L * 1024 * 1024)
+        for (y in intArrayOf(0, 15, 31)) for (x in intArrayOf(0, 16, 31)) {
+            val c = out.getPixel(x, y)
+            val r = (c shr 16) and 0xFF; val g = (c shr 8) and 0xFF; val b = c and 0xFF
+            assertEquals("灰度输出三通道应相等：$r/$g/$b", r, g)
+            assertEquals(g, b)
+        }
+        out.recycle(); src.recycle()
+    }
 }

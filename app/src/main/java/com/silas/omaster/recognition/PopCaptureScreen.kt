@@ -222,6 +222,14 @@ fun PopCaptureScreen(
         PresetColorTransform.buildColorMatrix(preset, applyExposureEv = applyPostExposureEv)
     }
     val vignetteStrength = remember(preset) { PresetColorTransform.vignetteStrength(preset) }
+    // 【v1.5.8】Filmic 基础影调预览强度：与拍后画质档同门控——确有可见效果
+    // （或 XDR 开启）的预设才启用，中性预设预览/成片都不加影调（逐位一致）。
+    // 影调层（XDR 全局 + Filmic）经合成 LUT 进取景，所见即所得；
+    // 细节层（降噪/锐化/清晰度/Vibrance/场景色）仍为拍后专属（邻域/逐像素非线性，
+    // Canvas ColorMatrix 无法表达，既有定位不变）
+    val filmicStrength = remember(preset, xdrEnabled) {
+        if (xdrEnabled || PresetColorTransform.hasVisibleEffect(preset, applyPostExposureEv)) 1f else 0f
+    }
     val filteredFrame = remember { mutableStateOf<Bitmap?>(null) }
     // 守护线程执行器：页面退出时 shutdown，异常场景也不阻塞进程退出
     val analyzerExecutor = remember {
@@ -232,15 +240,20 @@ fun PopCaptureScreen(
     // 【v1.5.6 P1 修复】xdrEnabled 不再进入 analyzer 的 remember key：
     // 原实现切换 XDR 会重建实例，但下方绑定 effect 的 key 不含 analyzer，
     // 新实例从未 setAnalyzer → 预览沿用旧强度、成片用新强度。
-    // 现在实例稳定，开关切换经 setXdrStrength 只重建 LUT，绑定引用始终有效。
+    // 现在实例稳定，开关切换经 setToneStrength 只重建 LUT，绑定引用始终有效。
     val analyzer = remember(colorMatrix, vignetteStrength) {
-        FilteredPreviewAnalyzer(colorMatrix, vignetteStrength, if (xdrEnabled) 1f else 0f) { bmp ->
+        FilteredPreviewAnalyzer(
+            colorMatrix, vignetteStrength,
+            if (xdrEnabled) 1f else 0f,
+            filmicStrength
+        ) { bmp ->
             filteredFrame.value = bmp
         }
     }
-    // XDR 开关变化时把新强度同步进现有分析器（下一帧生效，所见即所得）
+    // XDR 开关变化时把新强度同步进现有分析器（下一帧生效，所见即所得）。
+    // 【v1.5.8】同时同步 Filmic 强度（与拍后画质档同门控：中性预设 + XDR 关 → 全关）
     LaunchedEffect(xdrEnabled) {
-        analyzer.setXdrStrength(if (xdrEnabled) 1f else 0f)
+        analyzer.setToneStrength(if (xdrEnabled) 1f else 0f, filmicStrength)
     }
     val imageAnalysis = remember {
         // 【v1.8.0 画质】取景目标 1280x720（默认 640x480 拉伸到预览框观感模糊）；

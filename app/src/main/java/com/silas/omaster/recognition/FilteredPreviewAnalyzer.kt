@@ -23,6 +23,8 @@ import androidx.camera.core.ImageProxy
  *   不一致（默认每张成片都"变亮/收高光"而预览毫无变化）。全局项按整像素
  *   亮度查表施加，与拍后全局项逐位一致（[PresetPixelEffects.xdrGlobalLumaAdjust]）；
  *   清晰度（局部对比）需邻域运算，与锐化/降噪同为拍后专属，不在预览内；
+ * - 【v1.5.8】Filmic 基础影调（S 曲线）与 XDR 全局合成为单一查找表
+ *   （[PresetPixelEffects.buildCombinedToneLut]），影调层预览 = 拍后逐位一致；
  * - ImageAnalysis 目标 1280x720 + KEEP_ONLY_LATEST，逐帧节流约 30fps；
  * - 方向：ImageProxy.toBitmap() 返回的是**传感器方向**像素（CameraX 不自动旋转，
  *   见官方 orientation-rotation 文档与 ImageUtil.createBitmapFromImageProxy 实现），
@@ -35,8 +37,12 @@ class FilteredPreviewAnalyzer(
     colorMatrix: FloatArray,
     private val vignetteStrength: Float,
     /** Pro XDR 全局影调初始强度（0=关闭，1=开启；预览仅全局项，清晰度为拍后专属）。
-     *  运行期可由 [setXdrStrength] 更新，无需重建实例 */
+     *  运行期可由 [setToneStrength] 更新，无需重建实例 */
     xdrStrength: Float,
+    /** 【v1.5.8】Filmic 基础影调初始强度（0=关闭，1=开启；与拍后画质档同门控）。
+     *  与 XDR 合成单一查找表（[PresetPixelEffects.buildCombinedToneLut]），
+     *  预览所见 = 拍后所得（影调层逐位一致） */
+    private val filmicStrength: Float,
     private val onFrame: (Bitmap) -> Unit
 ) : ImageAnalysis.Analyzer {
 
@@ -53,7 +59,8 @@ class FilteredPreviewAnalyzer(
     private var vignetteHeight = 0
 
     /**
-     * XDR 全局影调查找表（与拍后同源，单一事实来源）；强度 ≤0 为全零表。
+     * 合成影调查找表（XDR 全局 + Filmic，与拍后同源，单一事实来源）；两项强度
+     * 均 ≤0 时为全零表。
      * 【v1.5.6 P1 修复】改为可运行时更新的 var：XDR 开关切换只重建 LUT，
      * 不重建分析器实例——原实现把 xdrEnabled 放进 analyzer 的 remember key，
      * 切换时生成新实例却从未重新 setAnalyzer（绑定 effect 的 key 不含 analyzer），
@@ -61,19 +68,20 @@ class FilteredPreviewAnalyzer(
      * @Volatile 保证主线程写入、分析线程读取的可见性；整表引用一次性替换，无撕裂。
      */
     @Volatile
-    private var xdrLut: FloatArray = PresetPixelEffects.buildXdrToneLut(xdrStrength)
+    private var toneLut: FloatArray =
+        PresetPixelEffects.buildCombinedToneLut(xdrStrength, filmicStrength)
     @Volatile
-    private var doXdr: Boolean = xdrStrength > 0.01f
+    private var doTone: Boolean = xdrStrength > 0.01f || filmicStrength > 0.01f
     private var lutScratch: IntArray? = null
 
     /**
-     * 运行时更新 XDR 强度（取景期开关切换）。重建 LUT 但不重建实例，
+     * 运行时更新影调强度（取景期开关切换）。重建合成 LUT 但不重建实例，
      * 相机绑定引用保持稳定，预览下一帧即反映新强度，与成片一致。
      */
-    fun setXdrStrength(strength: Float) {
+    fun setToneStrength(xdr: Float, filmic: Float) {
         // 先构建完整新表再整体替换，分析线程读到的是旧表或新表，不会读到半成品
-        xdrLut = PresetPixelEffects.buildXdrToneLut(strength)
-        doXdr = strength > 0.01f
+        toneLut = PresetPixelEffects.buildCombinedToneLut(xdr, filmic)
+        doTone = xdr > 0.01f || filmic > 0.01f
     }
 
     // 双缓冲输出位图交替写入，避免 Compose 读取时撕裂
@@ -116,8 +124,9 @@ class FilteredPreviewAnalyzer(
         runCatching {
             canvas.setBitmap(out)
             canvas.drawBitmap(src, 0f, 0f, colorPaint)
-            // XDR 全局影调先于暗角施加，与拍后条带管线顺序一致（①矩阵 → ④XDR → ⑥暗角）
-            if (doXdr) applyXdrTone(out)
+            // 合成影调（XDR 全局 + Filmic）先于暗角施加，与拍后条带管线顺序一致
+            // （①矩阵 → ⑤XDR → ⑥Filmic → ⑧暗角）
+            if (doTone) applyTone(out)
             if (vignetteStrength > 0.02f) drawVignette(out)
             canvas.setBitmap(null)
             src.recycle()
@@ -126,10 +135,10 @@ class FilteredPreviewAnalyzer(
     }
 
     /**
-     * 对输出帧原地施加 XDR 全局影调（[PresetPixelEffects.applyXdrToneLutInto]）。
+     * 对输出帧原地施加合成影调（XDR 全局 + Filmic，[PresetPixelEffects.applyXdrToneLutInto]）。
      * 逐帧复用一个同尺寸 IntArray 像素缓冲，避免每帧 getPixels/setPixels 分配。
      */
-    private fun applyXdrTone(out: Bitmap) {
+    private fun applyTone(out: Bitmap) {
         val w = out.width
         val h = out.height
         val n = w * h
@@ -139,7 +148,7 @@ class FilteredPreviewAnalyzer(
             lutScratch = scratch
         }
         out.getPixels(scratch, 0, w, 0, 0, w, h)
-        PresetPixelEffects.applyXdrToneLutInto(scratch, xdrLut)
+        PresetPixelEffects.applyXdrToneLutInto(scratch, toneLut)
         out.setPixels(scratch, 0, w, 0, 0, w, h)
     }
 

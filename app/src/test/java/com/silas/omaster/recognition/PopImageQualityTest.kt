@@ -40,8 +40,7 @@ class PopImageQualityTest {
     private fun referenceProcess(
         src: IntArray, w: Int, h: Int,
         matrix: FloatArray?, sharpen: Float, denoise: Float, vignette: Float
-    ): IntArray {
-        // base = 矩阵后的原始像素（邻域运算只读 base，保证与实现一致：读未被污染的源）
+    ): IntArray {        // base = 矩阵后的原始像素（邻域运算只读 base，保证与实现一致：读未被污染的源）
         val base = src.copyOf()
         if (matrix != null) PresetPixelEffects.applyMatrixInto(base, w, h, matrix)
         val out = base.copyOf()
@@ -688,4 +687,517 @@ class PopImageQualityTest {
 
     private fun argb(r: Int, g: Int, b: Int) =
         (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+
+    // ---------- ⑨ OPPO 级画质档（quality > 0，v1.5.8） ----------
+
+    /** smoothstep（与实现同曲线） */
+    private fun ss(lo: Float, hi: Float, v: Float): Float {
+        val t = ((v - lo) / (hi - lo)).coerceIn(0f, 1f)
+        return t * t * (3f - 2f * t)
+    }
+
+    /** 画质档独立参考实现：与 [referenceProcess] 同风格独立书写，覆盖 v2 全阶段 */
+    private fun referenceProcessQuality(
+        src: IntArray, w: Int, h: Int,
+        matrix: FloatArray?, sharpen: Float, denoise: Float, vignette: Float,
+        xdr: Float, scene: PresetPixelEffects.SceneStats, chromaBoost: Float
+    ): IntArray {
+        val base = src.copyOf()
+        if (matrix != null) PresetPixelEffects.applyMatrixInto(base, w, h, matrix)
+        // ② Vibrance（整带，逐像素独立复刻）
+        if (chromaBoost > 0.01f) {
+            val skyGate = ss(0.06f, 0.18f, scene.sky)
+            val greenGate = ss(0.06f, 0.18f, scene.green)
+            val skinGate = ss(0.06f, 0.18f, scene.skin)
+            val sceneScale = chromaBoost / PresetPixelEffects.VIBRANCE_BASE
+            for (i in base.indices) {
+                val c = base[i]
+                val r = (c shr 16) and 0xFF; val g = (c shr 8) and 0xFF; val b = c and 0xFF
+                val chroma = maxOf(r, g, b) - minOf(r, g, b)
+                if (chroma < 6) continue
+                var boost = chromaBoost * (1f - ss(96f, 180f, chroma.toFloat()))
+                val skin = PresetPixelEffects.isSkinPixel(r, g, b)
+                if (skin) boost *= 0.5f
+                if (PresetPixelEffects.isSkyPixel(r, g, b)) boost += 0.10f * skyGate * sceneScale
+                else if (PresetPixelEffects.isGreenPixel(r, g, b)) boost += 0.09f * greenGate * sceneScale
+                else if (skin) boost += 0.08f * skinGate * sceneScale
+                if (boost <= 0.005f) continue
+                val f = 1f + boost
+                val y = (r * 54 + g * 183 + b * 19) shr 8
+                base[i] = argb(
+                    (y + (r - y) * f).toInt().coerceIn(0, 255),
+                    (y + (g - y) * f).toInt().coerceIn(0, 255),
+                    (y + (b - y) * f).toInt().coerceIn(0, 255)
+                )
+            }
+        }
+        val lumArr = IntArray(w * h) { lum(base[it]) }
+        val blur = IntArray(w * h)
+        PresetPixelEffects.gaussianBlurInto(lumArr, blur, w, h, 2)
+        val blur6 = IntArray(w * h)
+        PresetPixelEffects.boxBlurInto(lumArr, blur6, w, h, PresetPixelEffects.STRUCTURE_BOX_RADIUS)
+        val filmic = PresetPixelEffects.buildFilmicLut(1f)
+        val cx = (w - 1) / 2f; val cy = (h - 1) / 2f
+        val maxSide = maxOf(w, h).toFloat(); val vr = maxSide * 0.75f
+        val dark = (0.62f * vignette).coerceIn(0f, 0.62f)
+        val out = base.copyOf()
+        for (y in 0 until h) for (x in 0 until w) {
+            val i = y * w + x
+            val edgeW = edgeW(Math.abs(lumArr[i] - blur[i]).toFloat())
+            var c = out[i]
+            val r0 = (c shr 16) and 0xFF; val g0 = (c shr 8) and 0xFF; val b0 = c and 0xFF
+            val skinKeep = if (PresetPixelEffects.isSkinPixel(r0, g0, b0)) 0.4f else 1f
+            // ④ 纹理保护降噪 v2（flat 门控 + 模糊目标 + 肤色阻尼）
+            if (denoise > 0.01f) {
+                val l = if (x > 0) base[i - 1] else c
+                val r = if (x < w - 1) base[i + 1] else c
+                val u = if (y > 0) base[i - w] else c
+                val dn = if (y < h - 1) base[i + w] else c
+                val aLuma = (denoise * 0.85f * (1f - edgeW) * skinKeep).coerceAtMost(0.75f)
+                val aChroma = aLuma * 0.6f
+                var p = c
+                if (aChroma > 0.002f) {
+                    // 只 blend 色度残差（c − y），灰像素天然不动
+                    val cr = ch(p, 16); val cg = ch(p, 8); val cb = ch(p, 0)
+                    val y0 = (cr * 54 + cg * 183 + cb * 19) shr 8
+                    fun chromaOf(px: Int, out: IntArray) {
+                        val r = ch(px, 16); val g = ch(px, 8); val b = ch(px, 0)
+                        val yy = (r * 54 + g * 183 + b * 19) shr 8
+                        out[0] = r - yy; out[1] = g - yy; out[2] = b - yy
+                    }
+                    val cl = IntArray(3); val cn = IntArray(3); val cu = IntArray(3); val cd = IntArray(3)
+                    chromaOf(l, cl); chromaOf(r, cn); chromaOf(u, cu); chromaOf(dn, cd)
+                    val mr = (cl[0] + cn[0] + cu[0] + cd[0]) / 4f
+                    val mg = (cl[1] + cn[1] + cu[1] + cd[1]) / 4f
+                    val mb = (cl[2] + cn[2] + cu[2] + cd[2]) / 4f
+                    p = argb(
+                        (y0 + ((cr - y0) + (mr - (cr - y0)) * aChroma)).toInt().coerceIn(0, 255),
+                        (y0 + ((cg - y0) + (mg - (cg - y0)) * aChroma)).toInt().coerceIn(0, 255),
+                        (y0 + ((cb - y0) + (mb - (cb - y0)) * aChroma)).toInt().coerceIn(0, 255)
+                    )
+                }
+                if (aLuma > 0.002f) {
+                    val yf = (ch(p, 16) * 54f + ch(p, 8) * 183f + ch(p, 0) * 19f) / 256f
+                    // 中心排除模糊目标：T = (blur − kc×y)/(1−kc)，kc = (6/16)²
+                    val target = (blur[i] - 0.140625f * yf) / (1f - 0.140625f)
+                    val delta = (target - yf) * aLuma
+                    if (delta > 0.5f || delta < -0.5f) {
+                        p = argb(
+                            (ch(p, 16) + delta).toInt().coerceIn(0, 255),
+                            (ch(p, 8) + delta).toInt().coerceIn(0, 255),
+                            (ch(p, 0) + delta).toInt().coerceIn(0, 255)
+                        )
+                    }
+                }
+                c = p
+            }
+            // ⑤ XDR + ⑥ Filmic（合并单次增量）
+            var adj = 0f
+            if (xdr > 0.01f) {
+                val l = lumArr[i].toFloat()
+                adj += PresetPixelEffects.xdrGlobalLumaAdjust(l, xdr) +
+                    (lumArr[i] - blur[i]) * xdr * 0.45f * edgeW *
+                    ((l - 24f) / 40f).coerceIn(0f, 1f).let { lo ->
+                        minOf(lo, ((208f - l) / 48f).coerceIn(0f, 1f))
+                    }
+            }
+            adj += filmic[lumArr[i]]
+            if (adj > 0.5f || adj < -0.5f) {
+                c = argb(
+                    (ch(c, 16) + adj).toInt().coerceIn(0, 255),
+                    (ch(c, 8) + adj).toInt().coerceIn(0, 255),
+                    (ch(c, 0) + adj).toInt().coerceIn(0, 255)
+                )
+            }
+            // ⑦ 多频段锐化
+            if (sharpen > 0.02f) {
+                val res2 = (lumArr[i] - blur[i]).toFloat()
+                val res6 = (lumArr[i] - blur6[i]).toFloat()
+                val w2 = edgeW(Math.abs(res2))
+                val w6 = ss(6f, 40f, Math.abs(res6))
+                var delta = res2 * sharpen * 2.0f * w2 + res6 * sharpen * 0.7f * w6
+                delta *= skinKeep
+                delta = delta.coerceIn(-30f, 30f)
+                if (delta > 0.5f || delta < -0.5f) {
+                    c = argb(
+                        (ch(c, 16) + delta).toInt().coerceIn(0, 255),
+                        (ch(c, 8) + delta).toInt().coerceIn(0, 255),
+                        (ch(c, 0) + delta).toInt().coerceIn(0, 255)
+                    )
+                }
+            }
+            // ⑧ 暗角
+            if (vignette > 0.02f) {
+                val dx = x - cx; val dy = y - cy
+                val dist = sqrt(dx * dx + dy * dy)
+                val t = ((dist / vr - 0.55f) / 0.45f).coerceIn(0f, 1f)
+                if (t > 0.001f) {
+                    val f = 1f - dark * t
+                    c = argb(
+                        (ch(c, 16) * f).toInt().coerceIn(0, 255),
+                        (ch(c, 8) * f).toInt().coerceIn(0, 255),
+                        (ch(c, 0) * f).toInt().coerceIn(0, 255)
+                    )
+                }
+            }
+            out[i] = c
+        }
+        return out
+    }
+
+    @Test
+    fun `画质档缺省值保持旧路径逐位一致`() {
+        // quality 缺省 0 = 旧路径：新参数全部有默认值，既有调用零改动
+        val w = 20; val h = 14
+        val rnd = Random(31)
+        val src = IntArray(w * h) { rgb(rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256)) }
+        val a = IntArray(w * h)
+        PresetPixelEffects.processBandInto(src.copyOf(), a, w, h, 0, h, 0, h, satMatrix, 0.5f, 0.55f, 0.6f)
+        val b = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            src.copyOf(), b, w, h, 0, h, 0, h, satMatrix, 0.5f, 0.55f, 0.6f,
+            quality = 0f, scene = PresetPixelEffects.SceneStats.NONE, chromaBoost = 0f
+        )
+        assertTrue("显式关闭应与缺省逐位一致", a.contentEquals(b))
+        assertTrue("且与旧参考实现一致", a.contentEquals(referenceProcess(src, w, h, satMatrix, 0.5f, 0.55f, 0.6f)))
+    }
+
+    @Test
+    fun `画质档与独立参考实现一致`() {
+        val w = 24; val h = 18
+        val rnd = Random(77)
+        val src = IntArray(w * h) { rgb(rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256)) }
+        val scene = PresetPixelEffects.SceneStats(sky = 0.3f, green = 0.2f, skin = 0.1f)
+        val out = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            src.copyOf(), out, w, h, 0, h, 0, h, satMatrix, 0.5f, 0.55f, 0.6f,
+            xdr = 1f, quality = 1f, scene = scene, chromaBoost = PresetPixelEffects.VIBRANCE_BASE
+        )
+        val ref = referenceProcessQuality(
+            src, w, h, satMatrix, 0.5f, 0.55f, 0.6f, 1f, scene, PresetPixelEffects.VIBRANCE_BASE
+        )
+        assertTrue(
+            "画质档应与独立参考实现一致，首个差异 idx=" +
+                out.indices.firstOrNull { out[it] != ref[it] },
+            out.contentEquals(ref)
+        )
+    }
+
+    @Test
+    fun `画质档条带无接缝`() {
+        val w = 30; val h = 70
+        val rnd = Random(888)
+        val src = IntArray(w * h) { rgb(rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256)) }
+        val scene = PresetPixelEffects.SceneStats(sky = 0.4f, green = 0.1f, skin = 0.2f)
+        val full = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            src.copyOf(), full, w, h, 0, h, 0, h, satMatrix, 0.5f, 0.55f, 0.6f,
+            xdr = 1f, quality = 1f, scene = scene, chromaBoost = PresetPixelEffects.VIBRANCE_BASE
+        )
+        val multi = IntArray(w * h)
+        var y = 0
+        while (y < h) {
+            val y1 = minOf(h, y + 16)
+            // 重叠行必须覆盖最大邻域半径（画质档含 r6 盒模糊半径 4）
+            val top = (y - 4).coerceAtLeast(0)
+            val bot = (y1 + 4).coerceAtMost(h)
+            val padTop = y - top
+            val bandH = bot - top
+            val band = IntArray(w * bandH) { i -> src[(top + i / w) * w + i % w] }
+            val out = IntArray(w * bandH)
+            PresetPixelEffects.processBandInto(
+                band, out, w, h, top, bandH, padTop, y1 - y, satMatrix, 0.5f, 0.55f, 0.6f,
+                xdr = 1f, quality = 1f, scene = scene, chromaBoost = PresetPixelEffects.VIBRANCE_BASE
+            )
+            System.arraycopy(out, padTop * w, multi, y * w, (y1 - y) * w)
+            y = y1
+        }
+        assertTrue(
+            "画质档多带应与整带一致，首个差异 idx=" +
+                full.indices.firstOrNull { full[it] != multi[it] },
+            full.contentEquals(multi)
+        )
+    }
+
+    @Test
+    fun `纹理保护降噪压噪更强且保细纹理`() {
+        val w = 32; val h = 24
+        val rnd = Random(99)
+        // 平坦 ±6 噪点区（左 60%）
+        val flat = img(w, h) { x, _ ->
+            if (x < w * 3 / 5) {
+                val n = 128 + if (rnd.nextBoolean()) 6 else -6
+                rgb(n, n, n)
+            } else rgb(128, 128, 128)
+        }
+        fun varFlat(px: IntArray) = varianceOf(px, w) { x, _ -> x < w * 3 / 5 }
+        val legacy = IntArray(w * h)
+        PresetPixelEffects.processBandInto(flat.copyOf(), legacy, w, h, 0, h, 0, h, null, 0f, 0.55f, 0f)
+        val quality = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            flat.copyOf(), quality, w, h, 0, h, 0, h, null, 0f, 0.55f, 0f, quality = 1f
+        )
+        val vBefore = varFlat(flat)()
+        val vLegacy = varFlat(legacy)()
+        val vQuality = varFlat(quality)()
+        assertTrue("画质档平坦噪点方差比应 <0.75：$vQuality", vQuality < vBefore * 0.75)
+        assertTrue(
+            "画质档压噪应强于旧路径（模糊目标 vs 四邻均值）：legacy=$vLegacy quality=$vQuality",
+            vQuality < vLegacy
+        )
+
+        // 细纹理（4px 周期条纹幅值 12，真实高感纹理量级）：画质档不应比旧路径更糊
+        val tex = img(w, h) { x, _ ->
+            val v = 120 + if ((x / 4) % 2 == 0) 12 else -12
+            rgb(v, v, v)
+        }
+        fun texContrast(px: IntArray): Float {
+            var even = 0.0; var odd = 0.0; var ne = 0; var no = 0
+            for (y in 2 until h - 2) for (x in 4 until w - 4) {
+                val l = lum(px[y * w + x]).toDouble()
+                if ((x / 4) % 2 == 0) { even += l; ne++ } else { odd += l; no++ }
+            }
+            return ((even / ne) - (odd / no)).toFloat()
+        }
+        val texLegacy = IntArray(w * h)
+        PresetPixelEffects.processBandInto(tex.copyOf(), texLegacy, w, h, 0, h, 0, h, null, 0f, 0.55f, 0f)
+        val texQuality = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            tex.copyOf(), texQuality, w, h, 0, h, 0, h, null, 0f, 0.55f, 0f, quality = 1f
+        )
+        val cBefore = texContrast(tex)
+        val legacyKeep = texContrast(texLegacy) / cBefore
+        val qualityKeep = texContrast(texQuality) / cBefore
+        assertTrue(
+            "细纹理对比画质档不应比旧路径更糊：legacy=$legacyKeep quality=$qualityKeep",
+            qualityKeep >= legacyKeep - 0.05f
+        )
+
+        // 真实边缘（80|200 强边）梯度必须完整保留（flat 门控：残差 >26 不降）
+        val edge = img(w, h) { x, _ -> if (x < w / 2) rgb(80, 80, 80) else rgb(200, 200, 200) }
+        val edgeQ = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            edge.copyOf(), edgeQ, w, h, 0, h, 0, h, null, 0f, 0.55f, 0f, quality = 1f
+        )
+        val li = 3 * w + w / 2 - 1
+        val ri = 3 * w + w / 2
+        val gb = lum(edge[ri]) - lum(edge[li])
+        val gq = lum(edgeQ[ri]) - lum(edgeQ[li])
+        assertTrue(
+            "画质档降噪后真实边缘梯度应保留 >=90%：before=$gb after=$gq",
+            gq >= gb * 0.9f
+        )
+    }
+
+    @Test
+    fun `画质档降噪加锐化组合净降噪`() {
+        val w = 32; val h = 32
+        val rnd = Random(777)
+        val src = IntArray(w * h) {
+            val n = 128 + rnd.nextInt(13) - 6
+            rgb(n, n, n)
+        }
+        val out = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            src.copyOf(), out, w, h, 0, h, 0, h, null, 0.5f, 0.55f, 0f, quality = 1f
+        )
+        assertTrue("画质档降噪+锐化应净降噪", varianceOf(out, w)() < varianceOf(src, w)() * 0.75)
+    }
+
+    @Test
+    fun `多频段锐化增强可感知且钳制光晕`() {
+        val w = 8; val h = 8
+        val src = img(w, h) { x, _ -> if (x < w / 2) rgb(80, 80, 80) else rgb(200, 200, 200) }
+        val left = 3 * w + 3
+        val right = 3 * w + 4
+        // 内置预设锐度 15：净增强应显著（多频段 r2+r6，Python 仿真 ≈40）
+        val out15 = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            src.copyOf(), out15, w, h, 0, h, 0, h, null, 0.15f, 0f, 0f, quality = 1f
+        )
+        val gradBefore = lum(src[right]) - lum(src[left])
+        val grad15 = lum(out15[right]) - lum(out15[left])
+        assertTrue("锐度15 多频段净增强应 >=20：${grad15 - gradBefore}", grad15 - gradBefore >= 20)
+
+        // 锐度 100：光晕钳制（±30 锐化 + Filmic ≤4）——单侧偏移不得越界
+        val out100 = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            src.copyOf(), out100, w, h, 0, h, 0, h, null, 1.0f, 0f, 0f, quality = 1f
+        )
+        assertTrue(
+            "暗侧偏移应被钳制在 -34 内（30 光晕钳制 + Filmic≤4）：${lum(out100[left]) - 80}",
+            lum(out100[left]) - 80 >= -34
+        )
+        assertTrue(
+            "亮侧偏移应被钳制在 +34 内：${lum(out100[right]) - 200}",
+            lum(out100[right]) - 200 <= 34
+        )
+    }
+
+    @Test
+    fun `画质档锐化不放大平坦噪点`() {
+        val w = 32; val h = 32
+        val rnd = Random(2024)
+        val src = IntArray(w * h) {
+            val n = 128 + rnd.nextInt(13) - 6
+            rgb(n, n, n)
+        }
+        for (amount in listOf(0.15f, 0.5f)) {
+            val out = IntArray(w * h)
+            PresetPixelEffects.processBandInto(
+                src.copyOf(), out, w, h, 0, h, 0, h, null, amount, 0f, 0f, quality = 1f
+            )
+            assertTrue(
+                "画质档锐化 amount=$amount 不应放大平坦噪点",
+                varianceOf(out, w)() < varianceOf(src, w)() * 1.15
+            )
+        }
+    }
+
+    @Test
+    fun `Vibrance低彩度优先且高彩度不动`() {
+        // 低彩度非肤色（蓝灰）：色度应提升
+        val low = intArrayOf(argb(160, 160, 190))
+        PresetPixelEffects.vibranceInto(low, PresetPixelEffects.VIBRANCE_BASE, PresetPixelEffects.SceneStats.NONE)
+        assertTrue("低彩度像素应被提升：B ${low[0] and 0xFF}", (low[0] and 0xFF) >= 190 + 2)
+        // 高彩度（纯红）：boost 归零，逐位不动
+        val high = intArrayOf(argb(255, 5, 5))
+        PresetPixelEffects.vibranceInto(high, PresetPixelEffects.VIBRANCE_BASE, PresetPixelEffects.SceneStats.NONE)
+        assertEquals("高彩度像素不应被增强", argb(255, 5, 5), high[0])
+        // 灰像素（无色相信息）：逐位不动
+        val gray = intArrayOf(argb(128, 128, 128))
+        PresetPixelEffects.vibranceInto(gray, PresetPixelEffects.VIBRANCE_BASE, PresetPixelEffects.SceneStats.NONE)
+        assertEquals("灰像素不应被增强", argb(128, 128, 128), gray[0])
+        // amount=0（满灰度预设门控）：逐位不动
+        val off = intArrayOf(argb(160, 160, 190))
+        PresetPixelEffects.vibranceInto(off, 0f, PresetPixelEffects.SceneStats.NONE)
+        assertEquals("amount=0 应关闭", argb(160, 160, 190), off[0])
+    }
+
+    @Test
+    fun `Vibrance肤色减半防塑料感`() {
+        val skin = intArrayOf(argb(200, 150, 120))
+        val sameChroma = intArrayOf(argb(120, 150, 200)) // 同 chroma=80，非肤色（反色相）
+        PresetPixelEffects.vibranceInto(skin, PresetPixelEffects.VIBRANCE_BASE, PresetPixelEffects.SceneStats.NONE)
+        PresetPixelEffects.vibranceInto(sameChroma, PresetPixelEffects.VIBRANCE_BASE, PresetPixelEffects.SceneStats.NONE)
+        val skinB = (skin[0] and 0xFF) - 120
+        val nonSkinB = (sameChroma[0] and 0xFF) - 200
+        assertTrue("肤色区增强应小于非肤色同彩度像素：skin=$skinB nonSkin=$nonSkinB", skinB < nonSkinB)
+    }
+
+    @Test
+    fun `场景统计命中才增强对应区域`() {
+        // 天空像素：sky 命中时蓝色增益显著大于未命中
+        val skyHit = intArrayOf(argb(100, 140, 200))
+        val skyMiss = intArrayOf(argb(100, 140, 200))
+        PresetPixelEffects.vibranceInto(skyHit, PresetPixelEffects.VIBRANCE_BASE, PresetPixelEffects.SceneStats(sky = 1f))
+        PresetPixelEffects.vibranceInto(skyMiss, PresetPixelEffects.VIBRANCE_BASE, PresetPixelEffects.SceneStats.NONE)
+        assertTrue(
+            "天空命中应更蓝：hit=${skyHit[0] and 0xFF} miss=${skyMiss[0] and 0xFF}",
+            (skyHit[0] and 0xFF) >= (skyMiss[0] and 0xFF) + 4
+        )
+        // 绿植像素：green 命中时红色被压低（绿色更鲜）
+        val greenHit = intArrayOf(argb(90, 160, 90))
+        val greenMiss = intArrayOf(argb(90, 160, 90))
+        PresetPixelEffects.vibranceInto(greenHit, PresetPixelEffects.VIBRANCE_BASE, PresetPixelEffects.SceneStats(green = 1f))
+        PresetPixelEffects.vibranceInto(greenMiss, PresetPixelEffects.VIBRANCE_BASE, PresetPixelEffects.SceneStats.NONE)
+        assertTrue(
+            "绿植命中应压低红色通道：hit=${(greenHit[0] shr 16) and 0xFF} miss=${(greenMiss[0] shr 16) and 0xFF}",
+            ((greenHit[0] shr 16) and 0xFF) <= ((greenMiss[0] shr 16) and 0xFF) - 2
+        )
+        // 小面积色块不触发（6% 门控以下）
+        val skyTiny = intArrayOf(argb(100, 140, 200))
+        PresetPixelEffects.vibranceInto(skyTiny, PresetPixelEffects.VIBRANCE_BASE, PresetPixelEffects.SceneStats(sky = 0.03f))
+        assertEquals("占比 3% 不应触发场景增强", skyMiss[0], skyTiny[0])
+    }
+
+    @Test
+    fun `肤色保护_降噪与锐化在肤色区阻尼`() {
+        val w = 16; val h = 12
+        val rnd = Random(5150)
+        // 左半肤色噪声、右半同亮度反向色相噪声（非肤色）
+        val src = img(w, h) { x, _ ->
+            val base = if (x < w / 2) intArrayOf(200, 150, 120) else intArrayOf(120, 150, 200)
+            val n = rnd.nextInt(13) - 6
+            rgb(base[0] + n, base[1] + n, base[2] + n)
+        }
+        val out = IntArray(w * h)
+        PresetPixelEffects.processBandInto(
+            src.copyOf(), out, w, h, 0, h, 0, h, null, 0.5f, 0.55f, 0f, quality = 1f
+        )
+        val vBeforeSkin = varianceOf(src, w) { x, _ -> x in 2 until w / 2 - 2 }()
+        val vBeforeOther = varianceOf(src, w) { x, _ -> x in w / 2 + 2 until w - 2 }()
+        val vAfterSkin = varianceOf(out, w) { x, _ -> x in 2 until w / 2 - 2 }()
+        val vAfterOther = varianceOf(out, w) { x, _ -> x in w / 2 + 2 until w - 2 }()
+        assertTrue(
+            "肤色区应比非肤色区保留更多细节（阻尼 0.4）：skin=${vAfterSkin / vBeforeSkin} other=${vAfterOther / vBeforeOther}",
+            vAfterSkin / vBeforeSkin > (vAfterOther / vBeforeOther) * 2f
+        )
+    }
+
+    @Test
+    fun `filmic影调曲线单调且保护黑白场`() {
+        val lut = PresetPixelEffects.buildFilmicLut(1f)
+        // 输出亮度 = l + lut[l] 必须单调非降（无影调翻转/色带）
+        var prev = -1f
+        for (l in 0..255) {
+            val out = l + lut[l]
+            assertTrue("filmic 输出必须单调非降：l=$l out=$out prev=$prev", out >= prev - 1e-3f)
+            prev = out
+        }
+        // 黑场保护：近黑压暗（沉得下去）
+        assertTrue("近黑应被压暗：lut[4]=${lut[4]}", lut[4] < -1.0f)
+        // 中间调接近零（S 曲线过零点）
+        assertTrue("中间调应接近零：lut[128]=${lut[128]}", Math.abs(lut[128]) < 0.5f)
+        // 高光提升（通透）：量级 ±4 内（微妙可感知，非滤镜感）
+        assertTrue("高光应被提升：lut[192]=${lut[192]}", lut[192] > 3.0f)
+        assertTrue("S 曲线量级应克制（≤4）：lut[192]=${lut[192]}", lut[192] < 4.0f)
+        // 强度 0 = 全零（关闭）
+        assertTrue(PresetPixelEffects.buildFilmicLut(0f).all { it == 0f })
+    }
+
+    @Test
+    fun `合成影调LUT与拍后逐位同源`() {
+        // 预览 buildCombinedToneLut(xdr, filmic) 必须逐项等于拍后两项之和
+        // （拍后将 XDR 全局 + Filmic 合并进单次 addLumaDelta，保证单次钳位一致）
+        val combined = PresetPixelEffects.buildCombinedToneLut(1f, 1f)
+        val xdrLut = PresetPixelEffects.buildXdrToneLut(1f)
+        val filmicLut = PresetPixelEffects.buildFilmicLut(1f)
+        for (l in 0..255) {
+            assertEquals("luma=$l", xdrLut[l] + filmicLut[l], combined[l], 1e-6f)
+        }
+        // 单侧关闭时退化为另一侧
+        val onlyXdr = PresetPixelEffects.buildCombinedToneLut(1f, 0f)
+        assertTrue(onlyXdr.contentEquals(xdrLut))
+        val onlyFilmic = PresetPixelEffects.buildCombinedToneLut(0f, 1f)
+        assertTrue(onlyFilmic.contentEquals(filmicLut))
+    }
+
+    @Test
+    fun `像素场景规则保守准确`() {
+        // 典型肤色 / 天空 / 绿植命中
+        assertTrue(PresetPixelEffects.isSkinPixel(200, 150, 120))
+        assertTrue(PresetPixelEffects.isSkinPixel(230, 180, 150))
+        assertTrue(PresetPixelEffects.isSkyPixel(100, 140, 200))
+        assertTrue(PresetPixelEffects.isGreenPixel(90, 160, 90))
+        // 非目标：纯灰、深蓝（超出天空蓝区间）、高彩度红、暗绿
+        assertTrue(!PresetPixelEffects.isSkinPixel(128, 128, 128))
+        assertTrue(!PresetPixelEffects.isSkyPixel(60, 110, 220))  // 蓝差 160 > 120
+        assertTrue(!PresetPixelEffects.isSkinPixel(255, 5, 5))
+        assertTrue(!PresetPixelEffects.isGreenPixel(20, 30, 25))
+    }
+
+    /** 区域方差（luma 域；region 判定传入 x,y；w 需与图像宽一致） */
+    private fun varianceOf(px: IntArray, w: Int, region: (Int, Int) -> Boolean = { _, _ -> true }): () -> Double {
+        return {
+            var sum = 0.0; var sq = 0.0; var n = 0
+            for (i in px.indices) {
+                val x = i % w; val y = i / w
+                if (!region(x, y)) continue
+                val l = lum(px[i]).toDouble(); sum += l; sq += l * l; n++
+            }
+            val mean = sum / n
+            sq / n - mean * mean
+        }
+    }
 }
