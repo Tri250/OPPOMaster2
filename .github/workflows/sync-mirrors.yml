@@ -1,0 +1,113 @@
+name: Sync Mirrors (Pgyer 蒲公英自动同步)
+
+# 【v1.5.8】发布镜像同步：
+# - 蒲公英：官方 API v2 全自动上传 universal APK（需配置 Secret PGYER_API_TOKEN，
+#   取自 pgyer.com 个人中心 →「API 信息」页的 _api_key）
+# - 蓝奏云：无官方 API、网页上传有签名/反爬校验，Cookie 自动化不可靠——
+#   保留为手动同步（本工作流输出操作清单与校验信息）
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release 标签 (例如: v1.5.8)'
+        required: true
+        type: string
+
+jobs:
+  pgyer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PGYER_API_TOKEN
+        id: tok
+        env:
+          PGYER_API_TOKEN: ${{ secrets.PGYER_API_TOKEN }}
+        run: |
+          if [ -z "$PGYER_API_TOKEN" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::未配置 Secret PGYER_API_TOKEN——到仓库 Settings → Secrets and variables → Actions 新增（pgyer.com 个人中心 →「API 信息」页的 _api_key），配置后重新运行本工作流即可自动同步"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "✅ PGYER_API_TOKEN 已配置"
+          fi
+
+      - name: Download universal APK from release
+        if: steps.tok.outputs.configured == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ inputs.release_tag }}"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern '*-universal-*.apk' --dir ./dist
+          ls -la ./dist
+
+      - name: Upload to Pgyer (API v2)
+        if: steps.tok.outputs.configured == 'true'
+        env:
+          PGYER_API_TOKEN: ${{ secrets.PGYER_API_TOKEN }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          python3 - <<'PY'
+          import glob, json, mimetypes, os, urllib.request, urllib.parse, uuid
+
+          api_key = os.environ['PGYER_API_TOKEN']
+          apk = glob.glob('./dist/*-universal-*.apk')[0]
+          tag = os.environ.get('RELEASE_TAG', '')
+
+          def post_form(url, fields):
+              data = urllib.parse.urlencode(fields).encode()
+              req = urllib.request.Request(url, data=data)
+              with urllib.request.urlopen(req, timeout=60) as r:
+                  return json.load(r)
+
+          # ① 获取蒲公英 COS 预签名上传凭证
+          info = post_form('https://www.pgyer.com/apiv2/app/getCOSToken',
+                           {'_api_key': api_key, 'buildType': 'apk'})
+          if info.get('code') != 0:
+              raise SystemExit(f'❌ getCOSToken 失败: {info}')
+          d = info['data']
+
+          # ② multipart 上传 APK
+          boundary = '----' + uuid.uuid4().hex
+          with open(apk, 'rb') as f:
+              payload = f.read()
+          body = bytearray()
+          for k, v in {**d['params'], 'key': d['key']}.items():
+              body += (f'--{boundary}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n').encode()
+          body += (f'--{boundary}\r\nContent-Disposition: form-data; name="file"; '
+                   f'filename="{os.path.basename(apk)}"\r\n'
+                   f'Content-Type: {mimetypes.guess_type(apk)[0] or "application/octet-stream"}\r\n\r\n').encode()
+          body += payload
+          body += (f'\r\n--{boundary}--\r\n').encode()
+          req = urllib.request.Request(d['upload_url'], data=bytes(body), headers={
+              'Content-Type': f'multipart/form-data; boundary={boundary}'})
+          with urllib.request.urlopen(req, timeout=600) as r:
+              r.read()
+          print(f'✅ APK 已上传蒲公英 ({len(payload) // 1024 // 1024}MB)')
+
+          # ③ 回填版本信息（可选失败不影响上传结果）
+          try:
+              binfo = post_form('https://www.pgyer.com/apiv2/app/buildInfo',
+                                {'_api_key': api_key, 'buildKey': d['key']})
+              if binfo.get('code') == 0:
+                  b = binfo['data']['data'] if 'data' in binfo['data'] else binfo['data']
+                  print(f"   buildName={b.get('buildName')} buildVersion={b.get('buildVersion')}"
+                        f" buildBuildVersion={b.get('buildBuildVersion')}")
+          except Exception as e:
+              print(f'   buildInfo 查询跳过: {e}')
+          print(f'🔗 蒲公英分发页: https://www.pgyer.com/omaster-android （{tag}）')
+          PY
+
+      - name: Lanzou manual sync checklist (蓝奏云手动同步清单)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ inputs.release_tag }}"
+          echo "📦 蓝奏云无官方 API（网页上传有动态签名/反爬校验，Cookie 自动化不可靠），手动同步："
+          echo "  1. 用已登录蓝奏云的浏览器打开分享目录: https://wwbwy.lanzouu.com/b016klqmib"
+          echo "  2. 从 https://github.com/${GITHUB_REPOSITORY}/releases/tag/$TAG 下载 universal APK（或本任务 ./dist 目录）"
+          echo "  3. 拖拽上传 → 完成（目录链接不变时 README 无需更新）"
+          echo ""
+          echo "🔎 上传前校验值（与 Release CHECKSUMS.txt 一致）:"
+          sha256sum ./dist/*-universal-*.apk 2>/dev/null || \
+            gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body -q .body | grep -m1 universal || true
